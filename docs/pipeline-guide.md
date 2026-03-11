@@ -63,6 +63,7 @@ Cameo Model ──> JSON Export ──> Versioned Artifact (Repo 1)
 - **Traceability is enforced, not optional.** The pipeline will not pass if any verification method lacks a test scenario. No exceptions.
 - **Tests are passive log analyzers.** BDD scenarios read log files collected after simulation runs. They do not interact with running systems. This makes tests deterministic and reproducible.
 - **Clean break versioning.** Model artifacts are semantically versioned. The product pipeline pins to a specific model version, ensuring reproducibility.
+- **Collaborative test authoring.** Systems engineers and developers co-author Gherkin specifications. SEs define *what* to verify (the Feature/Scenario language that captures requirement intent and verification methodology). Developers implement *how* to verify it (the Python step definitions behind the Given/When/Then lines). Neither role works in isolation.
 
 ---
 
@@ -73,7 +74,7 @@ Cameo Model ──> JSON Export ──> Versioned Artifact (Repo 1)
 | Repository | Purpose | Maintained By |
 |---|---|---|
 | `cameo-model-pipeline` | Exports from Cameo → validated, versioned artifact (proto files + requirements JSON) published to Nexus | Systems Engineers |
-| `product-pipeline` | Consumes model artifact → runs traceability checks → deploys product → runs BDD tests → produces release bundle | Developers |
+| `product-pipeline` | Consumes model artifact → runs traceability checks → deploys product → runs BDD tests → produces release bundle | Developers + Systems Engineers (Gherkin co-authoring) |
 
 ### Dual CI/CD
 
@@ -105,11 +106,17 @@ Publish to Nexus ─────────────────────
 
 ---
 
-## 3. For Systems Engineers: Cameo Export Workflow
+## 3. For Systems Engineers: Cameo Export and Test Co-Authoring
 
 ### Overview
 
-Your role is to maintain the Cameo model and run the export macros. You do not need to write tests or understand the BDD framework. When you export and push, the pipeline handles everything downstream.
+Your role has two parts:
+
+1. **Model and export.** You maintain the Cameo model and run the export macros. When you export and push, the pipeline handles validation and artifact publishing.
+
+2. **Co-author Gherkin specifications.** When new requirements or verification methods are added, you work with developers to write the Gherkin Feature and Scenario text. You are the domain expert -- you know what the requirement means and what the verification method is intended to prove. The Gherkin language (Given/When/Then) is plain English and does not require programming knowledge.
+
+You do **not** need to write the Python step implementation code behind the Gherkin steps. That is the developer's responsibility. Your role is to ensure the specification language accurately captures the intent of the requirement and the verification methodology.
 
 ### Step-by-Step Export Process
 
@@ -189,15 +196,47 @@ For a requirement "Basic ICD Communications" with two verification methods:
 
 ### What Happens When You Change Things
 
-| Action | Pipeline Effect |
-|---|---|
-| Add a new requirement | Gate A fires: a stub test is auto-generated. Pipeline continues but the stub intentionally fails BDD, signaling developers that a real test is needed. |
-| Add a new VM to an existing requirement | Same as above -- a stub is generated for the new VM. |
-| Change verification criteria text | Gate B fires: `@REVIEW_REQUIRED` tag is injected into the affected feature file. Pipeline fails until a developer reviews and acknowledges the change. |
-| Remove a requirement | Gate C fires: any test scenarios still referencing the removed requirement are flagged as orphans. Pipeline fails until developers clean up. |
-| Change a description or title (no criteria change) | No gate fires. The change flows through to reports without blocking. |
+| Action | Pipeline Effect | Your Role |
+|---|---|---|
+| Add a new requirement | Gate A fires: a stub test is auto-generated. The stub intentionally fails, signaling that a real test is needed. | Work with the developer to co-author the Gherkin Feature and Scenario text that replaces the stub. You define what the scenario should verify; the developer implements the step code. |
+| Add a new VM to an existing requirement | Same as above -- a stub is generated for the new VM. | Same as above -- help write the Gherkin scenario for the new VM. |
+| Change verification criteria text | Gate B fires: `@REVIEW_REQUIRED` tag is injected into the affected feature file. Pipeline fails until reviewed. | Review the existing scenario with the developer. Confirm whether the Gherkin text still captures the intent of the updated criteria, or whether the scenario needs to be rewritten. |
+| Remove a requirement | Gate C fires: any test scenarios still referencing the removed requirement are flagged as orphans. Pipeline fails until cleaned up. | Confirm the removal with the developer so they can delete the orphaned scenario. |
+| Change a description or title (no criteria change) | No gate fires. The change flows through to reports without blocking. | No action needed. |
 
-**You do not need to fix these pipeline failures yourself.** The gates are designed to notify developers that action is needed. Your job is to export and push.
+### Co-Authoring Gherkin Specifications
+
+When a new requirement or VM needs a test, you and the developer sit down together. Here is how the responsibility splits:
+
+**You (Systems Engineer) own:**
+- The Feature description (what capability is being verified)
+- The Scenario name (what specific aspect is being checked)
+- The Given/When/Then phrasing (what conditions, actions, and expected outcomes matter)
+- Ensuring the scenario faithfully represents the verification criteria from the model
+
+**The developer owns:**
+- The Python step definition code behind each Given/When/Then line
+- The log parsing logic, timing assertions, and error checking
+- Ensuring the steps actually work against real simulation logs
+- Adding new step definitions when existing ones don't cover the need
+
+**Example collaboration:**
+
+The verification criteria says: *"Verify that a valid IcdRequest produces a valid IcdResponse within 500ms under nominal load conditions."*
+
+You write the Gherkin:
+```gherkin
+@VM:SYS-REQ-001-VM-01 @VER:Test
+Scenario: Valid ICD request produces correct response within latency budget
+  Given the simulation logs are loaded
+  Then the product logs should contain "Received IcdRequest: test-001"
+  And the product logs should contain "Sent IcdResponse: status=OK" within 500ms of the request
+  And no error entries should appear in the product logs
+```
+
+The developer implements the step `within 500ms of the request` by writing Python code that parses JSON log timestamps and computes the delta. You don't need to see or understand that code -- your job is ensuring the scenario *asks the right question*.
+
+**You do not need to know Python.** Gherkin is designed to be readable and writable by non-programmers. If a step you want to express doesn't exist yet, describe what you need in plain English and the developer will implement it.
 
 ---
 
@@ -205,7 +244,14 @@ For a requirement "Basic ICD Communications" with two verification methods:
 
 ### Overview
 
-Every verification method (VM) on every requirement must have at least one Gherkin scenario. The pipeline enforces this automatically. When a new VM appears without a scenario, the pipeline generates a failing stub. Your job is to replace the stub with a real test.
+Every verification method (VM) on every requirement must have at least one Gherkin scenario. The pipeline enforces this automatically. When a new VM appears without a scenario, the pipeline generates a failing stub.
+
+**Your responsibilities:**
+- **Implement step definitions** (the Python code behind Given/When/Then lines)
+- **Co-author Gherkin specifications** with the systems engineer. The SE defines the verification intent; you ensure it's implementable and wire it to real assertions against simulation logs.
+- **Maintain step libraries** so that SEs can compose new scenarios from existing steps whenever possible
+
+When replacing a stub, work with the SE who wrote the requirement. They will help you write the Gherkin text that accurately captures the verification criteria. You then implement the step code to make it pass.
 
 ### Understanding the Test Execution Model
 
@@ -301,9 +347,9 @@ Feature: SYS-REQ-007-VM-01 - Data Logging (Test)
 
 **To replace the stub:**
 
-1. Read the verification criteria in the Feature description. This tells you exactly what to verify.
+1. **Meet with the systems engineer** who owns the requirement. Review the verification criteria together. The criteria text is included in the stub's Feature description.
 
-2. Replace the stub scenario with a real one that analyzes simulation logs:
+2. **Co-author the Gherkin specification.** The SE drafts the Feature description and Scenario text in plain English. You advise on what's implementable given the available log data and existing step definitions. Together, produce something like:
 
    ```gherkin
    @REQ:SYS-REQ-007
@@ -317,9 +363,11 @@ Feature: SYS-REQ-007-VM-01 - Data Logging (Test)
        And every inbound message should appear in the log within 1 second of receipt
    ```
 
+   The SE ensures this captures the *intent* of the verification criteria. You ensure each line maps to an implementable assertion.
+
 3. Remove `@STUB` and `@AUTO_GENERATED` from the tags.
 
-4. If the step definitions you need don't exist yet, add them to `bdd/features/steps/log_analysis_steps.py` or `common_steps.py`.
+4. **Implement any new step definitions** needed. If the SE wrote a Then line that doesn't match an existing step, add it to `bdd/features/steps/log_analysis_steps.py` or `common_steps.py`. Share the list of available steps with the SE so they can reuse existing ones in future scenarios.
 
 5. Test locally:
    ```bash
@@ -402,10 +450,10 @@ The pipeline enforces three quality gates that run before any tests execute. All
 2. Injects a `@REVIEW_REQUIRED` tag into the affected feature file(s)
 3. Fails the pipeline with a clear message listing drifted VMs
 
-**Developer action:**
+**Action (developer + SE together):**
 1. Open the affected feature file(s) -- look for the `@REVIEW_REQUIRED` tag
 2. Compare the current scenario steps against the updated criteria in `requirements.json`
-3. Update the scenario if the criteria change requires different assertions
+3. Review together: does the existing Gherkin still capture the SE's intent? If the criteria change is substantive, co-author updated scenario text.
 4. Remove the `@REVIEW_REQUIRED` tag
 5. Update the baseline:
    ```bash
@@ -574,36 +622,37 @@ Generated by `generate_req_doc.py`. Formatted requirements document with:
 
 ### Scenario: A new requirement is added to the Cameo model
 
-**Who acts:** Systems Engineer exports, Developer writes test.
+**Who acts:** SE exports and co-authors Gherkin, Developer implements steps.
 
 1. SE runs the export macro and pushes.
 2. Pipeline runs. Gate A detects the uncovered VM(s). A stub is generated.
 3. If `--fail-on-uncovered` is enabled, the pipeline fails at the traceability check.
 4. If not, the pipeline continues but Behave fails on the stub's `NotImplementedError`.
-5. Developer opens the stub, reads the verification criteria, writes a real scenario.
-6. Developer commits and pushes. Pipeline passes.
+5. SE and developer meet. SE explains the requirement intent and verification methodology. Together they co-author the Gherkin Feature and Scenario text.
+6. Developer implements any new step definitions needed for the scenario.
+7. Developer commits and pushes. Pipeline passes.
 
 ### Scenario: Verification criteria text is updated
 
-**Who acts:** Systems Engineer exports, Developer reviews.
+**Who acts:** SE exports, SE and Developer review together.
 
 1. SE updates the criteria in Cameo, runs the export macro, and pushes.
 2. Pipeline runs. Gate B detects the criteria hash mismatch.
 3. `@REVIEW_REQUIRED` is injected into the affected feature file. Pipeline fails.
-4. Developer opens the feature file, sees `@REVIEW_REQUIRED`.
-5. Developer compares the scenario steps against the new criteria in `requirements.json`.
-6. Developer updates the scenario if needed, removes `@REVIEW_REQUIRED`.
-7. Developer runs `--update-baseline` to refresh hashes.
+4. SE and developer review the affected scenario together. SE explains what changed in the criteria and why.
+5. Together they determine if the existing Gherkin still captures the intent. If not, they co-author updated scenario text.
+6. Developer updates step implementations if the assertions changed.
+7. Developer removes `@REVIEW_REQUIRED`, runs `--update-baseline` to refresh hashes.
 8. Developer commits the updated feature file and baseline. Pipeline passes.
 
 ### Scenario: A requirement is removed from the model
 
-**Who acts:** Systems Engineer exports, Developer cleans up.
+**Who acts:** SE exports, SE confirms removal, Developer cleans up.
 
 1. SE removes the requirement in Cameo, runs the export macro, and pushes.
 2. Pipeline runs. Gate C detects orphaned `@REQ:` and/or `@VM:` tags.
 3. Pipeline fails, listing the orphaned scenarios and their files.
-4. Developer deletes the orphaned feature file or removes the stale tags.
+4. SE confirms the removal is intentional. Developer deletes the orphaned feature file or removes the stale tags.
 5. Developer commits and pushes. Pipeline passes.
 
 ### Scenario: A new VM is added to an existing requirement
