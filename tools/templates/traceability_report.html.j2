@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traceability Matrix Report</title>
+  <style>
+    :root {
+      --color-pass: #d4edda;
+      --color-fail: #f8d7da;
+      --color-uncovered: #f8d7da;
+      --color-drifted: #fff3cd;
+      --color-manual: #e2e3e5;
+      --color-orphaned: #cce5ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    /* Dashboard Header */
+    .dashboard {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 30px;
+      margin-bottom: 24px;
+    }
+    .dashboard h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    .dashboard .subtitle {
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .metrics {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .metric-card {
+      flex: 1;
+      min-width: 140px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 16px;
+      text-align: center;
+    }
+    .metric-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    .metric-card .label {
+      font-size: 0.85rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .metric-card.coverage .value {
+      color: {% if summary.coverage_percent >= 80 %}#28a745{% elif summary.coverage_percent >= 50 %}#ffc107{% else %}#dc3545{% endif %};
+    }
+    .metric-card.pass .value { color: #28a745; }
+    .metric-card.fail .value { color: #dc3545; }
+    .metric-card.drifted .value { color: #856404; }
+
+    /* Coverage Bar */
+    .coverage-bar-container {
+      margin-top: 20px;
+    }
+    .coverage-bar-container .bar-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .coverage-bar {
+      height: 24px;
+      background: #e9ecef;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .coverage-bar .fill {
+      height: 100%;
+      background: {% if summary.coverage_percent >= 80 %}#28a745{% elif summary.coverage_percent >= 50 %}#ffc107{% else %}#dc3545{% endif %};
+      border-radius: 12px;
+      transition: width 0.4s;
+    }
+
+    /* Filters */
+    .filters {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filters label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .filters select, .filters input {
+      padding: 6px 10px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .filters input[type="text"] {
+      min-width: 220px;
+    }
+
+    /* Table */
+    .table-wrapper {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: #343a40;
+      color: #fff;
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      cursor: pointer;
+    }
+    th:hover { background: #495057; }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e9ecef;
+      font-size: 0.9rem;
+      vertical-align: top;
+    }
+    tr.status-pass { background: var(--color-pass); }
+    tr.status-fail { background: var(--color-fail); }
+    tr.status-uncovered { background: var(--color-uncovered); }
+    tr.status-drifted { background: var(--color-drifted); }
+    tr.status-manual { background: var(--color-manual); }
+    tr.status-orphaned { background: var(--color-orphaned); }
+    tr:hover { filter: brightness(0.97); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-pass { background: #28a745; color: #fff; }
+    .badge-fail { background: #dc3545; color: #fff; }
+    .badge-uncovered { background: #dc3545; color: #fff; }
+    .badge-drifted { background: #ffc107; color: #333; }
+    .badge-manual { background: #6c757d; color: #fff; }
+    .badge-orphaned { background: #007bff; color: #fff; }
+
+    .footer {
+      text-align: center;
+      color: #999;
+      font-size: 0.8rem;
+      margin-top: 24px;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard">
+      <h1>Traceability Matrix Report</h1>
+      <p class="subtitle">Generated: {{ generated_at }}</p>
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="value">{{ summary.total_requirements }}</div>
+          <div class="label">Total Requirements</div>
+        </div>
+        <div class="metric-card coverage">
+          <div class="value">{{ "%.1f" | format(summary.coverage_percent) }}%</div>
+          <div class="label">Coverage</div>
+        </div>
+        <div class="metric-card pass">
+          <div class="value">{{ summary.passed }}</div>
+          <div class="label">Passed</div>
+        </div>
+        <div class="metric-card fail">
+          <div class="value">{{ summary.failed }}</div>
+          <div class="label">Failed</div>
+        </div>
+        <div class="metric-card">
+          <div class="value">{{ summary.uncovered }}</div>
+          <div class="label">Uncovered</div>
+        </div>
+        <div class="metric-card drifted">
+          <div class="value">{{ summary.drifted }}</div>
+          <div class="label">Drifted</div>
+        </div>
+        <div class="metric-card">
+          <div class="value">{{ summary.orphaned_tests }}</div>
+          <div class="label">Orphaned Tests</div>
+        </div>
+      </div>
+      <div class="coverage-bar-container">
+        <div class="bar-label">
+          <span>Requirement Coverage</span>
+          <span>{{ summary.covered }} / {{ summary.total_requirements }}</span>
+        </div>
+        <div class="coverage-bar">
+          <div class="fill" style="width: {{ summary.coverage_percent }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <label for="filter-status">Status:</label>
+      <select id="filter-status" onchange="applyFilters()">
+        <option value="all">All</option>
+        <option value="pass">Passed</option>
+        <option value="fail">Failed</option>
+        <option value="uncovered">Uncovered</option>
+        <option value="drifted">Drifted</option>
+        <option value="manual">Manual</option>
+      </select>
+
+      <label for="filter-method">Verification Method:</label>
+      <select id="filter-method" onchange="applyFilters()">
+        <option value="all">All</option>
+        <option value="Test">Test</option>
+        <option value="Demonstration">Demonstration</option>
+        <option value="Analysis">Analysis</option>
+        <option value="Inspection">Inspection</option>
+      </select>
+
+      <label for="filter-search">Search:</label>
+      <input type="text" id="filter-search" placeholder="Filter by ID or title..." oninput="applyFilters()">
+    </div>
+
+    <!-- Requirements Table -->
+    <div class="table-wrapper">
+      <table id="traceability-table">
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)">Requirement ID</th>
+            <th onclick="sortTable(1)">Title</th>
+            <th onclick="sortTable(2)">Verification Method</th>
+            <th onclick="sortTable(3)">Priority</th>
+            <th onclick="sortTable(4)">Status</th>
+            <th onclick="sortTable(5)">Test Result</th>
+            <th>Feature File</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr class="status-{{ row.status }}" data-status="{{ row.status }}" data-method="{{ row.verification_method }}">
+            <td>{{ row.requirement_id }}</td>
+            <td>{{ row.title }}</td>
+            <td>{{ row.verification_method }}</td>
+            <td>{{ row.priority | default("—") }}</td>
+            <td><span class="badge badge-{{ row.status }}">{{ row.status }}</span></td>
+            <td>{{ row.test_result | default("—") }}</td>
+            <td>{{ row.feature_file | default("—") }}</td>
+          </tr>
+          {% endfor %}
+
+          {% if orphaned_tests %}
+          {% for test in orphaned_tests %}
+          <tr class="status-orphaned" data-status="orphaned" data-method="">
+            <td>—</td>
+            <td>{{ test.name | default(test.feature_file) }}</td>
+            <td>—</td>
+            <td>—</td>
+            <td><span class="badge badge-orphaned">orphaned</span></td>
+            <td>{{ test.result | default("—") }}</td>
+            <td>{{ test.feature_file | default("—") }}</td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      Traceability Matrix &mdash; Auto-generated by the product pipeline.
+    </div>
+  </div>
+
+  <script>
+    function applyFilters() {
+      const status = document.getElementById('filter-status').value;
+      const method = document.getElementById('filter-method').value;
+      const search = document.getElementById('filter-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#traceability-table tbody tr');
+
+      rows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status');
+        const rowMethod = row.getAttribute('data-method');
+        const text = row.textContent.toLowerCase();
+
+        let visible = true;
+        if (status !== 'all' && rowStatus !== status) visible = false;
+        if (method !== 'all' && rowMethod !== method) visible = false;
+        if (search && !text.includes(search)) visible = false;
+
+        row.style.display = visible ? '' : 'none';
+      });
+    }
+
+    let sortDirection = {};
+    function sortTable(colIndex) {
+      const table = document.getElementById('traceability-table');
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const dir = sortDirection[colIndex] === 'asc' ? 'desc' : 'asc';
+      sortDirection[colIndex] = dir;
+
+      rows.sort((a, b) => {
+        const aText = a.cells[colIndex]?.textContent.trim() || '';
+        const bText = b.cells[colIndex]?.textContent.trim() || '';
+        return dir === 'asc'
+          ? aText.localeCompare(bText)
+          : bText.localeCompare(aText);
+      });
+
+      rows.forEach(row => tbody.appendChild(row));
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: single-container-chart
+description: Single container deployment for isolated testing
+version: "0.1.0"
+appVersion: "0.1.0"
+type: application

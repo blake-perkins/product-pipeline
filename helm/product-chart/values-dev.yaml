@@ -1,0 +1,42 @@
+# Development / CI environment overrides
+replicaCount: 1
+
+images:
+  containerA:
+    repository: registry.internal.example.com/product/container-a
+    tag: "latest"
+    port: 50051
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  containerB:
+    repository: registry.internal.example.com/product/container-b
+    tag: "latest"
+    port: 50052
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  sidecar:
+    repository: registry.internal.example.com/product/sidecar
+    tag: "latest"
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+imagePullSecret: registry-credentials
+
+service:
+  type: ClusterIP
+  port: 8080

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "single-container-chart.fullname" . }}
+  labels:
+    app: product
+    {{- include "single-container-chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: product
+      {{- include "single-container-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: product
+        {{- include "single-container-chart.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: product
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.image.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.image.resources | nindent 12 }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}

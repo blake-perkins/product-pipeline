@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "product-chart.fullname" . }}
+  labels:
+    app: product
+    {{- include "product-chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: product
+      {{- include "product-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: product
+        {{- include "product-chart.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: container-a
+          image: "{{ .Values.images.containerA.repository }}:{{ .Values.images.containerA.tag }}"
+          ports:
+            - containerPort: {{ .Values.images.containerA.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.images.containerA.resources | nindent 12 }}
+        - name: container-b
+          image: "{{ .Values.images.containerB.repository }}:{{ .Values.images.containerB.tag }}"
+          ports:
+            - containerPort: {{ .Values.images.containerB.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.images.containerB.resources | nindent 12 }}
+        - name: sidecar
+          image: "{{ .Values.images.sidecar.repository }}:{{ .Values.images.sidecar.tag }}"
+          resources:
+            {{- toYaml .Values.images.sidecar.resources | nindent 12 }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}

@@ -1,0 +1,146 @@
+plugins {
+    id 'base'
+}
+
+// Load versions from the single source-of-truth file
+def versions = new Properties()
+file("versions.properties").withInputStream { versions.load(it) }
+
+ext {
+    cameoGroup      = versions['cameo.group']
+    cameoArtifact   = versions['cameo.artifact']
+    cameoVersion    = versions['cameo.version']
+    deployTopology  = versions['deploy.topology'] ?: 'pod'
+    helmChartVersion = versions['helm.chart.version']
+}
+
+repositories {
+    // Air-gapped: only internal Nexus
+    maven {
+        url = uri(findProperty('nexusUrl') ?: System.getenv('NEXUS_URL') ?: 'https://nexus.internal.example.com/repository/maven-releases/')
+        credentials {
+            username = findProperty('nexusUser') ?: System.getenv('NEXUS_USER') ?: ''
+            password = findProperty('nexusPass') ?: System.getenv('NEXUS_PASS') ?: ''
+        }
+        allowInsecureProtocol = false
+    }
+}
+
+configurations {
+    cameoModel
+}
+
+dependencies {
+    cameoModel "${cameoGroup}:${cameoArtifact}:${cameoVersion}@zip"
+}
+
+// ─── Task: downloadCameoZip ───
+task downloadCameoZip(type: Copy) {
+    description = 'Downloads the versioned Cameo model zip from Nexus'
+    group = 'cameo'
+    from configurations.cameoModel
+    into "${buildDir}/cameo-download"
+}
+
+// ─── Task: unpackCameoZip ───
+task unpackCameoZip(type: Copy, dependsOn: downloadCameoZip) {
+    description = 'Unpacks the Cameo zip into build/cameo/'
+    group = 'cameo'
+    from zipTree(configurations.cameoModel.singleFile)
+    into "${buildDir}/cameo"
+}
+
+// ─── Task: runTraceabilityCheck ───
+task runTraceabilityCheck(type: Exec, dependsOn: unpackCameoZip) {
+    description = 'Runs the traceability checker: stubs, drift detection, orphan detection'
+    group = 'verification'
+    workingDir projectDir
+    commandLine 'python3', 'tools/traceability_checker.py',
+        '--requirements', "${buildDir}/cameo/requirements/requirements.json",
+        '--features-dir', "${projectDir}/bdd/features",
+        '--stubs-output-dir', "${projectDir}/bdd/features/automated",
+        '--non-test-output-dir', "${projectDir}/bdd/features/non_test",
+        '--report-output', "${buildDir}/reports/traceability/traceability_report.json",
+        '--html-report-output', "${buildDir}/reports/traceability/traceability_report.html",
+        '--fail-on-uncovered',
+        '--fail-on-orphaned'
+}
+
+// ─── Task: runSimulations ───
+task runSimulations(type: Exec, dependsOn: runTraceabilityCheck) {
+    description = 'Deploys product + simulator, runs simulations, collects logs'
+    group = 'verification'
+    workingDir projectDir
+    commandLine 'bash', 'scripts/run_simulations.sh',
+        'test',                     // namespace
+        "${buildDir}/logs",         // log output dir
+        deployTopology,             // topology: single or pod
+        '300'                       // timeout seconds
+}
+
+// ─── Task: runBddTests ───
+task runBddTests(type: Exec, dependsOn: runSimulations) {
+    description = 'Runs Behave BDD log analysis tests against collected logs'
+    group = 'verification'
+    workingDir "${projectDir}/bdd"
+    environment 'LOG_DIR', "${buildDir}/logs"
+    commandLine 'python3', '-m', 'behave',
+        '--format', 'json',
+        '--outfile', "${buildDir}/reports/bdd/behave-results.json",
+        '--format', 'pretty',
+        '--no-capture',
+        'features/'
+}
+
+// ─── Task: securityScan ───
+task securityScan(type: Exec) {
+    description = 'Runs Syft (SBOM) + Grype (CVE scan) against product containers'
+    group = 'security'
+    workingDir projectDir
+
+    def images = []
+    if (deployTopology == 'single') {
+        images.add("${versions['single.container.image']}:${versions['single.container.version']}")
+    } else {
+        images.add("${versions['container.a.image']}:${versions['container.a.version']}")
+        images.add("${versions['container.b.image']}:${versions['container.b.version']}")
+        images.add("${versions['sidecar.image']}:${versions['sidecar.version']}")
+    }
+
+    commandLine 'bash', 'security/scan.sh',
+        '--registry', System.getenv('REGISTRY') ?: 'registry.internal.example.com',
+        '--images', images.join(','),
+        '--sbom-output', "${buildDir}/reports/security/sbom.json",
+        '--grype-output', "${buildDir}/reports/security/grype-results.json",
+        '--policy', "${projectDir}/security/grype-policy.yaml"
+}
+
+// ─── Task: generateTraceabilityReport ───
+task generateTraceabilityReport(type: Exec, dependsOn: runBddTests) {
+    description = 'Generates final traceability report merging requirements + BDD results'
+    group = 'verification'
+    commandLine 'python3', 'tools/report_generator.py',
+        '--requirements', "${buildDir}/cameo/requirements/requirements.json",
+        '--behave-results', "${buildDir}/reports/bdd/behave-results.json",
+        '--traceability-input', "${buildDir}/reports/traceability/traceability_report.json",
+        '--output-json', "${buildDir}/reports/traceability/traceability_report.json",
+        '--output-html', "${buildDir}/reports/traceability/traceability_report.html"
+}
+
+// ─── Task: packageHelmChart ───
+task packageHelmChart(type: Exec, dependsOn: [generateTraceabilityReport, securityScan]) {
+    description = 'Packages the Helm chart into a .tgz'
+    group = 'release'
+    commandLine 'helm', 'package', "${projectDir}/helm/product-chart",
+        '--version', helmChartVersion,
+        '--destination', "${buildDir}/helm"
+}
+
+// ─── Task: publishHelmChart ───
+task publishHelmChart(type: Exec, dependsOn: packageHelmChart) {
+    description = 'Pushes the packaged Helm chart to the internal Helm registry'
+    group = 'release'
+    commandLine 'helm', 'push',
+        "${buildDir}/helm/product-chart-${helmChartVersion}.tgz",
+        "oci://${System.getenv('REGISTRY') ?: 'registry.internal.example.com'}/helm-charts"
+}

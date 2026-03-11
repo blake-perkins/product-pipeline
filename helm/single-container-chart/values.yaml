@@ -1,0 +1,19 @@
+replicaCount: 1
+
+image:
+  repository: registry.internal.example.com/product/container-a
+  tag: "0.1.0"
+  port: 50051
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+imagePullSecret: registry-credentials
+
+service:
+  type: ClusterIP
+  port: 8080

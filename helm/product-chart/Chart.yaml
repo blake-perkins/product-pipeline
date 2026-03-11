@@ -1,0 +1,6 @@
+apiVersion: v2
+name: product-chart
+description: Multi-container C++ product deployment
+version: "0.1.0"
+appVersion: "0.1.0"
+type: application

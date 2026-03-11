@@ -1,0 +1,13 @@
+# Grype configuration for air-gapped environment
+# The vulnerability DB must be pre-loaded or mirrored to an internal location
+
+db:
+  auto-update: false
+  cache-dir: /opt/grype/db
+
+fail-on-severity: critical
+
+ignore:
+  # Suppress known false positives by CVE ID
+  # Example:
+  # - vulnerability: CVE-YYYY-XXXXX

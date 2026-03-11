@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: simulator-job
+  labels:
+    app: simulator
+spec:
+  backoffLimit: 0
+  completions: 1
+  template:
+    metadata:
+      labels:
+        app: simulator
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: simulator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            - name: PRODUCT_ENDPOINT
+              value: "{{ .Values.productEndpoint }}"
+            - name: COMPLETION_TIMEOUT
+              value: "{{ .Values.completionTimeout }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}

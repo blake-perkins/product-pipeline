@@ -1,0 +1,6 @@
+apiVersion: v2
+name: simulator-chart
+description: Simulator that stimulates the product under test with ICD messages
+version: "0.1.0"
+appVersion: "0.1.0"
+type: application

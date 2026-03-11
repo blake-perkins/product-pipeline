@@ -1,0 +1,580 @@
+#!/usr/bin/env python3
+"""Generate the final traceability matrix report.
+
+This script merges three data sources:
+
+* **requirements.json** – the Cameo model export produced by the
+  cameo-model-pipeline.
+* **behave-results.json** – the JSON output from a Behave test run.
+* **traceability_report.json** – the intermediate report produced by
+  ``traceability_checker.py`` (lists covered, uncovered, drifted, and
+  orphaned items).
+
+It produces:
+
+1. A **JSON report** containing a summary block and per-requirement detail.
+2. An **HTML report** with a dashboard header, coverage bar, colour-coded
+   table, and client-side filters.
+
+Typical CLI usage::
+
+    python report_generator.py \
+        --requirements build/requirements.json \
+        --behave-results build/behave-results.json \
+        --traceability-input build/traceability_report.json \
+        --output-json build/traceability_matrix.json \
+        --output-html build/traceability_matrix.html
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import re
+import sys
+import textwrap
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Constants / inline HTML fallback
+# ---------------------------------------------------------------------------
+
+_JINJA2_TEMPLATE_NAME = "traceability_report.html.j2"
+
+_INLINE_HTML_TEMPLATE = textwrap.dedent(
+    """\
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8"><title>Traceability Report</title>
+    <style>
+      body {{ font-family: sans-serif; margin: 2em; }}
+      table {{ border-collapse: collapse; width: 100%; }}
+      th, td {{ border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 0.9rem; }}
+      th {{ background: #343a40; color: #fff; }}
+      .pass {{ background: #d4edda; }}
+      .fail, .uncovered {{ background: #f8d7da; }}
+      .drifted {{ background: #fff3cd; }}
+      .manual {{ background: #e2e3e5; }}
+      .orphaned {{ background: #cce5ff; }}
+      h1 {{ margin-bottom: 0.25em; }}
+      .summary {{ margin-bottom: 1.5em; }}
+    </style>
+    </head>
+    <body>
+    <h1>Traceability Matrix Report</h1>
+    <p>Generated: {generated_at}</p>
+    <div class="summary">
+      <p><strong>Total:</strong> {total} &nbsp;
+         <strong>Covered:</strong> {covered} &nbsp;
+         <strong>Uncovered:</strong> {uncovered} &nbsp;
+         <strong>Drifted:</strong> {drifted} &nbsp;
+         <strong>Orphaned Tests:</strong> {orphaned} &nbsp;
+         <strong>Passed:</strong> {passed} &nbsp;
+         <strong>Failed:</strong> {failed} &nbsp;
+         <strong>Coverage:</strong> {coverage:.1f}%</p>
+    </div>
+    <table>
+    <thead><tr>
+      <th>Requirement ID</th><th>Title</th><th>Verification</th>
+      <th>Priority</th><th>Status</th><th>Test Result</th><th>Feature File</th>
+    </tr></thead>
+    <tbody>
+    {rows}
+    </tbody>
+    </table>
+    </body>
+    </html>
+    """
+)
+
+# ---------------------------------------------------------------------------
+# Data loading helpers
+# ---------------------------------------------------------------------------
+
+
+def _load_json(path: Path) -> Dict[str, Any]:
+    """Load a JSON file and return the parsed object."""
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _index_requirements(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Return a dict mapping ``requirementId`` to each requirement record."""
+    return {r["requirementId"]: r for r in data.get("requirements", [])}
+
+
+def _index_behave_results(data: Any) -> Dict[str, Dict[str, Any]]:
+    """Build a lookup from requirement ID to Behave scenario result.
+
+    The Behave JSON report is a list of feature objects.  We look for tags
+    matching known requirement ID patterns (e.g. ``SYS-REQ-001``) and map
+    them to their scenario result.
+
+    Returns a dict keyed by requirement ID with keys:
+    ``status`` (passed / failed), ``feature_file``, ``name``.
+    """
+    result_map: Dict[str, Dict[str, Any]] = {}
+
+    if isinstance(data, list):
+        features = data
+    elif isinstance(data, dict):
+        features = data.get("features", data.get("results", []))
+    else:
+        return result_map
+
+    for feature in features:
+        feature_file = feature.get("location", feature.get("filename", ""))
+
+        # Collect feature-level tags (inherited by all scenarios)
+        feature_tags = _extract_req_ids_from_tags(feature.get("tags", []))
+
+        for element in feature.get("elements", []):
+            # Collect scenario-level tags
+            scenario_tags = _extract_req_ids_from_tags(element.get("tags", []))
+            # Merge: scenario tags + inherited feature tags
+            all_tags = scenario_tags | feature_tags
+
+            # Determine overall scenario status
+            steps = element.get("steps", [])
+            scenario_status = "passed"
+            for step in steps:
+                step_result = step.get("result", {})
+                if step_result.get("status") in ("failed", "undefined"):
+                    scenario_status = "failed"
+                    break
+
+            scenario_name = element.get("name", "")
+
+            for req_id in all_tags:
+                result_map[req_id] = {
+                    "status": scenario_status,
+                    "feature_file": feature_file,
+                    "name": scenario_name,
+                }
+
+    return result_map
+
+
+def _parse_traceability_data(
+    trace_data: Dict[str, Any],
+    all_req_ids: set[str],
+) -> tuple[set[str], set[str], set[str], List[Dict[str, Any]]]:
+    """Extract covered/uncovered/drifted/orphaned from the traceability report.
+
+    Supports two formats:
+
+    1. **Gate-based** (from ``traceability_checker.py``): uses ``gate_a``,
+       ``gate_b``, ``gate_c`` sub-objects.
+    2. **Flat** (simpler): uses top-level ``covered``, ``uncovered``,
+       ``drifted``, ``orphaned`` lists.
+
+    Returns
+    -------
+    tuple
+        ``(covered_ids, uncovered_ids, drifted_ids, orphaned_tests)``
+    """
+    # --- Flat format ---
+    if "covered" in trace_data or "uncovered" in trace_data:
+        covered_ids: set[str] = set(trace_data.get("covered", []))
+        uncovered_ids: set[str] = set(trace_data.get("uncovered", []))
+        drifted_ids: set[str] = set(trace_data.get("drifted", []))
+        orphaned_tests: List[Dict[str, Any]] = trace_data.get("orphaned", [])
+        return covered_ids, uncovered_ids, drifted_ids, orphaned_tests
+
+    # --- Gate-based format ---
+    uncovered_ids_gate: set[str] = set()
+    gate_a = trace_data.get("gate_a", {})
+    for item in gate_a.get("items", []):
+        rid = item.get("requirementId", item.get("requirement_id", ""))
+        if rid:
+            uncovered_ids_gate.add(rid)
+
+    drifted_ids_gate: set[str] = set()
+    gate_b = trace_data.get("gate_b", {})
+    for item in gate_b.get("items", []):
+        rid = item.get("requirementId", item.get("requirement_id", ""))
+        if rid:
+            drifted_ids_gate.add(rid)
+
+    orphaned_tests_gate: List[Dict[str, Any]] = []
+    gate_c = trace_data.get("gate_c", {})
+    for item in gate_c.get("items", []):
+        orphaned_tests_gate.append({
+            "feature_file": item.get("featureFile", item.get("feature_file", "")),
+            "name": item.get("scenarioName", item.get("name", "")),
+            "orphaned_req_ids": item.get("orphanedReqIds", item.get("orphaned_req_ids", [])),
+        })
+
+    covered_ids_gate = all_req_ids - uncovered_ids_gate
+    return covered_ids_gate, uncovered_ids_gate, drifted_ids_gate, orphaned_tests_gate
+
+
+def _extract_req_ids_from_tags(tags: list) -> set[str]:
+    """Extract requirement IDs from a list of Behave JSON tags.
+
+    Tags may be strings or dicts with a 'name' key.  Handles formats like:
+    ``@REQ:SYS-REQ-001``, ``REQ:SYS-REQ-001``, or plain ``SYS-REQ-001``.
+    """
+    req_ids: set[str] = set()
+    for t in tags:
+        tag_str = t if isinstance(t, str) else t.get("name", "")
+        tag_str = tag_str.lstrip("@")
+        # Strip REQ: / REQ- / REQ_ prefix
+        stripped = re.sub(r"^REQ[:\-_]", "", tag_str, flags=re.IGNORECASE)
+        if _is_requirement_id(stripped):
+            req_ids.add(stripped)
+    return req_ids
+
+
+def _is_requirement_id(tag: str) -> bool:
+    """Return *True* if *tag* looks like a requirement ID (e.g. SYS-REQ-001)."""
+    return bool(re.match(r"^[A-Z]+-[A-Z]+-\d{3,}$", tag))
+
+
+# ---------------------------------------------------------------------------
+# Report building
+# ---------------------------------------------------------------------------
+
+
+def build_report(
+    requirements_path: Path,
+    behave_results_path: Path,
+    traceability_input_path: Path,
+) -> Dict[str, Any]:
+    """Merge all data sources and produce the traceability report dict.
+
+    Parameters
+    ----------
+    requirements_path:
+        Path to the Cameo ``requirements.json``.
+    behave_results_path:
+        Path to the Behave ``behave-results.json``.
+    traceability_input_path:
+        Path to the ``traceability_report.json`` from
+        ``traceability_checker.py``.
+
+    Returns
+    -------
+    dict
+        A report dict with ``summary``, ``requirements``, and
+        ``orphaned_tests`` keys.
+    """
+    req_data = _load_json(requirements_path)
+    req_index = _index_requirements(req_data)
+
+    behave_data = _load_json(behave_results_path)
+    behave_index = _index_behave_results(behave_data)
+
+    trace_data = _load_json(traceability_input_path)
+
+    # Extract traceability data.  The traceability_checker.py emits a
+    # gate-based format (gate_a, gate_b, gate_c) while a simpler format
+    # with flat "covered"/"uncovered"/"drifted"/"orphaned" keys is also
+    # supported for flexibility.
+    covered_ids, uncovered_ids, drifted_ids, orphaned_tests = _parse_traceability_data(
+        trace_data, set(req_index.keys())
+    )
+
+    # Manual verification methods don't have automated test results
+    manual_methods = {"Analysis", "Inspection"}
+
+    total = len(req_index)
+    passed = 0
+    failed = 0
+    manual_count = 0
+    rows: List[Dict[str, Any]] = []
+
+    for req_id, req in req_index.items():
+        verification_method: str = req.get("verificationMethod", "Test")
+        is_manual = verification_method in manual_methods
+
+        behave_result = behave_index.get(req_id)
+
+        # Determine row status
+        if req_id in drifted_ids:
+            status = "drifted"
+        elif req_id in uncovered_ids:
+            status = "uncovered"
+        elif is_manual:
+            status = "manual"
+            manual_count += 1
+        elif behave_result is not None:
+            status = "pass" if behave_result["status"] == "passed" else "fail"
+            if status == "pass":
+                passed += 1
+            else:
+                failed += 1
+        else:
+            # Covered according to traceability but no Behave result found
+            status = "uncovered"
+
+        row: Dict[str, Any] = {
+            "requirement_id": req_id,
+            "title": req.get("title", ""),
+            "description": req.get("description", ""),
+            "priority": req.get("priority", ""),
+            "verification_method": verification_method,
+            "verification_criteria": req.get("verificationCriteria", ""),
+            "status": status,
+            "test_result": behave_result["status"] if behave_result else None,
+            "feature_file": behave_result["feature_file"] if behave_result else None,
+            "scenario_name": behave_result["name"] if behave_result else None,
+        }
+        rows.append(row)
+
+    covered_count = len(covered_ids)
+    uncovered_count = len(uncovered_ids)
+    drifted_count = len(drifted_ids)
+    coverage_percent = (covered_count / total * 100) if total > 0 else 0.0
+
+    summary: Dict[str, Any] = {
+        "total_requirements": total,
+        "covered": covered_count,
+        "uncovered": uncovered_count,
+        "drifted": drifted_count,
+        "orphaned_tests": len(orphaned_tests),
+        "passed": passed,
+        "failed": failed,
+        "manual": manual_count,
+        "coverage_percent": round(coverage_percent, 2),
+    }
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": summary,
+        "requirements": rows,
+        "orphaned_tests": orphaned_tests,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Output renderers
+# ---------------------------------------------------------------------------
+
+
+def write_json_report(report: Dict[str, Any], output_path: Path) -> None:
+    """Write the report dict as formatted JSON."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as fh:
+        json.dump(report, fh, indent=2, ensure_ascii=False)
+    logger.info("JSON report written to %s", output_path)
+
+
+def _try_load_jinja2_template(template_dir: Optional[Path] = None):
+    """Attempt to load the Jinja2 HTML template; return *None* on failure."""
+    try:
+        from jinja2 import Environment, FileSystemLoader  # type: ignore[import-untyped]
+    except ImportError:
+        logger.debug("Jinja2 not installed – using inline HTML template.")
+        return None
+
+    if template_dir is None:
+        template_dir = Path(__file__).resolve().parent / "templates"
+
+    if not (template_dir / _JINJA2_TEMPLATE_NAME).is_file():
+        logger.debug(
+            "HTML template %s not found in %s – using inline template.",
+            _JINJA2_TEMPLATE_NAME,
+            template_dir,
+        )
+        return None
+
+    env = Environment(
+        loader=FileSystemLoader(str(template_dir)),
+        keep_trailing_newline=True,
+    )
+    return env.get_template(_JINJA2_TEMPLATE_NAME)
+
+
+def write_html_report(
+    report: Dict[str, Any],
+    output_path: Path,
+    *,
+    template_dir: Optional[Path] = None,
+) -> None:
+    """Render and write the HTML traceability report.
+
+    Parameters
+    ----------
+    report:
+        The merged report dict produced by :func:`build_report`.
+    output_path:
+        Destination for the HTML file.
+    template_dir:
+        Override directory for Jinja2 templates.
+    """
+    jinja_template = _try_load_jinja2_template(template_dir)
+
+    if jinja_template is not None:
+        html = jinja_template.render(
+            generated_at=report["generated_at"],
+            summary=report["summary"],
+            rows=report["requirements"],
+            orphaned_tests=report.get("orphaned_tests", []),
+        )
+    else:
+        html = _render_inline_html(report)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(html, encoding="utf-8")
+    logger.info("HTML report written to %s", output_path)
+
+
+def _render_inline_html(report: Dict[str, Any]) -> str:
+    """Render the report using the built-in inline HTML template."""
+    summary = report["summary"]
+
+    row_lines: List[str] = []
+    for row in report["requirements"]:
+        css_class = row["status"]
+        row_lines.append(
+            f'<tr class="{css_class}">'
+            f'<td>{row["requirement_id"]}</td>'
+            f'<td>{row["title"]}</td>'
+            f'<td>{row["verification_method"]}</td>'
+            f'<td>{row.get("priority") or "—"}</td>'
+            f'<td>{row["status"]}</td>'
+            f'<td>{row.get("test_result") or "—"}</td>'
+            f'<td>{row.get("feature_file") or "—"}</td>'
+            f"</tr>"
+        )
+
+    for orphan in report.get("orphaned_tests", []):
+        name = orphan.get("name", orphan.get("feature_file", ""))
+        result = orphan.get("result", "—")
+        feature = orphan.get("feature_file", "—")
+        row_lines.append(
+            f'<tr class="orphaned">'
+            f"<td>—</td>"
+            f"<td>{name}</td>"
+            f"<td>—</td>"
+            f"<td>—</td>"
+            f"<td>orphaned</td>"
+            f"<td>{result}</td>"
+            f"<td>{feature}</td>"
+            f"</tr>"
+        )
+
+    return _INLINE_HTML_TEMPLATE.format(
+        generated_at=report["generated_at"],
+        total=summary["total_requirements"],
+        covered=summary["covered"],
+        uncovered=summary["uncovered"],
+        drifted=summary["drifted"],
+        orphaned=summary["orphaned_tests"],
+        passed=summary["passed"],
+        failed=summary["failed"],
+        coverage=summary["coverage_percent"],
+        rows="\n".join(row_lines),
+    )
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Generate the traceability matrix report (JSON + HTML).",
+    )
+    parser.add_argument(
+        "--requirements",
+        required=True,
+        type=Path,
+        help="Path to the Cameo requirements.json export.",
+    )
+    parser.add_argument(
+        "--behave-results",
+        required=True,
+        type=Path,
+        help="Path to behave-results.json from the Behave test run.",
+    )
+    parser.add_argument(
+        "--traceability-input",
+        required=True,
+        type=Path,
+        help="Path to traceability_report.json from traceability_checker.py.",
+    )
+    parser.add_argument(
+        "--output-json",
+        required=True,
+        type=Path,
+        help="Output path for the JSON traceability matrix report.",
+    )
+    parser.add_argument(
+        "--output-html",
+        required=True,
+        type=Path,
+        help="Output path for the HTML traceability matrix report.",
+    )
+    parser.add_argument(
+        "--template-dir",
+        type=Path,
+        default=None,
+        help="Override directory containing Jinja2 templates.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable debug logging.",
+    )
+    return parser
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Entry point for CLI invocation.
+
+    Returns
+    -------
+    int
+        ``0`` on success, ``1`` on error.
+    """
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(levelname)-8s %(message)s",
+    )
+
+    # Validate inputs
+    for label, path in [
+        ("Requirements", args.requirements),
+        ("Behave results", args.behave_results),
+        ("Traceability input", args.traceability_input),
+    ]:
+        if not path.is_file():
+            logger.error("%s file not found: %s", label, path)
+            return 1
+
+    report = build_report(
+        requirements_path=args.requirements,
+        behave_results_path=args.behave_results,
+        traceability_input_path=args.traceability_input,
+    )
+
+    write_json_report(report, args.output_json)
+    write_html_report(report, args.output_html, template_dir=args.template_dir)
+
+    summary = report["summary"]
+    logger.info(
+        "Report complete: %d requirements, %.1f%% coverage, %d passed, %d failed.",
+        summary["total_requirements"],
+        summary["coverage_percent"],
+        summary["passed"],
+        summary["failed"],
+    )
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

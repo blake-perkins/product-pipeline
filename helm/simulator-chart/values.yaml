@@ -1,0 +1,17 @@
+image:
+  repository: registry.internal.example.com/product/simulator
+  tag: "0.1.0"
+
+imagePullSecret: registry-credentials
+
+productEndpoint: "product-under-test:50051"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+completionTimeout: 300
