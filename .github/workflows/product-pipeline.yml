@@ -34,6 +34,9 @@ jobs:
             python tools/traceability_checker.py \
               --requirements build/cameo/requirements/requirements.json \
               --features-dir bdd/features \
+              --stubs-output-dir bdd/features/automated \
+              --non-test-output-dir bdd/features/non_test \
+              --report-output /dev/null \
               --update-baseline
           fi
 
