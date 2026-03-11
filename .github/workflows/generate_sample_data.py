@@ -11,7 +11,7 @@ data = {
         "exportTimestamp": "2026-03-10T14:30:00Z",
         "cameoVersion": "2024x Refresh2",
         "projectName": "SampleSystem",
-        "modelVersion": "0.1.0",
+        "modelVersion": "0.2.0",
     },
     "requirements": [
         {
@@ -22,8 +22,18 @@ data = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethod": "Test",
-            "verificationCriteria": "Verify that a valid IcdRequest message produces a valid IcdResponse within 500ms under nominal load conditions.",
+            "verificationMethods": [
+                {
+                    "verificationMethodId": "SYS-REQ-001-VM-01",
+                    "method": "Test",
+                    "criteria": "Verify that a valid IcdRequest message produces a valid IcdResponse within 500ms under nominal load conditions.",
+                },
+                {
+                    "verificationMethodId": "SYS-REQ-001-VM-02",
+                    "method": "Demonstration",
+                    "criteria": "Demonstrate correct round-trip ICD message exchange with the simulator under nominal conditions.",
+                },
+            ],
             "satisfiedBy": ["ComponentA", "ComponentB"],
             "tracesTo": [],
         },
@@ -35,8 +45,13 @@ data = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethod": "Test",
-            "verificationCriteria": "Verify that health status messages are emitted at the configured interval with less than 10% jitter.",
+            "verificationMethods": [
+                {
+                    "verificationMethodId": "SYS-REQ-002-VM-01",
+                    "method": "Test",
+                    "criteria": "Verify that health status messages are emitted at the configured interval with less than 10% jitter.",
+                },
+            ],
             "satisfiedBy": ["ComponentA"],
             "tracesTo": [],
         },
@@ -48,8 +63,18 @@ data = {
             "priority": "Medium",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethod": "Demonstration",
-            "verificationCriteria": "Demonstrate that the system continues to process critical messages when the logging subsystem is unavailable.",
+            "verificationMethods": [
+                {
+                    "verificationMethodId": "SYS-REQ-003-VM-01",
+                    "method": "Demonstration",
+                    "criteria": "Demonstrate that the system continues to process critical messages when the logging subsystem is unavailable.",
+                },
+                {
+                    "verificationMethodId": "SYS-REQ-003-VM-02",
+                    "method": "Test",
+                    "criteria": "Verify via log analysis that critical messages continue to be processed when the logging subsystem is disabled.",
+                },
+            ],
             "satisfiedBy": ["ComponentA", "ComponentB"],
             "tracesTo": ["SYS-REQ-001"],
         },
@@ -61,8 +86,13 @@ data = {
             "priority": "Critical",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethod": "Analysis",
-            "verificationCriteria": "Thermal analysis report confirms all components remain within operating temperature range under worst-case power dissipation.",
+            "verificationMethods": [
+                {
+                    "verificationMethodId": "SYS-REQ-004-VM-01",
+                    "method": "Analysis",
+                    "criteria": "Thermal analysis report confirms all components remain within operating temperature range under worst-case power dissipation.",
+                },
+            ],
             "satisfiedBy": ["ComponentA", "ComponentB"],
             "tracesTo": [],
         },
@@ -74,8 +104,13 @@ data = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": "SYS-REQ-001",
-            "verificationMethod": "Test",
-            "verificationCriteria": "Verify that sending a malformed IcdRequest results in a WARN log and an IcdResponse with status INVALID_REQUEST.",
+            "verificationMethods": [
+                {
+                    "verificationMethodId": "SYS-REQ-005-VM-01",
+                    "method": "Test",
+                    "criteria": "Verify that sending a malformed IcdRequest results in a WARN log and an IcdResponse with status INVALID_REQUEST.",
+                },
+            ],
             "satisfiedBy": ["ComponentA"],
             "tracesTo": ["SYS-REQ-001"],
         },
@@ -87,8 +122,13 @@ data = {
             "priority": "Medium",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethod": "Inspection",
-            "verificationCriteria": "Visual and dimensional inspection of all connectors against MIL-DTL-38999 Series III drawings.",
+            "verificationMethods": [
+                {
+                    "verificationMethodId": "SYS-REQ-006-VM-01",
+                    "method": "Inspection",
+                    "criteria": "Visual and dimensional inspection of all connectors against MIL-DTL-38999 Series III drawings.",
+                },
+            ],
             "satisfiedBy": [],
             "tracesTo": [],
         },
@@ -98,4 +138,5 @@ data = {
 with open("build/cameo/requirements/requirements.json", "w") as f:
     json.dump(data, f, indent=2)
 
-print(f"Generated {len(data['requirements'])} sample requirements")
+vm_count = sum(len(r["verificationMethods"]) for r in data["requirements"])
+print(f"Generated {len(data['requirements'])} sample requirements with {vm_count} verification methods")

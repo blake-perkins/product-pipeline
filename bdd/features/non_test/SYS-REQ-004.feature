@@ -1,4 +1,4 @@
-@REQ:SYS-REQ-004 @manual @STUB @AUTO_GENERATED
+@REQ:SYS-REQ-004 @VM:SYS-REQ-004-VM-01 @manual @STUB @AUTO_GENERATED
 Feature: SYS-REQ-004 - Thermal Analysis Compliance
   The system shall operate within the thermal envelope defined in the environmental specification.
 

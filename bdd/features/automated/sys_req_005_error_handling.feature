@@ -1,4 +1,4 @@
-@REQ:SYS-REQ-005 @VER:Test
+@REQ:SYS-REQ-005 @VM:SYS-REQ-005-VM-01 @VER:Test
 Feature: Error Message Handling
   Verify the system rejects malformed ICD messages gracefully.
 

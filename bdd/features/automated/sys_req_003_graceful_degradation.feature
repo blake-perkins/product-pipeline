@@ -1,4 +1,4 @@
-@REQ:SYS-REQ-003 @VER:Demonstration
+@REQ:SYS-REQ-003 @VM:SYS-REQ-003-VM-01 @VER:Demonstration
 Feature: Graceful Degradation
   Verify that the system continues operating in a degraded mode
   when a non-critical subsystem fails, by analyzing simulation logs.

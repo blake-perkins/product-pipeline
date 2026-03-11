@@ -1,4 +1,4 @@
-@REQ:SYS-REQ-006 @manual @STUB @AUTO_GENERATED
+@REQ:SYS-REQ-006 @VM:SYS-REQ-006-VM-01 @manual @STUB @AUTO_GENERATED
 Feature: SYS-REQ-006 - Visual Inspection of Connectors
   All external connectors shall be properly labeled and secured per the mechanical drawing.
 

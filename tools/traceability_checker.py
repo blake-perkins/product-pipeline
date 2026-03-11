@@ -2,13 +2,13 @@
 """Traceability Checker — core quality gate tool for the Product Pipeline.
 
 Implements three quality gates:
-  Gate A: Uncovered Requirements — requirements with no matching @REQ tag in any
+  Gate A: Uncovered Verification Methods — VMs with no matching @VM tag in any
           .feature file.  Auto-generates stub .feature files.
-  Gate B: Verification-Criteria Drift — detects when verificationCriteria text
+  Gate B: Verification-Criteria Drift — detects when VM criteria text
           changes (SHA-256 comparison against .traceability-baseline.json) and
           injects @REVIEW_REQUIRED into the affected feature files.
-  Gate C: Orphaned Scenarios — Gherkin scenarios whose @REQ tag references a
-          requirement that no longer exists.
+  Gate C: Orphaned Scenarios — Gherkin scenarios whose @REQ or @VM tag
+          references a requirement or VM that no longer exists.
 
 Exit codes:
   0  all gates pass
@@ -42,6 +42,7 @@ logging.basicConfig(
 # Constants
 # ---------------------------------------------------------------------------
 REQ_TAG_PATTERN = re.compile(r"@REQ[:\-_](\S+)", re.IGNORECASE)
+VM_TAG_PATTERN = re.compile(r"@VM[:\-_](\S+)", re.IGNORECASE)
 SCENARIO_HEADER_RE = re.compile(
     r"^\s*(Scenario Outline|Scenario|Example):", re.IGNORECASE
 )
@@ -50,15 +51,15 @@ VERIFICATION_METHODS_NON_TEST = frozenset({"Analysis", "Demonstration", "Inspect
 
 INLINE_STUB_TEMPLATE = textwrap.dedent(
     """\
-    @REQ:{{ requirement.requirementId }}{% if requirement.verification_method not in ["Test"] %} @manual{% endif %}
+    @REQ:{{ requirement.requirementId }} @VM:{{ vm.verificationMethodId }}{% if vm.method not in ["Test"] %} @manual{% endif %}
 
     Feature: {{ requirement.title }}
       {{ requirement.description | default("No description provided.", true) }}
 
-      Scenario: Verify {{ requirement.title }}
+      Scenario: Verify {{ requirement.title }} — {{ vm.verificationMethodId }}
         # Auto-generated stub — implement or replace with real steps.
-        # Verification method: {{ requirement.verification_method }}
-        # Verification criteria: {{ requirement.verification_criteria }}
+        # Verification method: {{ vm.method }}
+        # Verification criteria: {{ vm.criteria }}
         Given the system is set up for requirement {{ requirement.requirementId }}
         When the verification procedure is executed
         Then the requirement "{{ requirement.title }}" is satisfied
@@ -70,6 +71,32 @@ INLINE_STUB_TEMPLATE = textwrap.dedent(
 # Data classes
 # ---------------------------------------------------------------------------
 @dataclass
+class VerificationMethod:
+    """Single verification method attached to a requirement."""
+
+    vm_id: str
+    method: str  # Analysis | Demonstration | Inspection | Test
+    criteria: str
+
+    @property
+    def criteria_hash(self) -> str:
+        """SHA-256 hex digest of the criteria text."""
+        return hashlib.sha256(self.criteria.encode("utf-8")).hexdigest()
+
+    @property
+    def is_non_test(self) -> bool:
+        return self.method in VERIFICATION_METHODS_NON_TEST
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "VerificationMethod":
+        return cls(
+            vm_id=data["verificationMethodId"],
+            method=data.get("method", "Test"),
+            criteria=data.get("criteria", ""),
+        )
+
+
+@dataclass
 class Requirement:
     """Single requirement parsed from requirements.json."""
 
@@ -77,8 +104,7 @@ class Requirement:
     cameo_uuid: str
     title: str
     description: str
-    verification_method: str  # Analysis | Demonstration | Inspection | Test
-    verification_criteria: str
+    verification_methods: list[VerificationMethod]
     priority: str
     status: str
     parent_requirement_id: str | None
@@ -87,13 +113,27 @@ class Requirement:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Requirement:
+        # Parse verificationMethods array; fall back to legacy flat fields
+        raw_vms = data.get("verificationMethods")
+        if raw_vms and isinstance(raw_vms, list):
+            vms = [VerificationMethod.from_dict(vm) for vm in raw_vms]
+        else:
+            # Legacy format: single verificationMethod / verificationCriteria
+            vm_id = f"{data['requirementId']}-VM-01"
+            vms = [
+                VerificationMethod(
+                    vm_id=vm_id,
+                    method=data.get("verificationMethod", "Test"),
+                    criteria=data.get("verificationCriteria", ""),
+                )
+            ]
+
         return cls(
             requirement_id=data["requirementId"],
             cameo_uuid=data.get("cameoUUID", ""),
             title=data.get("title", ""),
             description=data.get("description", ""),
-            verification_method=data.get("verificationMethod", "Test"),
-            verification_criteria=data.get("verificationCriteria", ""),
+            verification_methods=vms,
             priority=data.get("priority", ""),
             status=data.get("status", ""),
             parent_requirement_id=data.get("parentRequirementId"),
@@ -102,25 +142,22 @@ class Requirement:
         )
 
     @property
-    def criteria_hash(self) -> str:
-        """SHA-256 hex digest of the verificationCriteria text."""
-        return hashlib.sha256(
-            self.verification_criteria.encode("utf-8")
-        ).hexdigest()
+    def all_vm_ids(self) -> list[str]:
+        return [vm.vm_id for vm in self.verification_methods]
 
-    @property
-    def is_non_test(self) -> bool:
-        return self.verification_method in VERIFICATION_METHODS_NON_TEST
+    def vm_by_id(self, vm_id: str) -> VerificationMethod | None:
+        return next((vm for vm in self.verification_methods if vm.vm_id == vm_id), None)
 
 
 @dataclass
 class ScenarioRef:
-    """A scenario found in a .feature file that carries a @REQ tag."""
+    """A scenario found in a .feature file that carries @REQ / @VM tags."""
 
     feature_file: Path
     scenario_name: str
     line_number: int
     req_ids: list[str]
+    vm_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -140,6 +177,8 @@ class TraceabilityReport:
     timestamp: str
     requirements_total: int
     features_scanned: int
+    vms_total: int
+    vms_covered: int
     gate_a: GateResult
     gate_b: GateResult
     gate_c: GateResult
@@ -185,10 +224,10 @@ def load_requirements(path: Path) -> dict[str, Requirement]:
 # ---------------------------------------------------------------------------
 # Feature file scanning
 # ---------------------------------------------------------------------------
-def scan_features(features_dir: Path) -> tuple[list[ScenarioRef], set[str]]:
-    """Walk *features_dir* for .feature files and extract @REQ tags.
+def scan_features(features_dir: Path) -> tuple[list[ScenarioRef], set[str], set[str]]:
+    """Walk *features_dir* for .feature files and extract @REQ / @VM tags.
 
-    Returns (list_of_ScenarioRef, set_of_all_req_ids_found).
+    Returns (list_of_ScenarioRef, set_of_all_req_ids_found, set_of_all_vm_ids_found).
     """
     if not features_dir.is_dir():
         LOG.error("Features directory does not exist: %s", features_dir)
@@ -196,56 +235,68 @@ def scan_features(features_dir: Path) -> tuple[list[ScenarioRef], set[str]]:
 
     scenario_refs: list[ScenarioRef] = []
     all_req_ids: set[str] = set()
+    all_vm_ids: set[str] = set()
 
     feature_header_re = re.compile(r"^\s*Feature:", re.IGNORECASE)
 
     for feature_file in sorted(features_dir.rglob("*.feature")):
         lines = feature_file.read_text(encoding="utf-8").splitlines()
         pending_tags: list[str] = []
-        feature_tags: list[str] = []  # Tags on Feature line, inherited by all Scenarios
+        pending_vm_tags: list[str] = []
+        feature_tags: list[str] = []  # REQ tags on Feature line, inherited by all Scenarios
+        feature_vm_tags: list[str] = []  # VM tags on Feature line, inherited
 
         for line_no, line in enumerate(lines, start=1):
             # Collect tags (may span multiple lines before a Feature or Scenario).
             if TAG_LINE_RE.match(line):
                 pending_tags.extend(REQ_TAG_PATTERN.findall(line))
+                pending_vm_tags.extend(VM_TAG_PATTERN.findall(line))
             elif feature_header_re.match(line):
                 # Tags before Feature: are feature-level — inherit into all scenarios
                 feature_tags = list(pending_tags)
+                feature_vm_tags = list(pending_vm_tags)
                 pending_tags = []
+                pending_vm_tags = []
             elif SCENARIO_HEADER_RE.match(line):
                 # Merge feature-level tags with any scenario-level tags
-                merged = list(set(feature_tags + pending_tags))
-                if merged:
+                merged_req = list(set(feature_tags + pending_tags))
+                merged_vm = list(set(feature_vm_tags + pending_vm_tags))
+                if merged_req or merged_vm:
                     scenario_name = line.strip().split(":", 1)[-1].strip()
                     ref = ScenarioRef(
                         feature_file=feature_file,
                         scenario_name=scenario_name,
                         line_number=line_no,
-                        req_ids=merged,
+                        req_ids=merged_req,
+                        vm_ids=merged_vm,
                     )
                     scenario_refs.append(ref)
-                    all_req_ids.update(merged)
+                    all_req_ids.update(merged_req)
+                    all_vm_ids.update(merged_vm)
                 pending_tags = []
+                pending_vm_tags = []
             else:
                 # Non-tag, non-scenario line — reset pending tags only if it is
                 # not blank (blank lines between tag rows are acceptable).
                 if line.strip():
                     pending_tags = []
+                    pending_vm_tags = []
 
     LOG.info(
-        "Scanned %d .feature files, found %d scenario(s) referencing %d unique requirement(s)",
+        "Scanned %d .feature files, found %d scenario(s) referencing %d unique requirement(s) and %d unique VM(s)",
         sum(1 for _ in features_dir.rglob("*.feature")),
         len(scenario_refs),
         len(all_req_ids),
+        len(all_vm_ids),
     )
-    return scenario_refs, all_req_ids
+    return scenario_refs, all_req_ids, all_vm_ids
 
 
 # ---------------------------------------------------------------------------
 # Stub generation (Gate A helper)
 # ---------------------------------------------------------------------------
-def _render_stub(requirement: Requirement, template_path: Path | None) -> str:
-    """Render a stub .feature file for an uncovered requirement.
+def _render_stub(requirement: Requirement, vm: VerificationMethod, template_path: Path | None) -> str:
+    """Render a stub .feature file for an uncovered VM.
 
     Tries Jinja2 template at *template_path* first; falls back to the inline
     template.
@@ -255,9 +306,12 @@ def _render_stub(requirement: Requirement, template_path: Path | None) -> str:
             "requirementId": requirement.requirement_id,
             "title": requirement.title,
             "description": requirement.description,
-            "verification_method": requirement.verification_method,
-            "verification_criteria": requirement.verification_criteria,
-        }
+        },
+        "vm": {
+            "verificationMethodId": vm.vm_id,
+            "method": vm.method,
+            "criteria": vm.criteria,
+        },
     }
 
     if template_path and template_path.is_file():
@@ -283,13 +337,14 @@ def _render_stub(requirement: Requirement, template_path: Path | None) -> str:
 
     # Inline fallback (manual mini-template rendering).
     req = context["requirement"]
-    is_test = req["verification_method"] == "Test"
-    tag_line = f"@REQ:{req['requirementId']}"
+    vm_ctx = context["vm"]
+    is_test = vm_ctx["method"] == "Test"
+    tag_line = f"@REQ:{req['requirementId']} @VM:{vm_ctx['verificationMethodId']}"
     if not is_test:
         tag_line += " @manual"
 
     description = req["description"] or "No description provided."
-    criteria = req["verification_criteria"] or "N/A"
+    criteria = vm_ctx["criteria"] or "N/A"
 
     return (
         f"{tag_line}\n"
@@ -297,9 +352,9 @@ def _render_stub(requirement: Requirement, template_path: Path | None) -> str:
         f"Feature: {req['title']}\n"
         f"  {description}\n"
         f"\n"
-        f"  Scenario: Verify {req['title']}\n"
+        f"  Scenario: Verify {req['title']} — {vm_ctx['verificationMethodId']}\n"
         f"    # Auto-generated stub — implement or replace with real steps.\n"
-        f"    # Verification method: {req['verification_method']}\n"
+        f"    # Verification method: {vm_ctx['method']}\n"
         f"    # Verification criteria: {criteria}\n"
         f"    Given the system is set up for requirement {req['requirementId']}\n"
         f"    When the verification procedure is executed\n"
@@ -308,30 +363,30 @@ def _render_stub(requirement: Requirement, template_path: Path | None) -> str:
 
 
 def generate_stubs(
-    uncovered: list[Requirement],
+    uncovered_vms: list[tuple[Requirement, VerificationMethod]],
     stubs_output_dir: Path,
     non_test_output_dir: Path | None,
     template_path: Path | None,
 ) -> list[Path]:
-    """Create stub .feature files for every uncovered requirement.
+    """Create stub .feature files for every uncovered VM.
 
-    Non-Test requirements are placed in *non_test_output_dir* (if given) with
+    Non-Test VMs are placed in *non_test_output_dir* (if given) with
     an additional ``@manual`` tag.
     """
     created: list[Path] = []
 
-    for req in uncovered:
-        if req.is_non_test and non_test_output_dir is not None:
+    for req, vm in uncovered_vms:
+        if vm.is_non_test and non_test_output_dir is not None:
             out_dir = non_test_output_dir
         else:
             out_dir = stubs_output_dir
 
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        safe_id = re.sub(r"[^\w\-.]", "_", req.requirement_id)
+        safe_id = re.sub(r"[^\w\-.]", "_", vm.vm_id)
         stub_path = out_dir / f"{safe_id}.feature"
 
-        content = _render_stub(req, template_path)
+        content = _render_stub(req, vm, template_path)
         stub_path.write_text(content, encoding="utf-8")
         LOG.info("Generated stub: %s", stub_path)
         created.append(stub_path)
@@ -343,7 +398,7 @@ def generate_stubs(
 # Baseline management (Gate B helper)
 # ---------------------------------------------------------------------------
 def load_baseline(path: Path) -> dict[str, str]:
-    """Load .traceability-baseline.json → {requirementId: sha256_hex}."""
+    """Load .traceability-baseline.json -> {vm_id: sha256_hex}."""
     if not path.exists():
         return {}
     with open(path, encoding="utf-8") as fh:
@@ -354,8 +409,11 @@ def load_baseline(path: Path) -> dict[str, str]:
 def save_baseline(
     path: Path, requirements: dict[str, Requirement]
 ) -> None:
-    """Persist current verificationCriteria hashes to baseline."""
-    hashes = {rid: req.criteria_hash for rid, req in requirements.items()}
+    """Persist current VM criteria hashes to baseline."""
+    hashes: dict[str, str] = {}
+    for req in requirements.values():
+        for vm in req.verification_methods:
+            hashes[vm.vm_id] = vm.criteria_hash
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "hashes": hashes,
@@ -368,18 +426,19 @@ def save_baseline(
 
 def detect_drift(
     requirements: dict[str, Requirement], baseline: dict[str, str]
-) -> list[Requirement]:
-    """Return requirements whose verificationCriteria hash differs from baseline."""
-    drifted: list[Requirement] = []
-    for rid, req in requirements.items():
-        old_hash = baseline.get(rid)
-        if old_hash is not None and old_hash != req.criteria_hash:
-            drifted.append(req)
+) -> list[tuple[Requirement, VerificationMethod]]:
+    """Return (requirement, vm) pairs whose criteria hash differs from baseline."""
+    drifted: list[tuple[Requirement, VerificationMethod]] = []
+    for req in requirements.values():
+        for vm in req.verification_methods:
+            old_hash = baseline.get(vm.vm_id)
+            if old_hash is not None and old_hash != vm.criteria_hash:
+                drifted.append((req, vm))
     return drifted
 
 
-def inject_review_tag(feature_file: Path, req_id: str) -> bool:
-    """Add @REVIEW_REQUIRED tag to scenarios in *feature_file* tagged with *req_id*.
+def inject_review_tag(feature_file: Path, vm_id: str) -> bool:
+    """Add @REVIEW_REQUIRED tag to scenarios in *feature_file* tagged with *vm_id*.
 
     Returns True if any modification was made.
     """
@@ -390,9 +449,9 @@ def inject_review_tag(feature_file: Path, req_id: str) -> bool:
     i = 0
     while i < len(lines):
         line = lines[i]
-        # Look for a tag line that references the drifted requirement.
+        # Look for a tag line that references the drifted VM.
         if TAG_LINE_RE.match(line) and re.search(
-            rf"@REQ[:\-_]{re.escape(req_id)}\b", line
+            rf"@VM[:\-_]{re.escape(vm_id)}\b", line
         ):
             # Check if @REVIEW_REQUIRED is already present on this or adjacent
             # tag lines.
@@ -416,9 +475,9 @@ def inject_review_tag(feature_file: Path, req_id: str) -> bool:
     if modified:
         feature_file.write_text("".join(lines), encoding="utf-8")
         LOG.info(
-            "Injected @REVIEW_REQUIRED into %s for requirement %s",
+            "Injected @REVIEW_REQUIRED into %s for VM %s",
             feature_file,
-            req_id,
+            vm_id,
         )
 
     return modified
@@ -429,43 +488,44 @@ def inject_review_tag(feature_file: Path, req_id: str) -> bool:
 # ---------------------------------------------------------------------------
 def run_gate_a(
     requirements: dict[str, Requirement],
-    covered_ids: set[str],
+    covered_vm_ids: set[str],
     stubs_output_dir: Path,
     non_test_output_dir: Path | None,
     template_path: Path | None,
     fail_on_uncovered: bool,
 ) -> GateResult:
-    """Gate A — Uncovered Requirements."""
-    uncovered_reqs = [
-        req
-        for rid, req in sorted(requirements.items())
-        if rid not in covered_ids
-    ]
+    """Gate A — Uncovered Verification Methods."""
+    uncovered_vms: list[tuple[Requirement, VerificationMethod]] = []
+    for _rid, req in sorted(requirements.items()):
+        for vm in req.verification_methods:
+            if vm.vm_id not in covered_vm_ids:
+                uncovered_vms.append((req, vm))
 
-    if not uncovered_reqs:
+    if not uncovered_vms:
         return GateResult(
             gate="A",
             passed=True,
-            message="All requirements are covered by at least one scenario.",
+            message="All verification methods are covered by at least one scenario.",
         )
 
     stubs = generate_stubs(
-        uncovered_reqs, stubs_output_dir, non_test_output_dir, template_path
+        uncovered_vms, stubs_output_dir, non_test_output_dir, template_path
     )
 
     items = [
         {
             "requirementId": req.requirement_id,
+            "verificationMethodId": vm.vm_id,
+            "method": vm.method,
             "title": req.title,
-            "verificationMethod": req.verification_method,
             "stubGenerated": str(stub),
         }
-        for req, stub in zip(uncovered_reqs, stubs)
+        for (req, vm), stub in zip(uncovered_vms, stubs)
     ]
 
     passed = not fail_on_uncovered
     msg = (
-        f"{len(uncovered_reqs)} uncovered requirement(s) found; "
+        f"{len(uncovered_vms)} uncovered verification method(s) found; "
         f"{len(stubs)} stub(s) generated."
     )
     LOG.warning("Gate A: %s", msg)
@@ -495,32 +555,33 @@ def run_gate_b(
             message="No verification-criteria drift detected.",
         )
 
-    # Build a lookup: req_id → list of feature files.
-    req_to_files: dict[str, set[Path]] = {}
+    # Build a lookup: vm_id -> list of feature files.
+    vm_to_files: dict[str, set[Path]] = {}
     for ref in scenario_refs:
-        for rid in ref.req_ids:
-            req_to_files.setdefault(rid, set()).add(ref.feature_file)
+        for vid in ref.vm_ids:
+            vm_to_files.setdefault(vid, set()).add(ref.feature_file)
 
     items: list[dict[str, Any]] = []
     files_modified: set[Path] = set()
-    for req in drifted:
-        affected_files = req_to_files.get(req.requirement_id, set())
+    for req, vm in drifted:
+        affected_files = vm_to_files.get(vm.vm_id, set())
         for ff in affected_files:
-            if inject_review_tag(ff, req.requirement_id):
+            if inject_review_tag(ff, vm.vm_id):
                 files_modified.add(ff)
 
         items.append(
             {
                 "requirementId": req.requirement_id,
+                "verificationMethodId": vm.vm_id,
                 "title": req.title,
-                "oldHash": baseline.get(req.requirement_id, ""),
-                "newHash": req.criteria_hash,
+                "oldHash": baseline.get(vm.vm_id, ""),
+                "newHash": vm.criteria_hash,
                 "affectedFeatureFiles": [str(f) for f in sorted(affected_files)],
             }
         )
 
     msg = (
-        f"{len(drifted)} requirement(s) with drifted verificationCriteria; "
+        f"{len(drifted)} verification method(s) with drifted criteria; "
         f"@REVIEW_REQUIRED injected into {len(files_modified)} file(s)."
     )
     LOG.warning("Gate B: %s", msg)
@@ -533,21 +594,25 @@ def run_gate_b(
 def run_gate_c(
     requirements: dict[str, Requirement],
     scenario_refs: list[ScenarioRef],
+    all_valid_vm_ids: set[str],
     fail_on_orphaned: bool,
 ) -> GateResult:
     """Gate C — Orphaned Scenarios."""
     orphans: list[dict[str, Any]] = []
     for ref in scenario_refs:
-        missing = [rid for rid in ref.req_ids if rid not in requirements]
-        if missing:
-            orphans.append(
-                {
-                    "featureFile": str(ref.feature_file),
-                    "scenarioName": ref.scenario_name,
-                    "lineNumber": ref.line_number,
-                    "orphanedReqIds": missing,
-                }
-            )
+        missing_reqs = [rid for rid in ref.req_ids if rid not in requirements]
+        missing_vms = [vid for vid in ref.vm_ids if vid not in all_valid_vm_ids]
+        if missing_reqs or missing_vms:
+            orphan_entry: dict[str, Any] = {
+                "featureFile": str(ref.feature_file),
+                "scenarioName": ref.scenario_name,
+                "lineNumber": ref.line_number,
+            }
+            if missing_reqs:
+                orphan_entry["orphanedReqIds"] = missing_reqs
+            if missing_vms:
+                orphan_entry["orphanedVmIds"] = missing_vms
+            orphans.append(orphan_entry)
 
     if not orphans:
         return GateResult(
@@ -558,7 +623,7 @@ def run_gate_c(
 
     passed = not fail_on_orphaned
     msg = (
-        f"{len(orphans)} scenario(s) reference requirement(s) that no longer exist."
+        f"{len(orphans)} scenario(s) reference requirement(s) or VM(s) that no longer exist."
     )
     LOG.warning("Gate C: %s", msg)
 
@@ -571,6 +636,7 @@ def run_gate_c(
 def build_report(
     requirements: dict[str, Requirement],
     features_dir: Path,
+    covered_vm_ids: set[str],
     gate_a: GateResult,
     gate_b: GateResult,
     gate_c: GateResult,
@@ -578,10 +644,20 @@ def build_report(
     feature_count = sum(1 for _ in features_dir.rglob("*.feature"))
     overall = gate_a.passed and gate_b.passed and gate_c.passed
 
+    # Count total VMs across all requirements
+    vms_total = sum(len(req.verification_methods) for req in requirements.values())
+    # Collect all valid VM IDs
+    all_valid_vm_ids: set[str] = set()
+    for req in requirements.values():
+        all_valid_vm_ids.update(req.all_vm_ids)
+    vms_covered = len(covered_vm_ids & all_valid_vm_ids)
+
     return TraceabilityReport(
         timestamp=datetime.now(timezone.utc).isoformat(),
         requirements_total=len(requirements),
         features_scanned=feature_count,
+        vms_total=vms_total,
+        vms_covered=vms_covered,
         gate_a=gate_a,
         gate_b=gate_b,
         gate_c=gate_c,
@@ -650,6 +726,8 @@ def write_html_report(report: TraceabilityReport, path: Path) -> None:
             Generated: {report.timestamp}<br>
             Requirements: {report.requirements_total} |
             Feature files scanned: {report.features_scanned} |
+            VMs total: {report.vms_total} |
+            VMs covered: {report.vms_covered} |
             Overall: <strong style="color:{'#2e7d32' if report.overall_pass else '#c62828'}">
               {'PASS' if report.overall_pass else 'FAIL'}</strong>
           </p>
@@ -734,7 +812,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--fail-on-uncovered",
         action="store_true",
-        help="Exit with code 1 if uncovered requirements are found.",
+        help="Exit with code 1 if uncovered verification methods are found.",
     )
     p.add_argument(
         "--fail-on-orphaned",
@@ -773,7 +851,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # --- Scan features --------------------------------------------------------
-    scenario_refs, covered_ids = scan_features(args.features_dir)
+    scenario_refs, covered_req_ids, covered_vm_ids = scan_features(args.features_dir)
+
+    # --- Build set of all valid VM IDs from requirements ----------------------
+    all_valid_vm_ids: set[str] = set()
+    for req in requirements.values():
+        all_valid_vm_ids.update(req.all_vm_ids)
 
     # --- Load baseline --------------------------------------------------------
     baseline = load_baseline(args.baseline_path)
@@ -784,7 +867,7 @@ def main(argv: list[str] | None = None) -> int:
     # --- Run gates ------------------------------------------------------------
     gate_a = run_gate_a(
         requirements=requirements,
-        covered_ids=covered_ids,
+        covered_vm_ids=covered_vm_ids,
         stubs_output_dir=args.stubs_output_dir,
         non_test_output_dir=args.non_test_output_dir,
         template_path=template_path,
@@ -800,6 +883,7 @@ def main(argv: list[str] | None = None) -> int:
     gate_c = run_gate_c(
         requirements=requirements,
         scenario_refs=scenario_refs,
+        all_valid_vm_ids=all_valid_vm_ids,
         fail_on_orphaned=args.fail_on_orphaned,
     )
 
@@ -807,7 +891,7 @@ def main(argv: list[str] | None = None) -> int:
     save_baseline(args.baseline_path, requirements)
 
     # --- Build and write reports ----------------------------------------------
-    report = build_report(requirements, args.features_dir, gate_a, gate_b, gate_c)
+    report = build_report(requirements, args.features_dir, covered_vm_ids, gate_a, gate_b, gate_c)
 
     write_json_report(report, args.report_output)
 

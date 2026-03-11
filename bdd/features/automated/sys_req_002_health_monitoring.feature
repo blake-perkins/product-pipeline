@@ -1,4 +1,4 @@
-@REQ:SYS-REQ-002 @VER:Test
+@REQ:SYS-REQ-002 @VM:SYS-REQ-002-VM-01 @VER:Test
 Feature: Health Monitoring
   Verify that the system reports health status at configured intervals.
 

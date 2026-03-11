@@ -1,4 +1,4 @@
-@REQ:SYS-REQ-001 @VER:Test
+@REQ:SYS-REQ-001 @VM:SYS-REQ-001-VM-01 @VER:Test
 Feature: Basic ICD Communications
   Verify that the product correctly handles ICD messages
   by analyzing logs from the simulation run.
