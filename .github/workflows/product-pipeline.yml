@@ -26,6 +26,17 @@ jobs:
           mkdir -p build/cameo/requirements build/cameo/proto
           python3 .github/workflows/generate_sample_data.py
 
+      # Create baseline from current requirements if none exists
+      # (prevents false drift detection on first run)
+      - name: Initialize traceability baseline
+        run: |
+          if [ ! -f bdd/features/.traceability-baseline.json ]; then
+            python tools/traceability_checker.py \
+              --requirements build/cameo/requirements/requirements.json \
+              --features-dir bdd/features \
+              --update-baseline
+          fi
+
       - name: Run Traceability Check
         run: |
           python tools/traceability_checker.py \
@@ -44,6 +55,7 @@ jobs:
           path: build/reports/traceability/
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: cameo-model
           path: build/cameo/
