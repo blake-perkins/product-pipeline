@@ -53,13 +53,14 @@ _MANUAL_TAG = "@manual"
 # Inline fallback template used when the Jinja2 file is unavailable.
 _INLINE_TEMPLATE = textwrap.dedent(
     """\
-    {tags}
+    {feature_tags}
     Feature: {vm_id} - {title} ({method})
       {description}
 
       Verification Method: {method}
       Verification Criteria: {criteria}
 
+      @VM:{vm_id}
       Scenario: Verify {vm_id} - {title}
         Given the system is configured for {method_lower} verification of "{req_id}"
         When the {method_lower} verification is performed
@@ -157,14 +158,14 @@ def _render_stub(
             vm=vm,
         )
 
-    # Inline fallback
+    # Inline fallback — @REQ: at feature level, @VM: at scenario level
     if is_manual:
-        tags = f"@REQ:{req_id} @VM:{vm_id} {_MANUAL_TAG} {_STUB_TAG} {_AUTO_TAG}"
+        feature_tags = f"@REQ:{req_id} {_MANUAL_TAG} {_STUB_TAG} {_AUTO_TAG}"
     else:
-        tags = f"@REQ:{req_id} @VM:{vm_id} {_STUB_TAG} {_AUTO_TAG}"
+        feature_tags = f"@REQ:{req_id} {_STUB_TAG} {_AUTO_TAG}"
 
     return _INLINE_TEMPLATE.format(
-        tags=tags,
+        feature_tags=feature_tags,
         req_id=req_id,
         vm_id=vm_id,
         title=title,

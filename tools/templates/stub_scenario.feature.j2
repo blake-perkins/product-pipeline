@@ -1,8 +1,8 @@
 {% set is_manual = vm.method not in ["Test", "Demonstration"] -%}
 {% if is_manual -%}
-@REQ:{{ requirement.requirementId }} @VM:{{ vm.verificationMethodId }} @manual @STUB @AUTO_GENERATED
+@REQ:{{ requirement.requirementId }} @manual @STUB @AUTO_GENERATED
 {% else -%}
-@REQ:{{ requirement.requirementId }} @VM:{{ vm.verificationMethodId }} @STUB @AUTO_GENERATED
+@REQ:{{ requirement.requirementId }} @STUB @AUTO_GENERATED
 {% endif -%}
 Feature: {{ vm.verificationMethodId }} - {{ requirement.title }} ({{ vm.method }})
   {{ requirement.description | default("No description provided.", true) }}
@@ -10,6 +10,7 @@ Feature: {{ vm.verificationMethodId }} - {{ requirement.title }} ({{ vm.method }
   Verification Method: {{ vm.method }}
   Verification Criteria: {{ vm.criteria | default("N/A", true) }}
 
+  @VM:{{ vm.verificationMethodId }}
   Scenario: Verify {{ vm.verificationMethodId }} - {{ requirement.title }}
     Given the system is configured for {{ vm.method | lower }} verification of "{{ requirement.requirementId }}"
     When the {{ vm.method | lower }} verification is performed
