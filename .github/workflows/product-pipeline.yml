@@ -112,9 +112,10 @@ jobs:
 
       - name: Run BDD Log Analysis
         env:
-          LOG_DIR: build/logs
+          LOG_DIR: ${{ github.workspace }}/build/logs
         run: |
           cd bdd
+          mkdir -p ../build/reports/bdd
           python -m behave \
             --format json \
             --outfile ../build/reports/bdd/behave-results.json \

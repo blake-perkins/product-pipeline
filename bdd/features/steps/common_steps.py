@@ -4,7 +4,7 @@ Common Behave step definitions.
 Includes the stub-failure step that causes auto-generated stub scenarios
 to fail the pipeline with NotImplementedError.
 """
-from behave import given, then
+from behave import given, when, then
 
 
 @given("the simulation logs are loaded")
@@ -39,6 +39,19 @@ def step_evidence_documented(context):
 
 
 # ─── Stub Steps (Auto-Generated Scenarios) ───
+
+@given('the system is configured for {method} verification of "{req_id}"')
+def step_configured_for_verification(context, method, req_id):
+    """Placeholder step for auto-generated stubs."""
+    context.verification_method = method
+    context.verification_req_id = req_id
+
+
+@when("the {method} verification is performed")
+def step_verification_performed(context, method):
+    """Placeholder step for auto-generated stubs."""
+    pass
+
 
 @given("the scenario is executed")
 def step_scenario_executed(context):

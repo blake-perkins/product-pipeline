@@ -9,3 +9,4 @@ venv/
 .gradle/
 bdd/proto/*.py
 bdd/proto/*_pb2*
+bdd/features/.traceability-baseline.json
