@@ -95,6 +95,9 @@ jobs:
               {'timestamp':'2026-03-10T14:30:01.150Z','level':'INFO','component':'icd-handler','message':'Sent IcdResponse: status=OK','request_id':'test-001','status':'OK'},
               {'timestamp':'2026-03-10T14:30:02.000Z','level':'INFO','component':'health','message':'HealthStatus emitted'},
               {'timestamp':'2026-03-10T14:30:05.000Z','level':'WARN','component':'icd-handler','message':'Malformed message rejected','reason':'invalid protobuf'},
+              {'timestamp':'2026-03-10T14:30:06.000Z','level':'WARN','component':'degradation','message':'Non-critical subsystem unavailable: logging-svc'},
+              {'timestamp':'2026-03-10T14:30:06.100Z','level':'INFO','component':'degradation','message':'Continuing in degraded mode'},
+              {'timestamp':'2026-03-10T14:30:06.500Z','level':'INFO','component':'icd-handler','message':'Processed critical message in degraded mode'},
           ]
           sim_logs = [
               {'timestamp':'2026-03-10T14:30:00.900Z','level':'INFO','message':'Simulator started'},
