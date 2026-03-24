@@ -84,7 +84,12 @@
     .ah-title { flex: 1; }
     .ah-bar { width: 80px; text-align: center; }
     .ah-summary { min-width: 100px; text-align: right; }
-    .req-card { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+    .req-card { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; border-left: 4px solid var(--border); }
+    .req-card.rc-pass { border-left-color: var(--pass); }
+    .req-card.rc-fail { border-left-color: var(--fail); }
+    .req-card.rc-uncovered { border-left-color: var(--uncovered); }
+    .req-card.rc-drifted { border-left-color: var(--drifted); }
+    .req-card.rc-manual { border-left-color: var(--manual); }
     .req-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.15s; }
     .req-header:hover { background: #E8F4FB; }
     .req-header .arrow { transition: transform 0.2s; font-size: 0.7rem; color: var(--text-muted); }
@@ -212,12 +217,13 @@
     <div class="hero-top">
       <div>
         <h1>MBSE Traceability Dashboard</h1>
-        <div class="meta">Generated: {{ generated_at }}</div>
+        <div class="meta" id="hero-timestamp">Generated: {{ generated_at }}</div>
       </div>
       <span class="pipeline-badge {% if summary.failed == 0 and summary.coverage_percent >= 100 %}pass-badge{% else %}fail-badge{% endif %}">
         Pipeline {% if summary.failed == 0 and summary.coverage_percent >= 100 %}Pass{% else %}Attention Required{% endif %}
       </span>
     </div>
+    <div id="hero-summary-sentence" style="font-size:0.95rem;color:var(--text);margin-bottom:16px;line-height:1.7;padding:12px 16px;background:#EBF5FB;border-radius:8px;border-left:4px solid var(--blue-ng)"></div>
     <div class="metrics">
       <div class="metric m-cov">
         <div class="val">{{ "%.0f" | format(summary.coverage_percent) }}%</div>
@@ -254,11 +260,18 @@
     </div>
     <div>
       <div class="cov-label">
-        <span>Verification Criteria Coverage</span>
-        <span>{{ summary.covered_vms }} / {{ summary.total_vms }} VCs</span>
+        <span>Verification Criteria Breakdown</span>
+        <span>{{ summary.covered_vms }} / {{ summary.total_vms }} VCs covered</span>
       </div>
-      <div class="cov-bar">
-        <div class="cov-bar-inner" style="width: {{ summary.coverage_percent }}%; background: {% if summary.coverage_percent >= 80 %}var(--blue-ng){% elif summary.coverage_percent >= 50 %}var(--blue-5){% else %}var(--fail){% endif %};"></div>
+      <div class="cov-bar" style="display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--border);background:#E8F4FB">
+        {% if summary.total_vms > 0 %}
+        {% set tw = summary.total_vms %}
+        {% if summary.passed > 0 %}<div style="width:{{ (summary.passed/tw*100)|round(1) }}%;background:var(--pass)" title="Passed: {{ summary.passed }}"></div>{% endif %}
+        {% if summary.failed > 0 %}<div style="width:{{ (summary.failed/tw*100)|round(1) }}%;background:var(--fail)" title="Failed: {{ summary.failed }}"></div>{% endif %}
+        {% if summary.drifted_vms > 0 %}<div style="width:{{ (summary.drifted_vms/tw*100)|round(1) }}%;background:var(--drifted)" title="Drifted: {{ summary.drifted_vms }}"></div>{% endif %}
+        {% if summary.uncovered_vms > 0 %}<div style="width:{{ (summary.uncovered_vms/tw*100)|round(1) }}%;background:var(--uncovered)" title="Uncovered: {{ summary.uncovered_vms }}"></div>{% endif %}
+        {% if summary.manual > 0 %}<div style="width:{{ (summary.manual/tw*100)|round(1) }}%;background:var(--manual)" title="Manual: {{ summary.manual }}"></div>{% endif %}
+        {% endif %}
       </div>
     </div>
   </div>
@@ -288,6 +301,7 @@
       <span class="ah-title">Title</span>
       <span class="ah-bar">Coverage</span>
       <span class="ah-summary">VCs</span>
+      <button onclick="toggleAllReqs()" class="btn btn-secondary" style="padding:4px 12px;font-size:0.75rem;margin-left:8px" id="btn-expand-all">Expand All</button>
     </div>
     <div id="trace-accordion"></div>
   </div>
@@ -370,11 +384,30 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
    ================================================================ */
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 const VALID_STATUSES = ['pass','fail','uncovered','drifted','manual','orphaned','stub'];
+const STATUS_ICONS = {pass:'\u2713',fail:'\u2717',uncovered:'\u2014',drifted:'\u21BB',manual:'\u270B',orphaned:'?',stub:'\u2014'};
 function badgeFor(status) {
   const cls = VALID_STATUSES.includes(status) ? status : 'manual';
-  return '<span class="badge b-' + cls + '">' + esc(status) + '</span>';
+  const icon = STATUS_ICONS[cls] || '';
+  return '<span class="badge b-' + cls + '">' + icon + ' ' + esc(status) + '</span>';
 }
 function fmtDur(s) { return s != null ? (s < 1 ? (s*1000).toFixed(0) + 'ms' : s.toFixed(2) + 's') : ''; }
+function fmtDate(iso) {
+  if (!iso) return '\u2014';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    const now = new Date();
+    const diffMs = now - d;
+    if (diffMs > 0 && diffMs < 86400000) {
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return mins + ' minute' + (mins > 1 ? 's' : '') + ' ago';
+      const hrs = Math.floor(mins / 60);
+      return hrs + ' hour' + (hrs > 1 ? 's' : '') + ' ago';
+    }
+    return d.toLocaleDateString(undefined, {year:'numeric',month:'long',day:'numeric'}) + ' at ' + d.toLocaleTimeString(undefined, {hour:'2-digit',minute:'2-digit'});
+  } catch(e) { return iso; }
+}
 
 /* Build a lookup: reqId -> full requirement object from REQUIREMENTS */
 const reqLookup = {};
@@ -472,7 +505,14 @@ function renderTraceability() {
 
     const vmSummary = rows.length + ' VC' + (rows.length > 1 ? 's' : '');
 
-    html += '<div class="req-card" data-req="' + reqId + '">';
+    /* Worst-status determines the card's left-border color */
+    const STATUS_PRIORITY = ['fail','drifted','uncovered','manual','pass'];
+    let worstStatus = 'pass';
+    rows.forEach(r => {
+      if (STATUS_PRIORITY.indexOf(r.status) < STATUS_PRIORITY.indexOf(worstStatus)) worstStatus = r.status;
+    });
+
+    html += '<div class="req-card rc-' + worstStatus + '" data-req="' + reqId + '">';
     html += '<div class="req-header" onclick="toggleReq(this)">';
     html += '<span class="arrow">&#9654;</span>';
     html += '<span class="req-id">' + esc(reqId) + '</span>';
@@ -497,6 +537,7 @@ function renderTraceability() {
       html += '<span class="vm-id">' + esc(vmId || reqId) + '</span>';
       html += '<span class="vm-method">' + esc(row.method) + '</span>';
       html += badgeFor(row.status);
+      if (scenarios.length > 0) html += '<span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto">(' + scenarios.length + ' scenario' + (scenarios.length > 1 ? 's' : '') + ')</span>';
       html += '<span class="vm-feature">' + esc(row.feature_file || '') + '</span>';
       html += '</div>';
 
@@ -504,8 +545,18 @@ function renderTraceability() {
         html += '<div class="vm-criteria">' + esc(row.criteria) + '</div>';
       }
 
+      /* Action hint for non-pass statuses */
+      const ACTION_HINTS = {
+        uncovered: 'Action: Write a Gherkin scenario for this verification criteria, then re-run the pipeline.',
+        drifted: 'Action: Review the updated criteria text, update the scenario if needed, remove @REVIEW_REQUIRED, and run --update-baseline.',
+        fail: 'Action: Investigate the test failure below. Fix the product code or update the scenario.',
+      };
+      if (ACTION_HINTS[row.status]) {
+        html += '<div style="padding:8px 16px 8px 48px;font-size:0.82rem;color:var(--' + row.status + ');background:#EBF5FB;border-bottom:1px solid var(--border)">' + ACTION_HINTS[row.status] + '</div>';
+      }
+
       html += '<div class="scenario-list">';
-      if (scenarios.length === 0) {
+      if (scenarios.length === 0 && row.status !== 'uncovered' && row.status !== 'drifted' && row.status !== 'manual') {
         html += '<div class="scenario-item" style="color:var(--text-muted);font-style:italic">No matching scenarios found</div>';
       }
       scenarios.forEach(s => {
@@ -584,6 +635,16 @@ function toggleVM(el) {
     sibling.classList.toggle('open');
     el.querySelector('.arrow').classList.toggle('open');
   }
+}
+
+/* Expand All / Collapse All */
+function toggleAllReqs() {
+  const bodies = document.querySelectorAll('.req-body');
+  const btn = document.getElementById('btn-expand-all');
+  const anyOpen = Array.from(bodies).some(b => b.classList.contains('open'));
+  bodies.forEach(b => { anyOpen ? b.classList.remove('open') : b.classList.add('open'); });
+  document.querySelectorAll('.req-header .arrow').forEach(a => { anyOpen ? a.classList.remove('open') : a.classList.add('open'); });
+  if (btn) btn.textContent = anyOpen ? 'Expand All' : 'Collapse All';
 }
 
 /* Navigate from Gate item to Traceability Matrix */
@@ -705,9 +766,9 @@ function renderSecurity() {
   if (!SBOM && !GRYPE) {
     container.innerHTML = '<div class="empty-state">' +
       '<div class="icon">&#128274;</div>' +
-      '<h3>Security Scan Data Unavailable</h3>' +
-      '<p>Syft/Grype scanning runs in the Jenkins pipeline.<br>No SBOM or vulnerability data was provided for this report.</p>' +
-      '<p style="margin-top:12px;font-size:0.85rem">To include security data, run the report generator with<br><code>--sbom-path</code> and <code>--grype-path</code> arguments.</p>' +
+      '<h3>Security Scan Data Not Included</h3>' +
+      '<p>Software Bill of Materials (SBOM) and vulnerability scan results are generated<br>by the production Jenkins pipeline using Syft and Grype.</p>' +
+      '<p style="margin-top:8px;font-size:0.85rem;color:var(--text-muted)">This report was generated without security scan data. When available,<br>this tab will show a full component inventory and vulnerability analysis.</p>' +
       '</div>';
     return;
   }
@@ -962,6 +1023,37 @@ renderSecurity();
 renderGates();
 renderTests();
 renderMetadata();
+
+/* Item 1: Summary sentence */
+(function() {
+  const el = document.getElementById('hero-summary-sentence');
+  if (!el || !REPORT || !REPORT.summary) return;
+  const s = REPORT.summary;
+  const parts = [];
+  parts.push('<strong>' + s.passed + ' of ' + s.total_vms + '</strong> verification criteria passed.');
+  if (s.failed > 0) {
+    const failIds = (REPORT.requirements || []).filter(r => r.status === 'fail').map(r => r.vm_id).join(', ');
+    parts.push('<span style="color:var(--fail)"><strong>' + s.failed + ' failed</strong>' + (failIds ? ' (' + failIds + ')' : '') + '.</span>');
+  }
+  if (s.uncovered_vms > 0) parts.push('<span style="color:var(--uncovered)"><strong>' + s.uncovered_vms + ' uncovered</strong> (no scenario written).</span>');
+  if (s.drifted_vms > 0) parts.push('<span style="color:var(--drifted)"><strong>' + s.drifted_vms + ' drifted</strong> (criteria changed since baseline).</span>');
+  if (s.manual > 0) parts.push(s.manual + ' pending manual review.');
+  if (s.orphaned_tests > 0) parts.push('<span style="color:var(--orphaned)">' + s.orphaned_tests + ' orphaned test(s) referencing deleted requirements.</span>');
+  const gatesFailed = [
+    TRACEABILITY && TRACEABILITY.gate_a && !TRACEABILITY.gate_a.passed ? 'Coverage' : '',
+    TRACEABILITY && TRACEABILITY.gate_b && !TRACEABILITY.gate_b.passed ? 'Drift' : '',
+    TRACEABILITY && TRACEABILITY.gate_c && !TRACEABILITY.gate_c.passed ? 'Orphan' : '',
+  ].filter(Boolean);
+  if (gatesFailed.length) parts.push('Pipeline blocked by <strong>' + gatesFailed.length + ' gate failure' + (gatesFailed.length > 1 ? 's' : '') + '</strong> (' + gatesFailed.join(', ') + ').');
+  else parts.push('<span style="color:var(--pass)">All quality gates passed.</span>');
+  el.innerHTML = parts.join(' ');
+})();
+
+/* Item 6: Human-readable timestamp */
+(function() {
+  const el = document.getElementById('hero-timestamp');
+  if (el && REPORT && REPORT.generated_at) el.textContent = 'Generated: ' + fmtDate(REPORT.generated_at);
+})();
 </script>
 </body>
 </html>

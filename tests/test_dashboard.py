@@ -419,7 +419,7 @@ class TestHTMLDashboard:
     def test_html_security_empty_state(self, tmp_path):
         """When no SBOM/Grype data, security tab should show empty state."""
         html = self._generate_html(tmp_path)
-        assert "Security Scan Data Unavailable" in html
+        assert "Security Scan Data Not Included" in html
 
     def test_html_with_sbom_data(self, tmp_path):
         """When SBOM data is provided, it should be injected."""
