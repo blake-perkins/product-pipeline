@@ -1024,29 +1024,29 @@ renderGates();
 renderTests();
 renderMetadata();
 
-/* Item 1: Summary sentence */
+/* Item 1: Summary sentence — keep it short */
 (function() {
   const el = document.getElementById('hero-summary-sentence');
   if (!el || !REPORT || !REPORT.summary) return;
   const s = REPORT.summary;
-  const parts = [];
-  parts.push('<strong>' + s.passed + ' of ' + s.total_vms + '</strong> verification criteria passed.');
-  if (s.failed > 0) {
-    const failIds = (REPORT.requirements || []).filter(r => r.status === 'fail').map(r => r.vm_id).join(', ');
-    parts.push('<span style="color:var(--fail)"><strong>' + s.failed + ' failed</strong>' + (failIds ? ' (' + failIds + ')' : '') + '.</span>');
-  }
-  if (s.uncovered_vms > 0) parts.push('<span style="color:var(--uncovered)"><strong>' + s.uncovered_vms + ' uncovered</strong> (no scenario written).</span>');
-  if (s.drifted_vms > 0) parts.push('<span style="color:var(--drifted)"><strong>' + s.drifted_vms + ' drifted</strong> (criteria changed since baseline).</span>');
-  if (s.manual > 0) parts.push(s.manual + ' pending manual review.');
-  if (s.orphaned_tests > 0) parts.push('<span style="color:var(--orphaned)">' + s.orphaned_tests + ' orphaned test(s) referencing deleted requirements.</span>');
   const gatesFailed = [
-    TRACEABILITY && TRACEABILITY.gate_a && !TRACEABILITY.gate_a.passed ? 'Coverage' : '',
-    TRACEABILITY && TRACEABILITY.gate_b && !TRACEABILITY.gate_b.passed ? 'Drift' : '',
-    TRACEABILITY && TRACEABILITY.gate_c && !TRACEABILITY.gate_c.passed ? 'Orphan' : '',
-  ].filter(Boolean);
-  if (gatesFailed.length) parts.push('Pipeline blocked by <strong>' + gatesFailed.length + ' gate failure' + (gatesFailed.length > 1 ? 's' : '') + '</strong> (' + gatesFailed.join(', ') + ').');
-  else parts.push('<span style="color:var(--pass)">All quality gates passed.</span>');
-  el.innerHTML = parts.join(' ');
+    TRACEABILITY && TRACEABILITY.gate_a && !TRACEABILITY.gate_a.passed,
+    TRACEABILITY && TRACEABILITY.gate_b && !TRACEABILITY.gate_b.passed,
+    TRACEABILITY && TRACEABILITY.gate_c && !TRACEABILITY.gate_c.passed,
+  ].filter(Boolean).length;
+
+  if (s.failed === 0 && s.uncovered_vms === 0 && s.drifted_vms === 0 && gatesFailed === 0) {
+    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vms + '</strong> verification criteria passed. All quality gates passed.';
+    el.style.borderLeftColor = 'var(--pass)';
+  } else {
+    const issues = [];
+    if (s.failed > 0) issues.push(s.failed + ' failed');
+    if (s.uncovered_vms > 0) issues.push(s.uncovered_vms + ' uncovered');
+    if (s.drifted_vms > 0) issues.push(s.drifted_vms + ' drifted');
+    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vms + '</strong> verification criteria passed. ' +
+      '<strong>' + issues.join(', ') + '</strong> — see Quality Gates for details.';
+    el.style.borderLeftColor = s.failed > 0 ? 'var(--fail)' : 'var(--uncovered)';
+  }
 })();
 
 /* Item 6: Human-readable timestamp */
