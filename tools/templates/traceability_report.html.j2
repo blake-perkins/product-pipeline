@@ -535,13 +535,24 @@ function renderTraceability() {
   /* Orphaned tests */
   if (REPORT.orphaned_tests && REPORT.orphaned_tests.length) {
     html += '<h3 style="margin:20px 0 8px;color:var(--orphaned)">Orphaned Tests</h3>';
+    html += '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px">These scenarios reference requirements or verification criteria that no longer exist in the model. They should be removed or reassigned.</p>';
     REPORT.orphaned_tests.forEach(o => {
+      const reqIds = (o.orphaned_req_ids || []).join(', ');
+      const vmIds = (o.orphaned_vm_ids || []).join(', ');
+      const file = o.feature_file || '';
+      const name = o.name || file || 'Unknown scenario';
       html += '<div class="req-card" style="border-color:var(--orphaned)">';
-      html += '<div class="req-header">';
-      html += '<span class="req-id" style="color:var(--orphaned)">ORPHAN</span>';
-      html += '<span class="req-title">' + esc(o.name || o.feature_file) + '</span>';
+      html += '<div class="req-header" style="cursor:default">';
       html += badgeFor('orphaned');
-      html += '</div></div>';
+      html += '<span class="req-title" style="margin-left:8px">' + esc(name) + '</span>';
+      html += '</div>';
+      html += '<div class="req-body open" style="display:block;padding:12px 16px">';
+      if (file) html += '<div style="margin-bottom:6px"><strong>Feature file:</strong> <code style="font-size:0.85rem">' + esc(file) + '</code></div>';
+      if (reqIds) html += '<div style="margin-bottom:6px"><strong>References deleted requirement(s):</strong> <code style="font-size:0.85rem;color:var(--fail)">' + esc(reqIds) + '</code></div>';
+      if (vmIds) html += '<div style="margin-bottom:6px"><strong>References deleted VC(s):</strong> <code style="font-size:0.85rem;color:var(--fail)">' + esc(vmIds) + '</code></div>';
+      html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:8px"><strong>Action required:</strong> Delete this feature file or update its tags to reference a valid requirement.</div>';
+      html += '</div>';
+      html += '</div>';
     });
   }
 
