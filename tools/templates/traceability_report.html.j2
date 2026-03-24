@@ -155,6 +155,7 @@
     .gate-card .gate-desc { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; }
     .gate-item { padding: 8px 12px; border: 1px solid #D0E8F8; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; background: #EBF5FB; }
     .gate-item .gi-id { font-family: monospace; font-weight: 600; }
+    .gate-item:hover { background: #E8F4FB; border-color: var(--blue-ng); }
     .gate-item .gi-detail { color: var(--text-muted); font-size: 0.8rem; }
 
     /* ---- Tab 4: Test Execution ---- */
@@ -585,6 +586,67 @@ function toggleVM(el) {
   }
 }
 
+/* Navigate from Gate item to Traceability Matrix */
+function navigateToVC(reqId, vmId, isOrphan) {
+  /* Switch to Tab 1 */
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="traceability"]').classList.add('active');
+  document.getElementById('panel-traceability').classList.add('active');
+
+  /* Clear filters so the target card is visible */
+  ['f-status', 'f-method', 'f-search'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.tagName === 'SELECT' ? el.value = 'all' : (el.value = ''); }
+  });
+  applyFilters();
+
+  /* Find and expand the requirement card */
+  const cards = document.querySelectorAll('.req-card');
+  let targetCard = null;
+  cards.forEach(card => {
+    if (card.getAttribute('data-req') === reqId) targetCard = card;
+  });
+
+  if (targetCard) {
+    /* Open the req-body if closed */
+    const body = targetCard.querySelector('.req-body');
+    const arrow = targetCard.querySelector('.req-header .arrow');
+    if (body && !body.classList.contains('open')) {
+      body.classList.add('open');
+      if (arrow) arrow.classList.add('open');
+    }
+
+    /* Find the VM row and highlight it */
+    let targetVM = null;
+    targetCard.querySelectorAll('.vm-row').forEach(vr => {
+      const vmHeader = vr.querySelector('.vm-id');
+      if (vmHeader && vmHeader.textContent.trim() === vmId) targetVM = vr;
+    });
+
+    /* Scroll to target */
+    const scrollTarget = targetVM || targetCard;
+    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    /* Flash highlight */
+    scrollTarget.style.transition = 'background 0.3s';
+    scrollTarget.style.background = '#FFF3CD';
+    setTimeout(() => { scrollTarget.style.background = ''; }, 2000);
+    return;
+  }
+
+  /* If no card found (orphaned — req doesn't exist), scroll to orphaned section */
+  const orphanSection = document.querySelector('h3');
+  if (orphanSection) {
+    const headers = document.querySelectorAll('#trace-accordion h3');
+    headers.forEach(h => {
+      if (h.textContent.includes('Orphaned')) {
+        h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
+}
+
 /* Filters */
 ['f-status','f-method','f-search'].forEach(id => {
   const el = document.getElementById(id);
@@ -743,9 +805,11 @@ function renderGates() {
       html += '<p style="color:var(--pass);font-size:0.85rem">No issues detected.</p>';
     }
     items.forEach(item => {
-      html += '<div class="gate-item">';
       const id = item.verificationMethodId || item.vm_id || item.requirementId || '';
-      html += '<span class="gi-id">' + esc(id) + '</span>';
+      const reqId = item.requirementId || (id.match(/^(.*)-VM-\d+$/) || [])[1] || '';
+      const isOrphan = g.key === 'gate_c';
+      html += '<div class="gate-item" style="cursor:pointer" onclick="navigateToVC(\'' + esc(reqId) + '\',\'' + esc(id) + '\',' + isOrphan + ')" title="Click to view in Traceability Matrix">';
+      html += '<span class="gi-id" style="color:var(--blue-ng)">' + esc(id) + '</span> <span style="font-size:0.75rem;color:var(--text-muted)">&#x2197;</span>';
       if (item.method) html += ' <span style="font-size:0.8rem;color:var(--text-muted)">(' + esc(item.method) + ')</span>';
       if (item.title) html += '<div class="gi-detail">' + esc(item.title) + '</div>';
       if (item.stubGenerated) html += '<div class="gi-detail">Stub: ' + esc(item.stubGenerated) + '</div>';
