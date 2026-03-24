@@ -930,42 +930,6 @@ function renderSecurity() {
     html += '<span style="color:var(--text-muted)">' + matches.length + ' total</span>';
     html += '</div>';
 
-    /* ---- #1 Affected components tied to architecture ---- */
-    if (REQUIREMENTS && REQUIREMENTS.requirements) {
-      const affectedPkgs = new Set(matches.map(m => (m.artifact || {}).name));
-      const compToReqs = {};
-      REQUIREMENTS.requirements.forEach(req => {
-        (req.satisfiedBy || []).forEach(comp => {
-          if (!compToReqs[comp]) compToReqs[comp] = [];
-          compToReqs[comp].push(req.requirementId);
-        });
-      });
-      /* Check if any satisfiedBy components share names with vulnerable packages */
-      const archComponents = Object.keys(compToReqs);
-      if (archComponents.length > 0) {
-        html += '<div style="background:#f9fafb;border:1px solid #e9ecef;border-radius:8px;padding:14px 18px;margin-bottom:20px">';
-        html += '<div style="font-weight:700;font-size:0.85rem;margin-bottom:8px">Architecture Impact</div>';
-        html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px">Mapping vulnerable packages to system components from the Cameo model.</div>';
-        html += '<table class="data-table" style="font-size:0.85rem"><thead><tr><th>Package</th><th>Severity</th><th>CVE</th><th style="min-width:120px">Fix</th></tr></thead><tbody>';
-        matches.forEach(m => {
-          const v = m.vulnerability || {};
-          const a = m.artifact || {};
-          const fixVersions = v.fix && v.fix.versions ? v.fix.versions : [];
-          const fixStr = fixVersions.length > 0
-            ? '<span style="color:var(--pass);font-weight:600">' + esc(fixVersions.join(', ')) + '</span>'
-            : '<span style="color:var(--fail);font-weight:600">No fix</span>';
-          html += '<tr>';
-          html += '<td><strong>' + esc(a.name) + '</strong> ' + esc(a.version) + '</td>';
-          html += '<td><span class="badge" style="background:var(--sev-' + (v.severity||'negligible').toLowerCase() + ');color:#fff">' + esc(v.severity) + '</span></td>';
-          html += '<td style="font-family:monospace;font-size:0.8rem">' + esc(v.id) + '</td>';
-          html += '<td>' + fixStr + '</td>';
-          html += '</tr>';
-        });
-        html += '</tbody></table>';
-        html += '</div>';
-      }
-    }
-
     /* ---- #7 Severity filter + #8 CVE links + #4 CVE year + #6 CSV export ---- */
     if (matches.length) {
       html += '<h2 class="section-title">Vulnerability Details</h2>';
