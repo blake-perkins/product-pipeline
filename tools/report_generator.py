@@ -71,10 +71,10 @@ _INLINE_HTML_TEMPLATE = textwrap.dedent(
     <p>Generated: {generated_at}</p>
     <div class="summary">
       <p><strong>Requirements:</strong> {total} &nbsp;
-         <strong>VMs:</strong> {total_vms} &nbsp;
-         <strong>Covered VMs:</strong> {covered_vms} &nbsp;
-         <strong>Uncovered VMs:</strong> {uncovered_vms} &nbsp;
-         <strong>Drifted VMs:</strong> {drifted_vms} &nbsp;
+         <strong>VCs:</strong> {total_vms} &nbsp;
+         <strong>Covered VCs:</strong> {covered_vms} &nbsp;
+         <strong>Uncovered VCs:</strong> {uncovered_vms} &nbsp;
+         <strong>Drifted VCs:</strong> {drifted_vms} &nbsp;
          <strong>Orphaned Tests:</strong> {orphaned} &nbsp;
          <strong>Passed:</strong> {passed} &nbsp;
          <strong>Failed:</strong> {failed} &nbsp;
@@ -365,15 +365,12 @@ def build_report(
             criteria: str = vm.get("criteria", "")
             is_manual = method in manual_methods
 
-            # Look up behave result: prefer VM-level, fall back to req-level
-            behave_result = vm_behave_index.get(vm_id) if vm_id else None
-            if behave_result is None:
-                behave_result = req_behave_index.get(req_id)
-
             # The lookup key for traceability is the VM ID when available
             lookup_id = vm_id or req_id
 
-            # Determine row status
+            # Determine row status FIRST — this controls whether we
+            # look up Behave results (uncovered/drifted VMs should NOT
+            # inherit test results from sibling VMs via req-level fallback)
             if lookup_id in drifted_ids:
                 status = "drifted"
             elif lookup_id in uncovered_ids:
@@ -381,15 +378,28 @@ def build_report(
             elif is_manual:
                 status = "manual"
                 manual_count += 1
-            elif behave_result is not None:
-                status = "pass" if behave_result["status"] == "passed" else "fail"
-                if status == "pass":
-                    passed += 1
-                else:
-                    failed += 1
             else:
-                # Covered according to traceability but no Behave result found
-                status = "uncovered"
+                # Only look up Behave results for covered, non-manual VMs
+                behave_result = vm_behave_index.get(vm_id) if vm_id else None
+                if behave_result is None:
+                    behave_result = req_behave_index.get(req_id)
+
+                if behave_result is not None:
+                    status = "pass" if behave_result["status"] == "passed" else "fail"
+                    if status == "pass":
+                        passed += 1
+                    else:
+                        failed += 1
+                else:
+                    # Covered according to traceability but no Behave result found
+                    status = "uncovered"
+
+            # Only attach Behave data for VMs that actually have test results
+            behave_result_for_row = None
+            if status in ("pass", "fail"):
+                behave_result_for_row = vm_behave_index.get(vm_id) if vm_id else None
+                if behave_result_for_row is None:
+                    behave_result_for_row = req_behave_index.get(req_id)
 
             row: Dict[str, Any] = {
                 "requirement_id": req_id,
@@ -399,9 +409,9 @@ def build_report(
                 "criteria": criteria,
                 "priority": req.get("priority", ""),
                 "status": status,
-                "test_result": behave_result["status"] if behave_result else None,
-                "feature_file": behave_result["feature_file"] if behave_result else None,
-                "scenario_name": behave_result["name"] if behave_result else None,
+                "test_result": behave_result_for_row["status"] if behave_result_for_row else None,
+                "feature_file": behave_result_for_row["feature_file"] if behave_result_for_row else None,
+                "scenario_name": behave_result_for_row["name"] if behave_result_for_row else None,
             }
             rows.append(row)
 
@@ -470,11 +480,28 @@ def _try_load_jinja2_template(template_dir: Optional[Path] = None):
     return env.get_template(_JINJA2_TEMPLATE_NAME)
 
 
+def _load_optional_json(path: Optional[Path]) -> Optional[Dict[str, Any]]:
+    """Load a JSON file if the path is provided and exists; return *None* otherwise."""
+    if path is None or not path.is_file():
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Could not load optional file %s: %s", path, exc)
+        return None
+
+
 def write_html_report(
     report: Dict[str, Any],
     output_path: Path,
     *,
     template_dir: Optional[Path] = None,
+    requirements_raw: Optional[Dict[str, Any]] = None,
+    behave_raw: Optional[Any] = None,
+    traceability_raw: Optional[Dict[str, Any]] = None,
+    sbom_data: Optional[Dict[str, Any]] = None,
+    grype_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Render and write the HTML traceability report.
 
@@ -486,6 +513,16 @@ def write_html_report(
         Destination for the HTML file.
     template_dir:
         Override directory for Jinja2 templates.
+    requirements_raw:
+        The full Cameo requirements export (with ``exportMetadata``).
+    behave_raw:
+        The raw Behave JSON results (with step-level detail).
+    traceability_raw:
+        The raw traceability report from ``traceability_checker.py``.
+    sbom_data:
+        Optional CycloneDX SBOM JSON from Syft.
+    grype_data:
+        Optional Grype vulnerability scan results JSON.
     """
     jinja_template = _try_load_jinja2_template(template_dir)
 
@@ -495,6 +532,12 @@ def write_html_report(
             summary=report["summary"],
             rows=report["requirements"],
             orphaned_tests=report.get("orphaned_tests", []),
+            report_json=json.dumps(report),
+            requirements_json=json.dumps(requirements_raw),
+            behave_json=json.dumps(behave_raw),
+            traceability_json=json.dumps(traceability_raw),
+            sbom_json=json.dumps(sbom_data),
+            grype_json=json.dumps(grype_data),
         )
     else:
         html = _render_inline_html(report)
@@ -602,6 +645,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Override directory containing Jinja2 templates.",
     )
     parser.add_argument(
+        "--sbom-path",
+        type=Path,
+        default=None,
+        help="Optional path to CycloneDX SBOM JSON (from Syft).",
+    )
+    parser.add_argument(
+        "--grype-path",
+        type=Path,
+        default=None,
+        help="Optional path to Grype vulnerability scan results JSON.",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -642,12 +697,28 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         traceability_input_path=args.traceability_input,
     )
 
+    # Load raw data for the interactive dashboard template
+    requirements_raw = _load_json(args.requirements)
+    behave_raw = _load_json(args.behave_results)
+    traceability_raw = _load_json(args.traceability_input)
+    sbom_data = _load_optional_json(getattr(args, "sbom_path", None))
+    grype_data = _load_optional_json(getattr(args, "grype_path", None))
+
     write_json_report(report, args.output_json)
-    write_html_report(report, args.output_html, template_dir=args.template_dir)
+    write_html_report(
+        report,
+        args.output_html,
+        template_dir=args.template_dir,
+        requirements_raw=requirements_raw,
+        behave_raw=behave_raw,
+        traceability_raw=traceability_raw,
+        sbom_data=sbom_data,
+        grype_data=grype_data,
+    )
 
     summary = report["summary"]
     logger.info(
-        "Report complete: %d requirements, %d VMs, %.1f%% coverage, %d passed, %d failed.",
+        "Report complete: %d requirements, %d VCs, %.1f%% coverage, %d passed, %d failed.",
         summary["total_requirements"],
         summary["total_vms"],
         summary["coverage_percent"],

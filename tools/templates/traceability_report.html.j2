@@ -3,342 +3,859 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Traceability Matrix Report</title>
+  <title>MBSE Traceability Dashboard</title>
   <style>
     :root {
-      --color-pass: #d4edda;
-      --color-fail: #f8d7da;
-      --color-uncovered: #f8d7da;
-      --color-drifted: #fff3cd;
-      --color-manual: #e2e3e5;
-      --color-orphaned: #cce5ff;
+      /* Brand blues (dark → light) */
+      --navy-1: #003057; --navy-2: #004A87; --blue-ng: #0069B0;
+      --blue-4: #0082CC; --blue-5: #0099D6; --blue-6: #00A8E0;
+      /* Status */
+      --pass: #0082CC; --pass-bg: #E8F5EE;
+      --fail: #C62828; --fail-bg: #FDECEA;
+      --uncovered: #E65100; --uncovered-bg: #FFF3E0;
+      --drifted: #F9A825; --drifted-bg: #FFFDE7;
+      --manual: #546E7A; --manual-bg: #ECEFF1;
+      --orphaned: #0099D6; --orphaned-bg: #E8F4FB;
+      --stub: #E65100;
+      /* Security severities */
+      --sev-critical: #C62828; --sev-high: #E65100; --sev-medium: #F9A825;
+      --sev-low: #0099D6; --sev-negligible: #546E7A;
+      /* Layout */
+      --bg: #F4F7FA; --card: #FFFFFF; --border: #D0E8F8;
+      --text: #0D1B2A; --text-muted: #546E7A; --header-bg: #0D1B2A;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #f5f5f5;
-      color: #333;
-      line-height: 1.6;
-    }
-    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    .container { max-width: 1440px; margin: 0 auto; padding: 16px 20px; }
 
-    /* Dashboard Header */
-    .dashboard {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      padding: 30px;
-      margin-bottom: 24px;
-    }
-    .dashboard h1 {
-      font-size: 1.8rem;
-      margin-bottom: 8px;
-    }
-    .dashboard .subtitle {
-      color: #666;
-      margin-bottom: 20px;
-    }
-    .metrics {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .metric-card {
-      flex: 1;
-      min-width: 140px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      padding: 16px;
-      text-align: center;
-    }
-    .metric-card .value {
-      font-size: 2rem;
-      font-weight: 700;
-    }
-    .metric-card .label {
-      font-size: 0.85rem;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .metric-card.coverage .value {
-      color: {% if summary.coverage_percent >= 80 %}#28a745{% elif summary.coverage_percent >= 50 %}#ffc107{% else %}#dc3545{% endif %};
-    }
-    .metric-card.pass .value { color: #28a745; }
-    .metric-card.fail .value { color: #dc3545; }
-    .metric-card.drifted .value { color: #856404; }
+    /* ---- Hero Header ---- */
+    .hero { background: #FFFFFF; color: var(--text); padding: 28px 32px 24px; border-radius: 10px; margin-bottom: 0; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
+    .hero h1 { font-size: 1.5rem; font-weight: 700; color: var(--navy-1); }
+    .hero .meta { font-size: 0.8rem; color: var(--text-muted); }
+    .hero .pipeline-badge { display: inline-block; padding: 6px 20px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+    .pipeline-badge.pass-badge { background: var(--blue-ng); color: #fff; }
+    .pipeline-badge.fail-badge { background: var(--fail); color: #fff; }
+    .metrics { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .metric { flex: 1; min-width: 110px; background: var(--navy-1); border-radius: 8px; padding: 14px 12px; text-align: center; color: #fff; }
+    .metric .val { font-size: 1.6rem; font-weight: 700; color: #fff; }
+    .metric .lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #D0E8F8; }
+    .metric.m-pass { background: var(--blue-ng); }
+    .metric.m-fail { background: var(--navy-1); }
+    .metric.m-fail .val { color: #EF9A9A; }
+    .metric.m-cov { background: var(--blue-4); }
+    .metric.m-drift { background: var(--navy-1); }
+    .metric.m-drift .val { color: #FFF176; }
+    .metric.m-uncov { background: var(--navy-1); }
+    .metric.m-uncov .val { color: #FFAB91; }
+    .cov-bar { height: 10px; background: #E8F4FB; border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+    .cov-bar-inner { height: 100%; border-radius: 5px; transition: width 0.4s; }
+    .cov-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 3px; }
 
-    /* Coverage Bar */
-    .coverage-bar-container {
-      margin-top: 20px;
-    }
-    .coverage-bar-container .bar-label {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 4px;
-      font-weight: 600;
-    }
-    .coverage-bar {
-      height: 24px;
-      background: #e9ecef;
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .coverage-bar .fill {
-      height: 100%;
-      background: {% if summary.coverage_percent >= 80 %}#28a745{% elif summary.coverage_percent >= 50 %}#ffc107{% else %}#dc3545{% endif %};
-      border-radius: 12px;
-      transition: width 0.4s;
+    /* ---- Tabs ---- */
+    .tab-bar { display: flex; background: var(--card); border-bottom: 2px solid var(--border); border-radius: 10px 10px 0 0; overflow-x: auto; }
+    .tab-btn { flex: none; padding: 12px 24px; border: none; background: none; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .tab-btn:hover { color: var(--text); background: #E8F4FB; }
+    .tab-btn.active { color: var(--blue-ng); border-bottom-color: var(--blue-ng); }
+    .tab-panel { display: none; background: var(--card); border-radius: 0 0 10px 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .tab-panel.active { display: block; }
+
+    /* ---- Shared ---- */
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .b-pass { background: var(--pass); color: #fff; }
+    .b-fail { background: var(--fail); color: #fff; }
+    .b-uncovered { background: var(--uncovered); color: #fff; }
+    .b-drifted { background: var(--drifted); color: #333; }
+    .b-manual { background: var(--manual); color: #fff; }
+    .b-orphaned { background: var(--orphaned); color: #fff; }
+    .b-stub { background: var(--stub); color: #fff; }
+    .filter-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+    .filter-row label { font-weight: 600; font-size: 0.82rem; }
+    .filter-row select, .filter-row input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
+    .filter-row input[type="text"] { min-width: 200px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state h3 { margin-bottom: 8px; color: var(--text); }
+
+    /* ---- Tab 1: Traceability Accordion ---- */
+    .accordion-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); margin-bottom: 8px; }
+    .ah-expand { width: 12px; }
+    .ah-id { min-width: 120px; }
+    .ah-title { flex: 1; }
+    .ah-bar { width: 80px; text-align: center; }
+    .ah-summary { min-width: 100px; text-align: right; }
+    .req-card { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+    .req-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.15s; }
+    .req-header:hover { background: #E8F4FB; }
+    .req-header .arrow { transition: transform 0.2s; font-size: 0.7rem; color: var(--text-muted); }
+    .req-header .arrow.open { transform: rotate(90deg); }
+    .req-id { font-weight: 700; font-family: monospace; font-size: 0.9rem; min-width: 120px; }
+    .req-title { flex: 1; font-size: 0.9rem; }
+    .mini-bar { display: flex; width: 80px; height: 8px; border-radius: 4px; overflow: hidden; background: #D0E8F8; }
+    .mini-bar span { height: 100%; }
+    .vm-summary { font-size: 0.75rem; color: var(--text-muted); min-width: 100px; text-align: right; }
+    .req-body { display: none; border-top: 1px solid var(--border); padding: 0; }
+    .req-body.open { display: block; }
+    .req-desc { padding: 12px 16px; font-size: 0.85rem; color: var(--text-muted); background: #EBF5FB; border-bottom: 1px solid var(--border); }
+    .vm-row { border-bottom: 1px solid #D0E8F8; }
+    .vm-row:last-child { border-bottom: none; }
+    .vm-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px 10px 32px; cursor: pointer; font-size: 0.85rem; }
+    .vm-header:hover { background: #E8F4FB; }
+    .vm-header .arrow { font-size: 0.6rem; color: var(--text-muted); transition: transform 0.2s; }
+    .vm-header .arrow.open { transform: rotate(90deg); }
+    .vm-id { font-family: monospace; font-weight: 600; min-width: 180px; }
+    .vm-method { min-width: 100px; }
+    .vm-feature { font-size: 0.8rem; color: var(--text-muted); flex: 1; text-align: right; font-family: monospace; }
+    .vm-criteria { padding: 8px 16px 8px 48px; font-size: 0.82rem; color: var(--text-muted); font-style: italic; background: #EBF5FB; }
+    .scenario-list { display: none; background: #EBF5FB; }
+    .scenario-list.open { display: block; }
+    .scenario-item { padding: 8px 16px 8px 48px; border-top: 1px solid #D0E8F8; }
+    .scenario-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+    .step { display: flex; gap: 8px; padding: 2px 0 2px 16px; font-size: 0.82rem; font-family: monospace; }
+    .step-kw { font-weight: 700; min-width: 50px; }
+    .step-kw.given { color: var(--blue-ng); }
+    .step-kw.when { color: var(--navy-1); }
+    .step-kw.then { color: var(--blue-4); }
+    .step-kw.and, .step-kw.but { color: var(--text-muted); }
+    .step-text { flex: 1; }
+    .step-dur { color: var(--text-muted); font-size: 0.75rem; min-width: 60px; text-align: right; }
+    .step-status { min-width: 16px; }
+    .step-status.passed::before { content: "\2713"; color: var(--pass); }
+    .step-status.failed::before { content: "\2717"; color: var(--fail); }
+
+    /* ---- Tab 2: Security ---- */
+    .sev-cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    .sev-card { flex: 1; min-width: 120px; border-radius: 8px; padding: 16px; text-align: center; color: #fff; }
+    .sev-card .sev-val { font-size: 2rem; font-weight: 700; }
+    .sev-card .sev-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .sev-critical { background: var(--sev-critical); }
+    .sev-high { background: var(--sev-high); }
+    .sev-medium { background: var(--sev-medium); color: #333; }
+    .sev-low { background: var(--sev-low); }
+    .sev-negligible { background: var(--sev-negligible); }
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.data-table th { background: var(--header-bg); color: #fff; padding: 10px 12px; text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; position: sticky; top: 0; }
+    table.data-table th:hover { background: var(--navy-1); }
+    table.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.data-table tr:hover { background: #E8F4FB; }
+    .table-scroll { max-height: 500px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+    .section-title { font-size: 1.1rem; font-weight: 700; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+    .section-title:first-child { margin-top: 0; }
+
+    /* ---- Tab 3: Gates ---- */
+    .gate-cards { display: flex; gap: 20px; flex-wrap: wrap; }
+    .gate-card { flex: 1; min-width: 300px; border-radius: 10px; border: 2px solid var(--border); padding: 20px; }
+    .gate-card.gate-pass { border-color: var(--pass); }
+    .gate-card.gate-fail { border-color: var(--fail); }
+    .gate-card .gate-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px 16px; margin: -20px -20px 12px; border-radius: 8px 8px 0 0; color: #fff; }
+    .gate-card[data-gate="A"] .gate-title { background: var(--blue-ng); }
+    .gate-card[data-gate="B"] .gate-title { background: var(--blue-4); }
+    .gate-card[data-gate="C"] .gate-title { background: var(--navy-1); }
+    .gate-card .gate-name { font-size: 1.1rem; font-weight: 700; }
+    .gate-card .gate-desc { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; }
+    .gate-item { padding: 8px 12px; border: 1px solid #D0E8F8; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; background: #EBF5FB; }
+    .gate-item .gi-id { font-family: monospace; font-weight: 600; }
+    .gate-item .gi-detail { color: var(--text-muted); font-size: 0.8rem; }
+
+    /* ---- Tab 4: Test Execution ---- */
+    .test-feature { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+    .test-feature-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+    .test-feature-header:hover { background: #E8F4FB; }
+    .test-feature-header .arrow { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+    .test-feature-header .arrow.open { transform: rotate(90deg); }
+    .test-feature-header .feat-status { margin-left: auto; }
+    .test-feature-header .feat-dur { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+    .test-feature-body { display: none; border-top: 1px solid var(--border); }
+    .test-feature-body.open { display: block; }
+    .test-scenario { padding: 10px 16px 10px 32px; border-bottom: 1px solid #D0E8F8; }
+    .test-scenario:last-child { border-bottom: none; }
+    .test-scenario-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: flex; justify-content: space-between; }
+
+    /* ---- Tab 5: Export ---- */
+    .export-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: var(--blue-ng); color: #fff; }
+    .btn-primary:hover { background: var(--navy-2); }
+    .btn-secondary { background: #E8F4FB; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #D0E8F8; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .info-item { padding: 16px; background: #E8F4FB; border-radius: 8px; border: 1px solid var(--border); }
+    .info-item .info-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
+    .info-item .info-value { font-size: 1rem; font-weight: 600; }
+    .legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ---- Print ---- */
+    @media print {
+      .tab-bar { display: none; }
+      .tab-panel { display: block !important; page-break-before: always; box-shadow: none; border: none; }
+      .tab-panel:first-of-type { page-break-before: auto; }
+      .hero { background: #fff !important; }
+      .metric { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .filter-row { display: none; }
+      .req-body, .scenario-list, .test-feature-body { display: block !important; }
+      .btn { display: none; }
     }
 
-    /* Filters */
-    .filters {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      padding: 16px 24px;
-      margin-bottom: 24px;
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .filters label {
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    .filters select, .filters input {
-      padding: 6px 10px;
-      border: 1px solid #ced4da;
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-    .filters input[type="text"] {
-      min-width: 220px;
-    }
-
-    /* Table */
-    .table-wrapper {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th {
-      background: #343a40;
-      color: #fff;
-      padding: 12px 14px;
-      text-align: left;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      position: sticky;
-      top: 0;
-      cursor: pointer;
-    }
-    th:hover { background: #495057; }
-    td {
-      padding: 10px 14px;
-      border-bottom: 1px solid #e9ecef;
-      font-size: 0.9rem;
-      vertical-align: top;
-    }
-    tr.status-pass { background: var(--color-pass); }
-    tr.status-fail { background: var(--color-fail); }
-    tr.status-uncovered { background: var(--color-uncovered); }
-    tr.status-drifted { background: var(--color-drifted); }
-    tr.status-manual { background: var(--color-manual); }
-    tr.status-orphaned { background: var(--color-orphaned); }
-    tr:hover { filter: brightness(0.97); }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .badge-pass { background: #28a745; color: #fff; }
-    .badge-fail { background: #dc3545; color: #fff; }
-    .badge-uncovered { background: #dc3545; color: #fff; }
-    .badge-drifted { background: #ffc107; color: #333; }
-    .badge-manual { background: #6c757d; color: #fff; }
-    .badge-orphaned { background: #007bff; color: #fff; }
-
-    .footer {
-      text-align: center;
-      color: #999;
-      font-size: 0.8rem;
-      margin-top: 24px;
-      padding: 16px;
-    }
+    /* ---- Footer ---- */
+    .footer { text-align: center; color: var(--text-muted); font-size: 0.75rem; padding: 16px; margin-top: 16px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Dashboard Header -->
-    <div class="dashboard">
-      <h1>Traceability Matrix Report</h1>
-      <p class="subtitle">Generated: {{ generated_at }}</p>
-      <div class="metrics">
-        <div class="metric-card">
-          <div class="value">{{ summary.total_requirements }}</div>
-          <div class="label">Total Requirements</div>
-        </div>
-        <div class="metric-card coverage">
-          <div class="value">{{ "%.1f" | format(summary.coverage_percent) }}%</div>
-          <div class="label">Coverage</div>
-        </div>
-        <div class="metric-card pass">
-          <div class="value">{{ summary.passed }}</div>
-          <div class="label">Passed</div>
-        </div>
-        <div class="metric-card fail">
-          <div class="value">{{ summary.failed }}</div>
-          <div class="label">Failed</div>
-        </div>
-        <div class="metric-card">
-          <div class="value">{{ summary.uncovered }}</div>
-          <div class="label">Uncovered</div>
-        </div>
-        <div class="metric-card drifted">
-          <div class="value">{{ summary.drifted }}</div>
-          <div class="label">Drifted</div>
-        </div>
-        <div class="metric-card">
-          <div class="value">{{ summary.orphaned_tests }}</div>
-          <div class="label">Orphaned Tests</div>
-        </div>
+<div class="container">
+
+  <!-- ======== HERO HEADER ======== -->
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <h1>MBSE Traceability Dashboard</h1>
+        <div class="meta">Generated: {{ generated_at }}</div>
       </div>
-      <div class="coverage-bar-container">
-        <div class="bar-label">
-          <span>Requirement Coverage</span>
-          <span>{{ summary.covered }} / {{ summary.total_requirements }}</span>
-        </div>
-        <div class="coverage-bar">
-          <div class="fill" style="width: {{ summary.coverage_percent }}%"></div>
-        </div>
+      <span class="pipeline-badge {% if summary.failed == 0 and summary.coverage_percent >= 100 %}pass-badge{% else %}fail-badge{% endif %}">
+        Pipeline {% if summary.failed == 0 and summary.coverage_percent >= 100 %}Pass{% else %}Attention Required{% endif %}
+      </span>
+    </div>
+    <div class="metrics">
+      <div class="metric m-cov">
+        <div class="val">{{ "%.0f" | format(summary.coverage_percent) }}%</div>
+        <div class="lbl">VC Coverage</div>
+      </div>
+      <div class="metric">
+        <div class="val">{{ summary.total_vms }}</div>
+        <div class="lbl">Total VCs</div>
+      </div>
+      <div class="metric">
+        <div class="val">{{ summary.covered_vms }}</div>
+        <div class="lbl">Covered</div>
+      </div>
+      <div class="metric m-pass">
+        <div class="val">{{ summary.passed }}</div>
+        <div class="lbl">Passed</div>
+      </div>
+      <div class="metric m-fail">
+        <div class="val">{{ summary.failed }}</div>
+        <div class="lbl">Failed</div>
+      </div>
+      <div class="metric m-uncov">
+        <div class="val">{{ summary.uncovered_vms }}</div>
+        <div class="lbl">Uncovered</div>
+      </div>
+      <div class="metric m-drift">
+        <div class="val">{{ summary.drifted_vms }}</div>
+        <div class="lbl">Drifted</div>
+      </div>
+      <div class="metric">
+        <div class="val">{{ summary.manual }}</div>
+        <div class="lbl">Manual</div>
       </div>
     </div>
-
-    <!-- Filters -->
-    <div class="filters">
-      <label for="filter-status">Status:</label>
-      <select id="filter-status" onchange="applyFilters()">
-        <option value="all">All</option>
-        <option value="pass">Passed</option>
-        <option value="fail">Failed</option>
-        <option value="uncovered">Uncovered</option>
-        <option value="drifted">Drifted</option>
-        <option value="manual">Manual</option>
-      </select>
-
-      <label for="filter-method">Verification Method:</label>
-      <select id="filter-method" onchange="applyFilters()">
-        <option value="all">All</option>
-        <option value="Test">Test</option>
-        <option value="Demonstration">Demonstration</option>
-        <option value="Analysis">Analysis</option>
-        <option value="Inspection">Inspection</option>
-      </select>
-
-      <label for="filter-search">Search:</label>
-      <input type="text" id="filter-search" placeholder="Filter by ID or title..." oninput="applyFilters()">
-    </div>
-
-    <!-- Requirements Table -->
-    <div class="table-wrapper">
-      <table id="traceability-table">
-        <thead>
-          <tr>
-            <th onclick="sortTable(0)">Requirement ID</th>
-            <th onclick="sortTable(1)">Title</th>
-            <th onclick="sortTable(2)">Verification Method</th>
-            <th onclick="sortTable(3)">Priority</th>
-            <th onclick="sortTable(4)">Status</th>
-            <th onclick="sortTable(5)">Test Result</th>
-            <th>Feature File</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in rows %}
-          <tr class="status-{{ row.status }}" data-status="{{ row.status }}" data-method="{{ row.verification_method }}">
-            <td>{{ row.requirement_id }}</td>
-            <td>{{ row.title }}</td>
-            <td>{{ row.verification_method }}</td>
-            <td>{{ row.priority | default("—") }}</td>
-            <td><span class="badge badge-{{ row.status }}">{{ row.status }}</span></td>
-            <td>{{ row.test_result | default("—") }}</td>
-            <td>{{ row.feature_file | default("—") }}</td>
-          </tr>
-          {% endfor %}
-
-          {% if orphaned_tests %}
-          {% for test in orphaned_tests %}
-          <tr class="status-orphaned" data-status="orphaned" data-method="">
-            <td>—</td>
-            <td>{{ test.name | default(test.feature_file) }}</td>
-            <td>—</td>
-            <td>—</td>
-            <td><span class="badge badge-orphaned">orphaned</span></td>
-            <td>{{ test.result | default("—") }}</td>
-            <td>{{ test.feature_file | default("—") }}</td>
-          </tr>
-          {% endfor %}
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="footer">
-      Traceability Matrix &mdash; Auto-generated by the product pipeline.
+    <div>
+      <div class="cov-label">
+        <span>Verification Criteria Coverage</span>
+        <span>{{ summary.covered_vms }} / {{ summary.total_vms }} VCs</span>
+      </div>
+      <div class="cov-bar">
+        <div class="cov-bar-inner" style="width: {{ summary.coverage_percent }}%; background: {% if summary.coverage_percent >= 80 %}var(--blue-ng){% elif summary.coverage_percent >= 50 %}var(--blue-5){% else %}var(--fail){% endif %};"></div>
+      </div>
     </div>
   </div>
 
-  <script>
-    function applyFilters() {
-      const status = document.getElementById('filter-status').value;
-      const method = document.getElementById('filter-method').value;
-      const search = document.getElementById('filter-search').value.toLowerCase();
-      const rows = document.querySelectorAll('#traceability-table tbody tr');
+  <!-- ======== TABS ======== -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="traceability">Traceability Matrix</button>
+    <button class="tab-btn" data-tab="security">Security</button>
+    <button class="tab-btn" data-tab="gates">Quality Gates</button>
+    <button class="tab-btn" data-tab="tests">Test Execution</button>
+    <button class="tab-btn" data-tab="export">Export &amp; Info</button>
+  </nav>
 
-      rows.forEach(row => {
-        const rowStatus = row.getAttribute('data-status');
-        const rowMethod = row.getAttribute('data-method');
-        const text = row.textContent.toLowerCase();
+  <!-- ======== TAB 1: TRACEABILITY ======== -->
+  <div id="panel-traceability" class="tab-panel active">
+    <div class="filter-row">
+      <label>Status:</label>
+      <select id="f-status"><option value="all">All</option><option value="pass">Passed</option><option value="fail">Failed</option><option value="uncovered">Uncovered</option><option value="drifted">Drifted</option><option value="manual">Manual</option></select>
+      <label>Criteria Type:</label>
+      <select id="f-method"><option value="all">All</option><option value="Test">Test</option><option value="Demonstration">Demonstration</option><option value="Analysis">Analysis</option><option value="Inspection">Inspection</option></select>
+      <label>Search:</label>
+      <input type="text" id="f-search" placeholder="Filter by ID, title, or criteria...">
+    </div>
+    <div class="accordion-header">
+      <span class="ah-expand"></span>
+      <span class="ah-id">Requirement ID</span>
+      <span class="ah-title">Title</span>
+      <span class="ah-bar">Coverage</span>
+      <span class="ah-summary">VCs</span>
+    </div>
+    <div id="trace-accordion"></div>
+  </div>
 
-        let visible = true;
-        if (status !== 'all' && rowStatus !== status) visible = false;
-        if (method !== 'all' && rowMethod !== method) visible = false;
-        if (search && !text.includes(search)) visible = false;
+  <!-- ======== TAB 2: SECURITY ======== -->
+  <div id="panel-security" class="tab-panel">
+    <div id="security-content"></div>
+  </div>
 
-        row.style.display = visible ? '' : 'none';
+  <!-- ======== TAB 3: QUALITY GATES ======== -->
+  <div id="panel-gates" class="tab-panel">
+    <div id="gates-content"></div>
+  </div>
+
+  <!-- ======== TAB 4: TEST EXECUTION ======== -->
+  <div id="panel-tests" class="tab-panel">
+    <div id="tests-content"></div>
+  </div>
+
+  <!-- ======== TAB 5: EXPORT & INFO ======== -->
+  <div id="panel-export" class="tab-panel">
+    <h2 class="section-title" style="margin-top:0">Actions</h2>
+    <div class="export-actions">
+      <button class="btn btn-primary" onclick="window.print()">Print Report</button>
+      <button class="btn btn-secondary" onclick="downloadJSON()">Download JSON</button>
+    </div>
+
+    <h2 class="section-title">Pipeline Metadata</h2>
+    <div class="info-grid" id="metadata-grid"></div>
+
+    <h2 class="section-title">Report Legend</h2>
+    <div class="legend-grid">
+      <div class="legend-item"><span class="legend-dot" style="background:var(--pass)"></span> Pass — VM covered, test passed</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--fail)"></span> Fail — VM covered, test failed</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--uncovered)"></span> Uncovered — No scenario for this VM</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--drifted)"></span> Drifted — Criteria changed since baseline</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--manual)"></span> Manual — Non-test verification method</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--orphaned)"></span> Orphaned — Test with no matching requirement</div>
+    </div>
+
+    <h2 class="section-title">Glossary</h2>
+    <div class="info-grid">
+      <div class="info-item"><div class="info-label">Verification Criteria (VC)</div><div class="info-value" style="font-weight:400;font-size:0.85rem">A specific technique for verifying a requirement: Test, Demonstration, Analysis, or Inspection (INCOSE ADIT).</div></div>
+      <div class="info-item"><div class="info-label">Gate A — Coverage</div><div class="info-value" style="font-weight:400;font-size:0.85rem">Checks every verification criteria has at least one Gherkin scenario. Generates stubs for uncovered VCs.</div></div>
+      <div class="info-item"><div class="info-label">Gate B — Drift Detection</div><div class="info-value" style="font-weight:400;font-size:0.85rem">Detects when verification criteria text changes between model versions. Flags affected scenarios for review.</div></div>
+      <div class="info-item"><div class="info-label">Gate C — Orphan Detection</div><div class="info-value" style="font-weight:400;font-size:0.85rem">Finds test scenarios that reference requirements or VCs that no longer exist in the model.</div></div>
+      <div class="info-item"><div class="info-label">Traceability Baseline</div><div class="info-value" style="font-weight:400;font-size:0.85rem">A snapshot of criteria hashes used by Gate B. Updated explicitly after review, creating an audit trail.</div></div>
+      <div class="info-item"><div class="info-label">SBOM</div><div class="info-value" style="font-weight:400;font-size:0.85rem">Software Bill of Materials — a complete inventory of all software components in the deployed artifact.</div></div>
+    </div>
+  </div>
+
+  <div class="footer">MBSE Traceability Dashboard &mdash; Auto-generated by the product pipeline</div>
+</div>
+
+<!-- ======== DATA INJECTION ======== -->
+<script>
+const REPORT = {{ report_json }};
+const REQUIREMENTS = {{ requirements_json }};
+const BEHAVE = {{ behave_json }};
+const TRACEABILITY = {{ traceability_json }};
+const SBOM = {{ sbom_json }};
+const GRYPE = {{ grype_json }};
+</script>
+
+<script>
+/* ================================================================
+   TAB NAVIGATION
+   ================================================================ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function badgeFor(status) { return '<span class="badge b-' + status + '">' + status + '</span>'; }
+function fmtDur(s) { return s != null ? (s < 1 ? (s*1000).toFixed(0) + 'ms' : s.toFixed(2) + 's') : ''; }
+
+/* Build a lookup: reqId -> full requirement object from REQUIREMENTS */
+const reqLookup = {};
+if (REQUIREMENTS && REQUIREMENTS.requirements) {
+  REQUIREMENTS.requirements.forEach(r => { reqLookup[r.requirementId] = r; });
+}
+
+/* Build behave lookup: feature name -> feature object with full steps */
+const behaveLookup = {};
+const behaveFeatures = Array.isArray(BEHAVE) ? BEHAVE : (BEHAVE && BEHAVE.features ? BEHAVE.features : []);
+behaveFeatures.forEach(f => {
+  const tags = (f.tags || []).map(t => typeof t === 'string' ? t : (t.name || ''));
+  /* Index by feature name and by REQ/VM tags */
+  behaveLookup[f.name] = f;
+  tags.forEach(tag => {
+    const clean = tag.replace(/^@/, '');
+    behaveLookup[clean] = f;
+  });
+});
+
+/* Find behave scenarios matching a given VM ID */
+function findScenariosForVM(vmId, reqId, reportRow) {
+  /* Don't look for scenarios if this VC is uncovered or drifted — there aren't real ones */
+  if (reportRow && (reportRow.status === 'uncovered' || reportRow.status === 'drifted')) {
+    return [];
+  }
+  const results = [];
+  behaveFeatures.forEach(feat => {
+    const fTags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, ''));
+    (feat.elements || []).forEach(el => {
+      if (el.keyword === 'Background') return;
+      const sTags = (el.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, ''));
+      const allTags = [...fTags, ...sTags];
+      const hasVM = allTags.some(t => t.replace(/^VM[:\-_]/i, '') === vmId);
+      const hasReq = allTags.some(t => t.replace(/^REQ[:\-_]/i, '') === reqId);
+      /* Match by: (1) explicit VM tag, or (2) scenario name from report */
+      if (hasVM) {
+        results.push({ scenario: el, featureName: feat.name, featureFile: feat.location || feat.filename || '' });
+      } else if (hasReq && reportRow && reportRow.scenario_name && el.name === reportRow.scenario_name) {
+        results.push({ scenario: el, featureName: feat.name, featureFile: feat.location || feat.filename || '' });
+      }
+    });
+  });
+  /* Last resort: req-level match when report confirms a test result exists */
+  if (results.length === 0 && reportRow && reportRow.status === 'pass') {
+    behaveFeatures.forEach(feat => {
+      const fTags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, ''));
+      const hasReq = fTags.some(t => t.replace(/^REQ[:\-_]/i, '') === reqId);
+      if (hasReq) {
+        (feat.elements || []).forEach(el => {
+          if (el.keyword === 'Background') return;
+          results.push({ scenario: el, featureName: feat.name, featureFile: feat.location || feat.filename || '' });
+        });
+      }
+    });
+  }
+  return results;
+}
+
+/* ================================================================
+   TAB 1: TRACEABILITY MATRIX
+   ================================================================ */
+function renderTraceability() {
+  const container = document.getElementById('trace-accordion');
+  /* Group report rows by requirement_id */
+  const grouped = {};
+  const reqOrder = [];
+  REPORT.requirements.forEach(row => {
+    if (!grouped[row.requirement_id]) { grouped[row.requirement_id] = []; reqOrder.push(row.requirement_id); }
+    grouped[row.requirement_id].push(row);
+  });
+
+  let html = '';
+  reqOrder.forEach(reqId => {
+    const rows = grouped[reqId];
+    const req = reqLookup[reqId] || {};
+    const title = rows[0].title || req.title || '';
+    const desc = req.description || '';
+    const satisfiedBy = (req.satisfiedBy || []).join(', ');
+    const tracesTo = (req.tracesTo || []).join(', ');
+
+    /* Mini bar */
+    const counts = { pass: 0, fail: 0, uncovered: 0, drifted: 0, manual: 0 };
+    rows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+    const total = rows.length;
+    let miniBar = '<div class="mini-bar">';
+    ['pass','fail','uncovered','drifted','manual'].forEach(s => {
+      if (counts[s]) miniBar += '<span style="width:' + (counts[s]/total*100) + '%;background:var(--' + s + ')"></span>';
+    });
+    miniBar += '</div>';
+
+    const vmSummary = rows.length + ' VC' + (rows.length > 1 ? 's' : '');
+
+    html += '<div class="req-card" data-req="' + reqId + '">';
+    html += '<div class="req-header" onclick="toggleReq(this)">';
+    html += '<span class="arrow">&#9654;</span>';
+    html += '<span class="req-id">' + esc(reqId) + '</span>';
+    html += '<span class="req-title">' + esc(title) + '</span>';
+    html += miniBar;
+    html += '<span class="vm-summary">' + vmSummary + '</span>';
+    html += '</div>';
+
+    html += '<div class="req-body">';
+    if (desc) html += '<div class="req-desc">' + esc(desc);
+    if (satisfiedBy) html += '<br><strong>Satisfied By:</strong> ' + esc(satisfiedBy);
+    if (tracesTo) html += '<br><strong>Traces To:</strong> ' + esc(tracesTo);
+    if (desc) html += '</div>';
+
+    rows.forEach(row => {
+      const vmId = row.vm_id || '';
+      const scenarios = findScenariosForVM(vmId, reqId, row);
+
+      html += '<div class="vm-row" data-status="' + row.status + '" data-method="' + esc(row.method) + '">';
+      html += '<div class="vm-header" onclick="toggleVM(this)">';
+      html += '<span class="arrow">&#9654;</span>';
+      html += '<span class="vm-id">' + esc(vmId || reqId) + '</span>';
+      html += '<span class="vm-method">' + esc(row.method) + '</span>';
+      html += badgeFor(row.status);
+      html += '<span class="vm-feature">' + esc(row.feature_file || '') + '</span>';
+      html += '</div>';
+
+      if (row.criteria) {
+        html += '<div class="vm-criteria">' + esc(row.criteria) + '</div>';
+      }
+
+      html += '<div class="scenario-list">';
+      if (scenarios.length === 0) {
+        html += '<div class="scenario-item" style="color:var(--text-muted);font-style:italic">No matching scenarios found</div>';
+      }
+      scenarios.forEach(s => {
+        html += '<div class="scenario-item">';
+        html += '<div class="scenario-name"><span>' + esc(s.scenario.name) + '</span><span>' + badgeFor(getScenarioStatus(s.scenario)) + '</span></div>';
+        (s.scenario.steps || []).forEach(step => {
+          const kw = (step.keyword || '').trim().toLowerCase().replace(/\*/, 'and');
+          const kwClass = ['given','when','then','and','but'].includes(kw) ? kw : 'and';
+          const stepStatus = (step.result && step.result.status) || '';
+          const dur = step.result ? step.result.duration : null;
+          html += '<div class="step">';
+          html += '<span class="step-status ' + stepStatus + '"></span>';
+          html += '<span class="step-kw ' + kwClass + '">' + esc(step.keyword) + '</span>';
+          html += '<span class="step-text">' + esc(step.name) + '</span>';
+          html += '<span class="step-dur">' + fmtDur(dur) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
       });
-    }
+      html += '</div>'; /* scenario-list */
+      html += '</div>'; /* vm-row */
+    });
 
-    let sortDirection = {};
-    function sortTable(colIndex) {
-      const table = document.getElementById('traceability-table');
-      const tbody = table.querySelector('tbody');
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      const dir = sortDirection[colIndex] === 'asc' ? 'desc' : 'asc';
-      sortDirection[colIndex] = dir;
+    html += '</div>'; /* req-body */
+    html += '</div>'; /* req-card */
+  });
 
-      rows.sort((a, b) => {
-        const aText = a.cells[colIndex]?.textContent.trim() || '';
-        const bText = b.cells[colIndex]?.textContent.trim() || '';
-        return dir === 'asc'
-          ? aText.localeCompare(bText)
-          : bText.localeCompare(aText);
+  /* Orphaned tests */
+  if (REPORT.orphaned_tests && REPORT.orphaned_tests.length) {
+    html += '<h3 style="margin:20px 0 8px;color:var(--orphaned)">Orphaned Tests</h3>';
+    REPORT.orphaned_tests.forEach(o => {
+      html += '<div class="req-card" style="border-color:var(--orphaned)">';
+      html += '<div class="req-header">';
+      html += '<span class="req-id" style="color:var(--orphaned)">ORPHAN</span>';
+      html += '<span class="req-title">' + esc(o.name || o.feature_file) + '</span>';
+      html += badgeFor('orphaned');
+      html += '</div></div>';
+    });
+  }
+
+  container.innerHTML = html;
+}
+
+function getScenarioStatus(scenario) {
+  const steps = scenario.steps || [];
+  for (let i = 0; i < steps.length; i++) {
+    const st = steps[i].result ? steps[i].result.status : '';
+    if (st === 'failed' || st === 'undefined') return 'fail';
+  }
+  return 'pass';
+}
+
+function toggleReq(el) {
+  const body = el.nextElementSibling;
+  const arrow = el.querySelector('.arrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function toggleVM(el) {
+  /* Toggle the scenario-list (skip criteria div if present) */
+  let sibling = el.nextElementSibling;
+  while (sibling && !sibling.classList.contains('scenario-list')) sibling = sibling.nextElementSibling;
+  if (sibling) {
+    sibling.classList.toggle('open');
+    el.querySelector('.arrow').classList.toggle('open');
+  }
+}
+
+/* Filters */
+['f-status','f-method','f-search'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', applyFilters);
+});
+
+function applyFilters() {
+  const status = document.getElementById('f-status').value;
+  const method = document.getElementById('f-method').value;
+  const search = document.getElementById('f-search').value.toLowerCase();
+
+  document.querySelectorAll('.req-card').forEach(card => {
+    /* Search only matches against req header (ID + title) and VM header (VM ID) */
+    const headerText = (card.querySelector('.req-header') || {}).textContent || '';
+    const cardMatchesSearch = !search || headerText.toLowerCase().includes(search);
+
+    const vmRows = card.querySelectorAll('.vm-row');
+    let anyVisible = false;
+    vmRows.forEach(vr => {
+      const s = vr.getAttribute('data-status');
+      const m = vr.getAttribute('data-method');
+      const vmHeaderText = (vr.querySelector('.vm-header') || {}).textContent || '';
+      const vmMatchesSearch = !search || vmHeaderText.toLowerCase().includes(search) || cardMatchesSearch;
+      let show = true;
+      if (status !== 'all' && s !== status) show = false;
+      if (method !== 'all' && m !== method) show = false;
+      if (!vmMatchesSearch) show = false;
+      vr.style.display = show ? '' : 'none';
+      if (show) anyVisible = true;
+    });
+    card.style.display = anyVisible ? '' : 'none';
+  });
+}
+
+/* ================================================================
+   TAB 2: SECURITY
+   ================================================================ */
+function renderSecurity() {
+  const container = document.getElementById('security-content');
+
+  if (!SBOM && !GRYPE) {
+    container.innerHTML = '<div class="empty-state">' +
+      '<div class="icon">&#128274;</div>' +
+      '<h3>Security Scan Data Unavailable</h3>' +
+      '<p>Syft/Grype scanning runs in the Jenkins pipeline.<br>No SBOM or vulnerability data was provided for this report.</p>' +
+      '<p style="margin-top:12px;font-size:0.85rem">To include security data, run the report generator with<br><code>--sbom-path</code> and <code>--grype-path</code> arguments.</p>' +
+      '</div>';
+    return;
+  }
+
+  let html = '';
+
+  /* Grype vulnerabilities */
+  if (GRYPE) {
+    const matches = GRYPE.matches || [];
+    const sevCounts = { Critical: 0, High: 0, Medium: 0, Low: 0, Negligible: 0 };
+    matches.forEach(m => {
+      const sev = (m.vulnerability && m.vulnerability.severity) || 'Unknown';
+      if (sevCounts[sev] !== undefined) sevCounts[sev]++;
+    });
+
+    html += '<h2 class="section-title" style="margin-top:0">Vulnerability Summary</h2>';
+    html += '<div class="sev-cards">';
+    ['Critical','High','Medium','Low','Negligible'].forEach(s => {
+      html += '<div class="sev-card sev-' + s.toLowerCase() + '"><div class="sev-val">' + sevCounts[s] + '</div><div class="sev-lbl">' + s + '</div></div>';
+    });
+    html += '</div>';
+
+    if (matches.length) {
+      html += '<div class="table-scroll"><table class="data-table"><thead><tr>';
+      html += '<th>CVE ID</th><th>Severity</th><th>Package</th><th>Version</th><th>Fixed In</th><th>Description</th>';
+      html += '</tr></thead><tbody>';
+      matches.forEach(m => {
+        const v = m.vulnerability || {};
+        const a = m.artifact || {};
+        html += '<tr>';
+        html += '<td>' + esc(v.id) + '</td>';
+        html += '<td><span class="badge" style="background:var(--sev-' + (v.severity||'negligible').toLowerCase() + ');color:#fff">' + esc(v.severity) + '</span></td>';
+        html += '<td>' + esc(a.name) + '</td>';
+        html += '<td>' + esc(a.version) + '</td>';
+        html += '<td>' + esc((v.fix && v.fix.versions ? v.fix.versions.join(', ') : v.fixedInVersion) || '—') + '</td>';
+        html += '<td style="max-width:300px;font-size:0.8rem">' + esc(v.description || '').substring(0, 200) + '</td>';
+        html += '</tr>';
       });
-
-      rows.forEach(row => tbody.appendChild(row));
+      html += '</tbody></table></div>';
+    } else {
+      html += '<p style="color:var(--pass);font-weight:600;margin:12px 0">No vulnerabilities found.</p>';
     }
-  </script>
+  }
+
+  /* SBOM components */
+  if (SBOM) {
+    const components = SBOM.components || [];
+    html += '<h2 class="section-title">SBOM Component Inventory (' + components.length + ' components)</h2>';
+    if (components.length) {
+      html += '<div class="filter-row"><label>Search:</label><input type="text" id="sbom-search" placeholder="Filter components..." oninput="filterSBOM()"></div>';
+      html += '<div class="table-scroll"><table class="data-table" id="sbom-table"><thead><tr>';
+      html += '<th>Name</th><th>Version</th><th>Type</th><th>PURL</th>';
+      html += '</tr></thead><tbody>';
+      components.forEach(c => {
+        html += '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.version) + '</td><td>' + esc(c.type) + '</td><td style="font-size:0.75rem;word-break:break-all">' + esc(c.purl || '') + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+  }
+
+  container.innerHTML = html;
+}
+
+function filterSBOM() {
+  const q = (document.getElementById('sbom-search') || {}).value || '';
+  const rows = document.querySelectorAll('#sbom-table tbody tr');
+  const search = q.toLowerCase();
+  rows.forEach(r => { r.style.display = r.textContent.toLowerCase().includes(search) ? '' : 'none'; });
+}
+
+/* ================================================================
+   TAB 3: QUALITY GATES
+   ================================================================ */
+function renderGates() {
+  const container = document.getElementById('gates-content');
+  if (!TRACEABILITY) { container.innerHTML = '<div class="empty-state"><h3>No traceability data available</h3></div>'; return; }
+
+  const gates = [
+    { key: 'gate_a', name: 'Gate A — Coverage', desc: 'Ensures every verification criteria has at least one Gherkin scenario. Generates stubs for any gaps.' },
+    { key: 'gate_b', name: 'Gate B — Drift Detection', desc: 'Detects when requirement verification criteria change between model versions. Flags scenarios for review.' },
+    { key: 'gate_c', name: 'Gate C — Orphan Detection', desc: 'Finds test scenarios referencing requirements or VCs that no longer exist in the model.' },
+  ];
+
+  let html = '<div class="gate-cards">';
+  gates.forEach(g => {
+    const data = TRACEABILITY[g.key] || {};
+    const passed = data.passed !== false;
+    const items = data.items || [];
+    const gateLabel = g.key === 'gate_a' ? 'A' : g.key === 'gate_b' ? 'B' : 'C';
+    html += '<div class="gate-card ' + (passed ? 'gate-pass' : 'gate-fail') + '" data-gate="' + gateLabel + '">';
+    html += '<div class="gate-title"><span class="gate-name">' + g.name + '</span>' + badgeFor(passed ? 'pass' : 'fail') + '</div>';
+    html += '<div class="gate-desc">' + g.desc + '</div>';
+    if (data.message) html += '<p style="font-size:0.85rem;margin-bottom:8px">' + esc(data.message) + '</p>';
+    if (items.length === 0) {
+      html += '<p style="color:var(--pass);font-size:0.85rem">No issues detected.</p>';
+    }
+    items.forEach(item => {
+      html += '<div class="gate-item">';
+      const id = item.verificationMethodId || item.vm_id || item.requirementId || '';
+      html += '<span class="gi-id">' + esc(id) + '</span>';
+      if (item.method) html += ' <span style="font-size:0.8rem;color:var(--text-muted)">(' + esc(item.method) + ')</span>';
+      if (item.title) html += '<div class="gi-detail">' + esc(item.title) + '</div>';
+      if (item.stubGenerated) html += '<div class="gi-detail">Stub: ' + esc(item.stubGenerated) + '</div>';
+      if (item.oldHash && item.newHash) html += '<div class="gi-detail">Hash changed: ' + esc(item.oldHash.substring(0,12)) + '... &rarr; ' + esc(item.newHash.substring(0,12)) + '...</div>';
+      if (item.orphanedReqIds && item.orphanedReqIds.length) html += '<div class="gi-detail">Orphaned IDs: ' + item.orphanedReqIds.map(esc).join(', ') + '</div>';
+      if (item.orphanedVmIds && item.orphanedVmIds.length) html += '<div class="gi-detail">Orphaned VC IDs: ' + item.orphanedVmIds.map(esc).join(', ') + '</div>';
+      if (item.featureFile) html += '<div class="gi-detail">Feature: ' + esc(item.featureFile) + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  /* Overall */
+  html += '<div style="margin-top:20px;text-align:center">';
+  html += '<strong>Overall Pipeline: </strong>' + badgeFor(TRACEABILITY.overall_pass ? 'pass' : 'fail');
+  html += '<span style="margin-left:8px;font-size:0.85rem;color:var(--text-muted)">';
+  html += TRACEABILITY.requirements_total + ' requirements, ' + TRACEABILITY.vms_total + ' VCs, ' + TRACEABILITY.features_scanned + ' features scanned';
+  html += '</span></div>';
+
+  container.innerHTML = html;
+}
+
+/* ================================================================
+   TAB 4: TEST EXECUTION
+   ================================================================ */
+function renderTests() {
+  const container = document.getElementById('tests-content');
+
+  if (!behaveFeatures.length) {
+    container.innerHTML = '<div class="empty-state"><h3>No Behave test results available</h3></div>';
+    return;
+  }
+
+  let totalScenarios = 0, totalSteps = 0, totalDur = 0, scenarioPassed = 0;
+  behaveFeatures.forEach(f => {
+    (f.elements || []).forEach(el => {
+      if (el.keyword === 'Background') return;
+      totalScenarios++;
+      let passed = true;
+      (el.steps || []).forEach(s => {
+        totalSteps++;
+        if (s.result) totalDur += (s.result.duration || 0);
+        if (s.result && (s.result.status === 'failed' || s.result.status === 'undefined')) passed = false;
+      });
+      if (passed) scenarioPassed++;
+    });
+  });
+
+  let html = '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px">';
+  html += '<div class="info-item"><div class="info-label">Features</div><div class="info-value">' + behaveFeatures.length + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Scenarios</div><div class="info-value">' + totalScenarios + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Steps</div><div class="info-value">' + totalSteps + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Total Duration</div><div class="info-value">' + fmtDur(totalDur) + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Pass Rate</div><div class="info-value" style="color:' + (scenarioPassed === totalScenarios ? 'var(--pass)' : 'var(--fail)') + '">' + (totalScenarios ? Math.round(scenarioPassed/totalScenarios*100) : 0) + '%</div></div>';
+  html += '</div>';
+
+  behaveFeatures.forEach((feat, fi) => {
+    const featureStatus = feat.status || 'passed';
+    const scenarios = (feat.elements || []).filter(e => e.keyword !== 'Background');
+    let featDur = 0;
+    scenarios.forEach(sc => (sc.steps || []).forEach(s => { if (s.result) featDur += (s.result.duration || 0); }));
+
+    html += '<div class="test-feature">';
+    html += '<div class="test-feature-header" onclick="toggleTestFeature(this)">';
+    html += '<span class="arrow">&#9654;</span>';
+    html += '<span>' + esc(feat.name) + '</span>';
+    html += '<span class="feat-dur">' + fmtDur(featDur) + '</span>';
+    html += '<span class="feat-status">' + badgeFor(featureStatus === 'passed' ? 'pass' : 'fail') + '</span>';
+    html += '</div>';
+    html += '<div class="test-feature-body">';
+
+    scenarios.forEach(sc => {
+      const scStatus = getScenarioStatus(sc);
+      let scDur = 0;
+      (sc.steps || []).forEach(s => { if (s.result) scDur += (s.result.duration || 0); });
+
+      html += '<div class="test-scenario">';
+      html += '<div class="test-scenario-name"><span>' + esc(sc.name) + '</span><span>' + fmtDur(scDur) + ' ' + badgeFor(scStatus) + '</span></div>';
+      (sc.steps || []).forEach(step => {
+        const kw = (step.keyword || '').trim().toLowerCase().replace(/\*/, 'and');
+        const kwClass = ['given','when','then','and','but'].includes(kw) ? kw : 'and';
+        const stepStatus = (step.result && step.result.status) || '';
+        const dur = step.result ? step.result.duration : null;
+        html += '<div class="step">';
+        html += '<span class="step-status ' + stepStatus + '"></span>';
+        html += '<span class="step-kw ' + kwClass + '">' + esc(step.keyword) + '</span>';
+        html += '<span class="step-text">' + esc(step.name) + '</span>';
+        html += '<span class="step-dur">' + fmtDur(dur) + '</span>';
+        html += '</div>';
+        if (stepStatus === 'failed' && step.result.error_message) {
+          html += '<div style="padding:4px 0 4px 80px;color:var(--fail);font-size:0.8rem;font-family:monospace;white-space:pre-wrap">' + esc(step.result.error_message) + '</div>';
+        }
+      });
+      html += '</div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function toggleTestFeature(el) {
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+  el.querySelector('.arrow').classList.toggle('open');
+}
+
+/* ================================================================
+   TAB 5: EXPORT & METADATA
+   ================================================================ */
+function renderMetadata() {
+  const grid = document.getElementById('metadata-grid');
+  const meta = (REQUIREMENTS && REQUIREMENTS.exportMetadata) || {};
+  const items = [
+    ['Model Version', meta.modelVersion || '—'],
+    ['Cameo Version', meta.cameoVersion || '—'],
+    ['Project Name', meta.projectName || '—'],
+    ['Export Timestamp', meta.exportTimestamp || '—'],
+    ['Total Requirements', (REPORT.summary && REPORT.summary.total_requirements) || '—'],
+    ['Total VCs', (REPORT.summary && REPORT.summary.total_vms) || '—'],
+    ['Report Generated', REPORT.generated_at || '—'],
+    ['Features Scanned', (TRACEABILITY && TRACEABILITY.features_scanned) || '—'],
+  ];
+  grid.innerHTML = items.map(([l,v]) => '<div class="info-item"><div class="info-label">' + l + '</div><div class="info-value">' + esc(String(v)) + '</div></div>').join('');
+}
+
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(REPORT, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'traceability_report.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+renderTraceability();
+renderSecurity();
+renderGates();
+renderTests();
+renderMetadata();
+</script>
 </body>
 </html>
