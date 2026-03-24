@@ -397,26 +397,29 @@ def generate_stubs(
 # ---------------------------------------------------------------------------
 # Baseline management (Gate B helper)
 # ---------------------------------------------------------------------------
-def load_baseline(path: Path) -> dict[str, str]:
-    """Load .traceability-baseline.json -> {vm_id: sha256_hex}."""
+def load_baseline(path: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """Load .traceability-baseline.json -> (hashes, criteria) dicts keyed by vm_id."""
     if not path.exists():
-        return {}
+        return {}, {}
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
-    return data.get("hashes", {})
+    return data.get("hashes", {}), data.get("criteria", {})
 
 
 def save_baseline(
     path: Path, requirements: dict[str, Requirement]
 ) -> None:
-    """Persist current VM criteria hashes to baseline."""
+    """Persist current VM criteria hashes and text to baseline."""
     hashes: dict[str, str] = {}
+    criteria: dict[str, str] = {}
     for req in requirements.values():
         for vm in req.verification_methods:
             hashes[vm.vm_id] = vm.criteria_hash
+            criteria[vm.vm_id] = vm.criteria
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "hashes": hashes,
+        "criteria": criteria,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as fh:
@@ -425,15 +428,19 @@ def save_baseline(
 
 
 def detect_drift(
-    requirements: dict[str, Requirement], baseline: dict[str, str]
-) -> list[tuple[Requirement, VerificationMethod]]:
-    """Return (requirement, vm) pairs whose criteria hash differs from baseline."""
-    drifted: list[tuple[Requirement, VerificationMethod]] = []
+    requirements: dict[str, Requirement],
+    baseline: dict[str, str],
+    baseline_criteria: dict[str, str] | None = None,
+) -> list[tuple[Requirement, VerificationMethod, str | None]]:
+    """Return (requirement, vm, old_criteria) tuples whose criteria hash differs from baseline."""
+    baseline_criteria = baseline_criteria or {}
+    drifted: list[tuple[Requirement, VerificationMethod, str | None]] = []
     for req in requirements.values():
         for vm in req.verification_methods:
             old_hash = baseline.get(vm.vm_id)
             if old_hash is not None and old_hash != vm.criteria_hash:
-                drifted.append((req, vm))
+                old_text = baseline_criteria.get(vm.vm_id)
+                drifted.append((req, vm, old_text))
     return drifted
 
 
@@ -537,6 +544,7 @@ def run_gate_b(
     requirements: dict[str, Requirement],
     scenario_refs: list[ScenarioRef],
     baseline: dict[str, str],
+    baseline_criteria: dict[str, str] | None = None,
 ) -> GateResult:
     """Gate B — Verification Criteria Drift."""
     if not baseline:
@@ -546,7 +554,8 @@ def run_gate_b(
             message="No baseline found; skipping drift detection. Run with --update-baseline to create one.",
         )
 
-    drifted = detect_drift(requirements, baseline)
+    baseline_criteria = baseline_criteria or {}
+    drifted = detect_drift(requirements, baseline, baseline_criteria)
 
     if not drifted:
         return GateResult(
@@ -563,7 +572,7 @@ def run_gate_b(
 
     items: list[dict[str, Any]] = []
     files_modified: set[Path] = set()
-    for req, vm in drifted:
+    for req, vm, old_criteria_text in drifted:
         affected_files = vm_to_files.get(vm.vm_id, set())
         for ff in affected_files:
             if inject_review_tag(ff, vm.vm_id):
@@ -576,6 +585,8 @@ def run_gate_b(
                 "title": req.title,
                 "oldHash": baseline.get(vm.vm_id, ""),
                 "newHash": vm.criteria_hash,
+                "oldCriteria": old_criteria_text,
+                "newCriteria": vm.criteria,
                 "affectedFeatureFiles": [str(f) for f in sorted(affected_files)],
             }
         )
@@ -859,7 +870,7 @@ def main(argv: list[str] | None = None) -> int:
         all_valid_vm_ids.update(req.all_vm_ids)
 
     # --- Load baseline --------------------------------------------------------
-    baseline = load_baseline(args.baseline_path)
+    baseline, baseline_criteria = load_baseline(args.baseline_path)
 
     # --- Resolve Jinja2 template path -----------------------------------------
     template_path = Path(__file__).resolve().parent / "templates" / "stub_scenario.feature.j2"
@@ -878,6 +889,7 @@ def main(argv: list[str] | None = None) -> int:
         requirements=requirements,
         scenario_refs=scenario_refs,
         baseline=baseline,
+        baseline_criteria=baseline_criteria,
     )
 
     gate_c = run_gate_c(

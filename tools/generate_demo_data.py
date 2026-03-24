@@ -350,6 +350,8 @@ def generate(output_dir: Path):
                     "title": "Error Handling",
                     "oldHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
                     "newHash": "f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1",
+                    "oldCriteria": "Verify that sending a malformed IcdRequest results in a WARN log and an IcdResponse with status INVALID_REQUEST.",
+                    "newCriteria": "Verify that malformed IcdRequest results in WARN log, IcdResponse with INVALID_REQUEST, and an incident ticket is auto-created.",
                     "affectedFeatureFiles": ["features/automated/sys_req_005_error_handling.feature"],
                 },
             ],

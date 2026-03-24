@@ -391,6 +391,51 @@ function badgeFor(status) {
   return '<span class="badge b-' + cls + '">' + icon + ' ' + esc(status) + '</span>';
 }
 function fmtDur(s) { return s != null ? (s < 1 ? (s*1000).toFixed(0) + 'ms' : s.toFixed(2) + 's') : ''; }
+/* Word-level diff for drifted criteria */
+function wordDiff(oldText, newText) {
+  if (!oldText || !newText) return null;
+  const oldWords = oldText.split(/(\s+)/);
+  const newWords = newText.split(/(\s+)/);
+  /* Simple LCS-based word diff */
+  const m = oldWords.length, n = newWords.length;
+  const dp = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = oldWords[i-1] === newWords[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+  /* Backtrack to build diff */
+  const result = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldWords[i-1] === newWords[j-1]) {
+      result.unshift({type:'same', text:oldWords[i-1]});
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+      result.unshift({type:'add', text:newWords[j-1]});
+      j--;
+    } else {
+      result.unshift({type:'del', text:oldWords[i-1]});
+      i--;
+    }
+  }
+  return result;
+}
+function renderDiff(diffTokens) {
+  return diffTokens.map(t => {
+    if (t.type === 'add') return '<span style="background:#d4edda;color:#155724;padding:1px 2px;border-radius:2px;text-decoration:none">' + esc(t.text) + '</span>';
+    if (t.type === 'del') return '<span style="background:#f8d7da;color:#721c24;padding:1px 2px;border-radius:2px;text-decoration:line-through">' + esc(t.text) + '</span>';
+    return esc(t.text);
+  }).join('');
+}
+
+/* Build lookup: vmId -> gate B item for drift data */
+const driftLookup = {};
+if (TRACEABILITY && TRACEABILITY.gate_b && TRACEABILITY.gate_b.items) {
+  TRACEABILITY.gate_b.items.forEach(item => {
+    const id = item.verificationMethodId || item.vm_id || '';
+    if (id) driftLookup[id] = item;
+  });
+}
+
 function fmtDate(iso) {
   if (!iso) return '\u2014';
   try {
@@ -541,14 +586,26 @@ function renderTraceability() {
       html += '<span class="vm-feature">' + esc(row.feature_file || '') + '</span>';
       html += '</div>';
 
-      if (row.criteria) {
+      /* Criteria display — show diff for drifted VCs */
+      if (row.status === 'drifted' && driftLookup[vmId]) {
+        const drift = driftLookup[vmId];
+        if (drift.oldCriteria && drift.newCriteria) {
+          const diff = wordDiff(drift.oldCriteria, drift.newCriteria);
+          html += '<div class="vm-criteria" style="font-style:normal">';
+          html += '<div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Criteria Changed</div>';
+          html += '<div style="font-size:0.85rem;line-height:1.6">' + renderDiff(diff) + '</div>';
+          html += '</div>';
+        } else {
+          if (row.criteria) html += '<div class="vm-criteria">' + esc(row.criteria) + '</div>';
+        }
+      } else if (row.criteria) {
         html += '<div class="vm-criteria">' + esc(row.criteria) + '</div>';
       }
 
       /* Action hint for non-pass statuses */
       const ACTION_HINTS = {
         uncovered: 'Action: Write a Gherkin scenario for this verification criteria, then re-run the pipeline.',
-        drifted: 'Action: Review the updated criteria text, update the scenario if needed, remove @REVIEW_REQUIRED, and run --update-baseline.',
+        drifted: 'Action: Review the changes above, update the scenario if needed, remove @REVIEW_REQUIRED, and run --update-baseline.',
         fail: 'Action: Investigate the test failure below. Fix the product code or update the scenario.',
       };
       if (ACTION_HINTS[row.status]) {
