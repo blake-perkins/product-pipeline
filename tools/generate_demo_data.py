@@ -374,6 +374,100 @@ def generate(output_dir: Path):
     }
 
     # ------------------------------------------------------------------
+    # 4. SBOM (CycloneDX from Syft)
+    # ------------------------------------------------------------------
+    sbom = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.4",
+        "version": 1,
+        "components": [
+            {"name": "glibc", "version": "2.35-0ubuntu3.6", "type": "library", "purl": "pkg:deb/ubuntu/glibc@2.35-0ubuntu3.6"},
+            {"name": "openssl", "version": "3.0.13", "type": "library", "purl": "pkg:deb/ubuntu/openssl@3.0.13"},
+            {"name": "libcurl", "version": "7.88.1", "type": "library", "purl": "pkg:deb/debian/libcurl@7.88.1"},
+            {"name": "zlib", "version": "1.2.13", "type": "library", "purl": "pkg:deb/debian/zlib@1.2.13"},
+            {"name": "protobuf", "version": "3.21.12", "type": "library", "purl": "pkg:pypi/protobuf@3.21.12"},
+            {"name": "grpcio", "version": "1.60.0", "type": "library", "purl": "pkg:pypi/grpcio@1.60.0"},
+            {"name": "boost", "version": "1.83.0", "type": "library", "purl": "pkg:conan/boost@1.83.0"},
+            {"name": "spdlog", "version": "1.12.0", "type": "library", "purl": "pkg:conan/spdlog@1.12.0"},
+            {"name": "nlohmann-json", "version": "3.11.3", "type": "library", "purl": "pkg:conan/nlohmann_json@3.11.3"},
+            {"name": "fmt", "version": "10.2.1", "type": "library", "purl": "pkg:conan/fmt@10.2.1"},
+            {"name": "yaml-cpp", "version": "0.8.0", "type": "library", "purl": "pkg:conan/yaml-cpp@0.8.0"},
+            {"name": "catch2", "version": "3.5.2", "type": "library", "purl": "pkg:conan/catch2@3.5.2"},
+        ],
+    }
+
+    # ------------------------------------------------------------------
+    # 5. Grype vulnerability scan results
+    # ------------------------------------------------------------------
+    grype = {
+        "matches": [
+            {
+                "vulnerability": {
+                    "id": "CVE-2024-5535",
+                    "severity": "Critical",
+                    "description": "OpenSSL SSL_select_next_proto buffer overread allows remote attackers to cause denial of service via crafted ALPN protocol list.",
+                    "fix": {"versions": ["3.0.15"]},
+                },
+                "artifact": {"name": "openssl", "version": "3.0.13"},
+            },
+            {
+                "vulnerability": {
+                    "id": "CVE-2024-2236",
+                    "severity": "High",
+                    "description": "libcurl SOCKS5 heap buffer overflow when hostname exceeds 255 bytes in non-blocking mode.",
+                    "fix": {"versions": ["7.88.2"]},
+                },
+                "artifact": {"name": "libcurl", "version": "7.88.1"},
+            },
+            {
+                "vulnerability": {
+                    "id": "CVE-2023-45853",
+                    "severity": "Medium",
+                    "description": "MiniZip in zlib through 1.3 has an integer overflow and resultant heap-based buffer overflow in zipOpenNewFileInZip4_64.",
+                    "fix": {"versions": ["1.3.1"]},
+                },
+                "artifact": {"name": "zlib", "version": "1.2.13"},
+            },
+            {
+                "vulnerability": {
+                    "id": "CVE-2024-34156",
+                    "severity": "Medium",
+                    "description": "Stack exhaustion in encoding/gob Decoder.Decode allows a malicious message to crash the server.",
+                    "fix": {"versions": []},
+                },
+                "artifact": {"name": "grpcio", "version": "1.60.0"},
+            },
+            {
+                "vulnerability": {
+                    "id": "CVE-2023-50782",
+                    "severity": "Low",
+                    "description": "Bleichenbacher-style side channel in glibc RSA PKCS#1 v1.5 decryption allows plaintext recovery under specific conditions.",
+                    "fix": {"versions": ["2.35-0ubuntu3.8"]},
+                },
+                "artifact": {"name": "glibc", "version": "2.35-0ubuntu3.6"},
+            },
+            {
+                "vulnerability": {
+                    "id": "CVE-2024-0727",
+                    "severity": "Low",
+                    "description": "Processing maliciously crafted PKCS12 files may cause OpenSSL to crash leading to denial of service.",
+                    "fix": {"versions": ["3.0.14"]},
+                },
+                "artifact": {"name": "openssl", "version": "3.0.13"},
+            },
+            {
+                "vulnerability": {
+                    "id": "CVE-2023-52425",
+                    "severity": "Negligible",
+                    "description": "libexpat through 2.5.0 allows XML Entity Expansion in specific multi-threading configurations.",
+                    "fix": {"versions": []},
+                },
+                "artifact": {"name": "glibc", "version": "2.35-0ubuntu3.6"},
+            },
+        ],
+    }
+
+    # ------------------------------------------------------------------
     # Write files
     # ------------------------------------------------------------------
     def write(name, data):
@@ -384,6 +478,8 @@ def generate(output_dir: Path):
     write("requirements.json", requirements)
     write("behave-results.json", behave_results)
     write("traceability_report.json", traceability_report)
+    write("sbom.json", sbom)
+    write("grype-results.json", grype)
 
     print()
     print("Demo data states:")
@@ -401,6 +497,8 @@ def generate(output_dir: Path):
     print(f"    --requirements {output_dir}/requirements.json \\")
     print(f"    --behave-results {output_dir}/behave-results.json \\")
     print(f"    --traceability-input {output_dir}/traceability_report.json \\")
+    print(f"    --sbom-path {output_dir}/sbom.json \\")
+    print(f"    --grype-path {output_dir}/grype-results.json \\")
     print(f"    --output-json {output_dir}/final_report.json \\")
     print(f"    --output-html {output_dir}/dashboard.html")
 
