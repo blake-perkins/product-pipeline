@@ -764,13 +764,20 @@ function renderGates() {
 function renderTests() {
   const container = document.getElementById('tests-content');
 
-  if (!behaveFeatures.length) {
+  /* Filter out @manual / @STUB features — they aren't automated tests */
+  function isManualFeature(feat) {
+    const tags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase());
+    return tags.includes('manual') || tags.includes('stub') || tags.includes('auto_generated');
+  }
+  const automatedFeatures = behaveFeatures.filter(f => !isManualFeature(f));
+
+  if (!automatedFeatures.length) {
     container.innerHTML = '<div class="empty-state"><h3>No Behave test results available</h3></div>';
     return;
   }
 
   let totalScenarios = 0, totalSteps = 0, totalDur = 0, scenarioPassed = 0;
-  behaveFeatures.forEach(f => {
+  automatedFeatures.forEach(f => {
     (f.elements || []).forEach(el => {
       if (el.keyword === 'Background') return;
       totalScenarios++;
@@ -785,14 +792,14 @@ function renderTests() {
   });
 
   let html = '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px">';
-  html += '<div class="info-item"><div class="info-label">Features</div><div class="info-value">' + behaveFeatures.length + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Features</div><div class="info-value">' + automatedFeatures.length + '</div></div>';
   html += '<div class="info-item"><div class="info-label">Scenarios</div><div class="info-value">' + totalScenarios + '</div></div>';
   html += '<div class="info-item"><div class="info-label">Steps</div><div class="info-value">' + totalSteps + '</div></div>';
   html += '<div class="info-item"><div class="info-label">Total Duration</div><div class="info-value">' + fmtDur(totalDur) + '</div></div>';
   html += '<div class="info-item"><div class="info-label">Pass Rate</div><div class="info-value" style="color:' + (scenarioPassed === totalScenarios ? 'var(--pass)' : 'var(--fail)') + '">' + (totalScenarios ? Math.round(scenarioPassed/totalScenarios*100) : 0) + '%</div></div>';
   html += '</div>';
 
-  behaveFeatures.forEach((feat, fi) => {
+  automatedFeatures.forEach((feat, fi) => {
     const featureStatus = feat.status || 'passed';
     const scenarios = (feat.elements || []).filter(e => e.keyword !== 'Background');
     let featDur = 0;
