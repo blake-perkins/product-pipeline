@@ -862,7 +862,7 @@ function applyFilters() {
 }
 
 /* ================================================================
-   TAB 2: SECURITY
+   TAB: CYBER
    ================================================================ */
 function renderSecurity() {
   const container = document.getElementById('security-content');
@@ -870,22 +870,50 @@ function renderSecurity() {
   if (!SBOM && !GRYPE) {
     container.innerHTML = '<div class="empty-state">' +
       '<div class="icon">&#128274;</div>' +
-      '<h3>Security Scan Data Not Included</h3>' +
+      '<h3>Cyber Scan Data Not Included</h3>' +
       '<p>Software Bill of Materials (SBOM) and vulnerability scan results are generated<br>by the production Jenkins pipeline using Syft and Grype.</p>' +
-      '<p style="margin-top:8px;font-size:0.85rem;color:var(--text-muted)">This report was generated without security scan data. When available,<br>this tab will show a full component inventory and vulnerability analysis.</p>' +
+      '<p style="margin-top:8px;font-size:0.85rem;color:var(--text-muted)">This report was generated without cyber scan data. When available,<br>this tab will show a full component inventory and vulnerability analysis.</p>' +
       '</div>';
     return;
   }
 
   let html = '';
+  const matches = (GRYPE && GRYPE.matches) || [];
+  const components = (SBOM && SBOM.components) || [];
 
-  /* Grype vulnerabilities */
+  /* ---- #3 Policy compliance banner ---- */
   if (GRYPE) {
-    const matches = GRYPE.matches || [];
+    const hasCritical = matches.some(m => (m.vulnerability || {}).severity === 'Critical');
+    const hasHigh = matches.some(m => (m.vulnerability || {}).severity === 'High');
+    if (hasCritical) {
+      html += '<div style="padding:14px 20px;border-radius:8px;background:var(--fail);color:#fff;font-weight:700;font-size:1rem;margin-bottom:20px;display:flex;align-items:center;gap:12px">';
+      html += '<span style="font-size:1.4rem">\u2717</span> POLICY: FAIL \u2014 Critical vulnerabilities detected. Deployment blocked per security policy.';
+      html += '</div>';
+    } else if (hasHigh) {
+      html += '<div style="padding:14px 20px;border-radius:8px;background:var(--drifted);color:#333;font-weight:700;font-size:1rem;margin-bottom:20px;display:flex;align-items:center;gap:12px">';
+      html += '<span style="font-size:1.4rem">\u26A0</span> POLICY: WARNING \u2014 High severity vulnerabilities found. Review required before deployment.';
+      html += '</div>';
+    } else if (matches.length === 0) {
+      html += '<div style="padding:14px 20px;border-radius:8px;background:var(--pass);color:#fff;font-weight:700;font-size:1rem;margin-bottom:20px;display:flex;align-items:center;gap:12px">';
+      html += '<span style="font-size:1.4rem">\u2713</span> POLICY: PASS \u2014 No vulnerabilities detected.';
+      html += '</div>';
+    } else {
+      html += '<div style="padding:14px 20px;border-radius:8px;background:var(--pass);color:#fff;font-weight:700;font-size:1rem;margin-bottom:20px;display:flex;align-items:center;gap:12px">';
+      html += '<span style="font-size:1.4rem">\u2713</span> POLICY: PASS \u2014 ' + matches.length + ' vulnerability(s) found, none above threshold.';
+      html += '</div>';
+    }
+  }
+
+  /* ---- Severity breakdown cards ---- */
+  if (GRYPE) {
     const sevCounts = { Critical: 0, High: 0, Medium: 0, Low: 0, Negligible: 0 };
+    let withFix = 0, noFix = 0;
     matches.forEach(m => {
       const sev = (m.vulnerability && m.vulnerability.severity) || 'Unknown';
       if (sevCounts[sev] !== undefined) sevCounts[sev]++;
+      const fix = m.vulnerability && m.vulnerability.fix;
+      const fixVersions = fix && fix.versions ? fix.versions : [];
+      if (fixVersions.length > 0) withFix++; else noFix++;
     });
 
     html += '<h2 class="section-title" style="margin-top:0">Vulnerability Summary</h2>';
@@ -895,45 +923,174 @@ function renderSecurity() {
     });
     html += '</div>';
 
+    /* ---- #2 Fix availability summary ---- */
+    html += '<div style="display:flex;gap:16px;margin:12px 0 20px;font-size:0.9rem">';
+    html += '<span style="color:var(--pass);font-weight:600">\u2713 ' + withFix + ' with fix available</span>';
+    html += '<span style="color:var(--fail);font-weight:600">\u2717 ' + noFix + ' no fix available</span>';
+    html += '<span style="color:var(--text-muted)">' + matches.length + ' total</span>';
+    html += '</div>';
+
+    /* ---- #1 Affected components tied to architecture ---- */
+    if (REQUIREMENTS && REQUIREMENTS.requirements) {
+      const affectedPkgs = new Set(matches.map(m => (m.artifact || {}).name));
+      const compToReqs = {};
+      REQUIREMENTS.requirements.forEach(req => {
+        (req.satisfiedBy || []).forEach(comp => {
+          if (!compToReqs[comp]) compToReqs[comp] = [];
+          compToReqs[comp].push(req.requirementId);
+        });
+      });
+      /* Check if any satisfiedBy components share names with vulnerable packages */
+      const archComponents = Object.keys(compToReqs);
+      if (archComponents.length > 0) {
+        html += '<div style="background:#f9fafb;border:1px solid #e9ecef;border-radius:8px;padding:14px 18px;margin-bottom:20px">';
+        html += '<div style="font-weight:700;font-size:0.85rem;margin-bottom:8px">Architecture Impact</div>';
+        html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px">Mapping vulnerable packages to system components from the Cameo model.</div>';
+        html += '<table class="data-table" style="font-size:0.85rem"><thead><tr><th>Package</th><th>Severity</th><th>CVE</th><th style="min-width:120px">Fix</th></tr></thead><tbody>';
+        matches.forEach(m => {
+          const v = m.vulnerability || {};
+          const a = m.artifact || {};
+          const fixVersions = v.fix && v.fix.versions ? v.fix.versions : [];
+          const fixStr = fixVersions.length > 0
+            ? '<span style="color:var(--pass);font-weight:600">' + esc(fixVersions.join(', ')) + '</span>'
+            : '<span style="color:var(--fail);font-weight:600">No fix</span>';
+          html += '<tr>';
+          html += '<td><strong>' + esc(a.name) + '</strong> ' + esc(a.version) + '</td>';
+          html += '<td><span class="badge" style="background:var(--sev-' + (v.severity||'negligible').toLowerCase() + ');color:#fff">' + esc(v.severity) + '</span></td>';
+          html += '<td style="font-family:monospace;font-size:0.8rem">' + esc(v.id) + '</td>';
+          html += '<td>' + fixStr + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '</div>';
+      }
+    }
+
+    /* ---- #7 Severity filter + #8 CVE links + #4 CVE year + #6 CSV export ---- */
     if (matches.length) {
-      html += '<div class="table-scroll"><table class="data-table"><thead><tr>';
-      html += '<th>CVE ID</th><th>Severity</th><th>Package</th><th>Version</th><th>Fixed In</th><th>Description</th>';
+      html += '<h2 class="section-title">Vulnerability Details</h2>';
+      html += '<div class="filter-row">';
+      html += '<label>Severity:</label>';
+      html += '<select id="vuln-sev-filter" onchange="filterVulns()">';
+      html += '<option value="all">All</option>';
+      ['Critical','High','Medium','Low','Negligible'].forEach(s => {
+        html += '<option value="' + s + '">' + s + '</option>';
+      });
+      html += '</select>';
+      html += '<label style="margin-left:8px">Search:</label>';
+      html += '<input type="text" id="vuln-search" placeholder="Filter by CVE, package..." oninput="filterVulns()">';
+      html += '<button class="btn btn-secondary" style="padding:4px 14px;font-size:0.8rem;margin-left:auto" onclick="exportVulnCSV()">Download CSV</button>';
+      html += '</div>';
+      html += '<div class="table-scroll"><table class="data-table" id="vuln-table"><thead><tr>';
+      html += '<th>CVE ID</th><th>Year</th><th>Severity</th><th>Package</th><th>Version</th><th>Fix Available</th><th>Description</th>';
       html += '</tr></thead><tbody>';
       matches.forEach(m => {
         const v = m.vulnerability || {};
         const a = m.artifact || {};
-        html += '<tr>';
-        html += '<td>' + esc(v.id) + '</td>';
+        const fixVersions = v.fix && v.fix.versions ? v.fix.versions : [];
+        const fixCell = fixVersions.length > 0
+          ? '<span style="color:var(--pass);font-weight:600">\u2713 ' + esc(fixVersions.join(', ')) + '</span>'
+          : '<span style="color:var(--fail);font-weight:600">\u2717 No fix</span>';
+        /* #4 Extract year from CVE ID */
+        const cveYear = (v.id || '').match(/CVE-(\d{4})/);
+        const yearStr = cveYear ? cveYear[1] : '\u2014';
+        /* #8 CVE link */
+        const cveLink = '<span style="font-family:monospace" title="' + esc(v.description || '') + '">' + esc(v.id) + '</span>';
+        html += '<tr data-severity="' + esc(v.severity || '') + '">';
+        html += '<td>' + cveLink + '</td>';
+        html += '<td style="text-align:center">' + yearStr + '</td>';
         html += '<td><span class="badge" style="background:var(--sev-' + (v.severity||'negligible').toLowerCase() + ');color:#fff">' + esc(v.severity) + '</span></td>';
         html += '<td>' + esc(a.name) + '</td>';
         html += '<td>' + esc(a.version) + '</td>';
-        html += '<td>' + esc((v.fix && v.fix.versions ? v.fix.versions.join(', ') : v.fixedInVersion) || '—') + '</td>';
+        html += '<td>' + fixCell + '</td>';
         html += '<td style="max-width:300px;font-size:0.8rem">' + esc(v.description || '').substring(0, 200) + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table></div>';
     } else {
-      html += '<p style="color:var(--pass);font-weight:600;margin:12px 0">No vulnerabilities found.</p>';
+      html += '<p style="color:var(--pass);font-weight:600;margin:12px 0">\u2713 No vulnerabilities found.</p>';
     }
   }
 
-  /* SBOM components */
+  /* ---- #5 SBOM with dependency type + component count ---- */
   if (SBOM) {
-    const components = SBOM.components || [];
     html += '<h2 class="section-title">SBOM Component Inventory (' + components.length + ' components)</h2>';
+
+    /* Group by type */
+    const byType = {};
+    components.forEach(c => {
+      const t = c.type || 'unknown';
+      byType[t] = (byType[t] || 0) + 1;
+    });
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">';
+    Object.entries(byType).forEach(([t, count]) => {
+      html += '<span style="font-size:0.82rem;padding:4px 10px;background:#f9fafb;border:1px solid #e9ecef;border-radius:12px">' + esc(t) + ': <strong>' + count + '</strong></span>';
+    });
+    html += '</div>';
+
     if (components.length) {
+      /* Mark which components have vulnerabilities */
+      const vulnPkgs = {};
+      matches.forEach(m => {
+        const a = m.artifact || {};
+        const v = m.vulnerability || {};
+        const key = a.name + '@' + a.version;
+        if (!vulnPkgs[key]) vulnPkgs[key] = [];
+        vulnPkgs[key].push(v.severity || 'Unknown');
+      });
+
       html += '<div class="filter-row"><label>Search:</label><input type="text" id="sbom-search" placeholder="Filter components..." oninput="filterSBOM()"></div>';
       html += '<div class="table-scroll"><table class="data-table" id="sbom-table"><thead><tr>';
-      html += '<th>Name</th><th>Version</th><th>Type</th><th>PURL</th>';
+      html += '<th>Name</th><th>Version</th><th>Type</th><th>Vulnerabilities</th><th>PURL</th>';
       html += '</tr></thead><tbody>';
       components.forEach(c => {
-        html += '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.version) + '</td><td>' + esc(c.type) + '</td><td style="font-size:0.75rem;word-break:break-all">' + esc(c.purl || '') + '</td></tr>';
+        const key = c.name + '@' + c.version;
+        const vulns = vulnPkgs[key] || [];
+        let vulnCell = '<span style="color:var(--pass)">\u2713 None</span>';
+        if (vulns.length > 0) {
+          const worst = ['Critical','High','Medium','Low','Negligible'].find(s => vulns.includes(s)) || 'Unknown';
+          vulnCell = '<span class="badge" style="background:var(--sev-' + worst.toLowerCase() + ');color:#fff">' + vulns.length + ' (' + worst + ')</span>';
+        }
+        html += '<tr><td><strong>' + esc(c.name) + '</strong></td><td>' + esc(c.version) + '</td><td>' + esc(c.type) + '</td><td>' + vulnCell + '</td><td style="font-size:0.75rem;word-break:break-all;color:var(--text-muted)">' + esc(c.purl || '') + '</td></tr>';
       });
       html += '</tbody></table></div>';
     }
   }
 
   container.innerHTML = html;
+}
+
+/* #7 Vulnerability filter */
+function filterVulns() {
+  const sev = (document.getElementById('vuln-sev-filter') || {}).value || 'all';
+  const search = ((document.getElementById('vuln-search') || {}).value || '').toLowerCase();
+  document.querySelectorAll('#vuln-table tbody tr').forEach(r => {
+    const rowSev = r.getAttribute('data-severity') || '';
+    const text = r.textContent.toLowerCase();
+    let show = true;
+    if (sev !== 'all' && rowSev !== sev) show = false;
+    if (search && !text.includes(search)) show = false;
+    r.style.display = show ? '' : 'none';
+  });
+}
+
+/* #6 CSV export */
+function exportVulnCSV() {
+  if (!GRYPE || !GRYPE.matches) return;
+  const rows = [['CVE ID','Severity','Package','Version','Fix Versions','Description']];
+  GRYPE.matches.forEach(m => {
+    const v = m.vulnerability || {};
+    const a = m.artifact || {};
+    const fix = v.fix && v.fix.versions ? v.fix.versions.join('; ') : '';
+    rows.push([v.id || '', v.severity || '', a.name || '', a.version || '', fix, (v.description || '').replace(/"/g, '""')]);
+  });
+  const csv = rows.map(r => r.map(c => '"' + c + '"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vulnerabilities.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function filterSBOM() {

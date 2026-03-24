@@ -198,7 +198,7 @@ class TestDemoDashboard:
         assert self.js_grype is None
 
     def test_security_empty_state_in_html(self):
-        assert "Security Scan Data Not Included" in self.html
+        assert "Cyber Scan Data Not Included" in self.html
 
     # ---- TAB 3: QUALITY GATES ----
 
