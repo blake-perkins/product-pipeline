@@ -213,22 +213,25 @@ def _parse_traceability_data(
             return vm_id
         return item.get("requirementId", item.get("requirement_id", ""))
 
+    def _as_dict(val: Any) -> Dict[str, Any]:
+        return val if isinstance(val, dict) else {}
+
     uncovered_ids_gate: set[str] = set()
-    gate_a = trace_data.get("gate_a", {})
+    gate_a = _as_dict(trace_data.get("gate_a"))
     for item in gate_a.get("items", []):
         extracted = _extract_id(item)
         if extracted:
             uncovered_ids_gate.add(extracted)
 
     drifted_ids_gate: set[str] = set()
-    gate_b = trace_data.get("gate_b", {})
+    gate_b = _as_dict(trace_data.get("gate_b"))
     for item in gate_b.get("items", []):
         extracted = _extract_id(item)
         if extracted:
             drifted_ids_gate.add(extracted)
 
     orphaned_tests_gate: List[Dict[str, Any]] = []
-    gate_c = trace_data.get("gate_c", {})
+    gate_c = _as_dict(trace_data.get("gate_c"))
     for item in gate_c.get("items", []):
         orphaned_tests_gate.append({
             "feature_file": item.get("featureFile", item.get("feature_file", "")),
@@ -482,7 +485,10 @@ def _try_load_jinja2_template(template_dir: Optional[Path] = None):
 
 def _load_optional_json(path: Optional[Path]) -> Optional[Dict[str, Any]]:
     """Load a JSON file if the path is provided and exists; return *None* otherwise."""
-    if path is None or not path.is_file():
+    if path is None:
+        return None
+    if not path.is_file():
+        logger.warning("Optional file not found (skipping): %s", path)
         return None
     try:
         with open(path, encoding="utf-8") as fh:
@@ -527,18 +533,32 @@ def write_html_report(
     jinja_template = _try_load_jinja2_template(template_dir)
 
     if jinja_template is not None:
-        html = jinja_template.render(
-            generated_at=report["generated_at"],
-            summary=report["summary"],
-            rows=report["requirements"],
-            orphaned_tests=report.get("orphaned_tests", []),
-            report_json=json.dumps(report),
-            requirements_json=json.dumps(requirements_raw),
-            behave_json=json.dumps(behave_raw),
-            traceability_json=json.dumps(traceability_raw),
-            sbom_json=json.dumps(sbom_data),
-            grype_json=json.dumps(grype_data),
-        )
+        # Escape </script> sequences in JSON to prevent XSS when
+        # injecting data into <script> tags.  The standard trick is
+        # to replace "</" with "<\\/" which is valid JSON/JS but
+        # won't close an HTML script block.
+        def _safe_json(obj: Any) -> str:
+            return json.dumps(obj, ensure_ascii=False).replace("</", r"<\/")
+
+        try:
+            html = jinja_template.render(
+                generated_at=report["generated_at"],
+                summary=report["summary"],
+                rows=report["requirements"],
+                orphaned_tests=report.get("orphaned_tests", []),
+                report_json=_safe_json(report),
+                requirements_json=_safe_json(requirements_raw),
+                behave_json=_safe_json(behave_raw),
+                traceability_json=_safe_json(traceability_raw),
+                sbom_json=_safe_json(sbom_data),
+                grype_json=_safe_json(grype_data),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Jinja2 template rendering failed (%s); falling back to inline template.",
+                exc,
+            )
+            html = _render_inline_html(report)
     else:
         html = _render_inline_html(report)
 

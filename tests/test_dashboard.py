@@ -603,6 +603,144 @@ class TestTraceabilityParsing:
 
 
 # ---------------------------------------------------------------------------
+# Tests: edge cases from audit
+# ---------------------------------------------------------------------------
+
+
+class TestEdgeCases:
+    """Tests for edge cases discovered during the deep audit."""
+
+    def _build(self, tmpdir, behave_data, trace_data, req_data=None):
+        req_path = _write_json(tmpdir, "req.json", req_data or REQUIREMENTS_DATA)
+        behave_path = _write_json(tmpdir, "behave.json", behave_data)
+        trace_path = _write_json(tmpdir, "trace.json", trace_data)
+        return report_generator.build_report(req_path, behave_path, trace_path)
+
+    def test_xss_script_tag_escaped(self, tmp_path):
+        """JSON injection must escape </script> to prevent XSS."""
+        # Create requirements with a </script> in the title
+        req_data = {
+            "exportMetadata": REQUIREMENTS_DATA["exportMetadata"],
+            "requirements": [{
+                "requirementId": "SYS-REQ-XSS",
+                "title": "Test </script><script>alert('XSS')</script> attack",
+                "description": "Malicious description",
+                "priority": "High",
+                "status": "Approved",
+                "parentRequirementId": None,
+                "verificationMethods": [{
+                    "verificationMethodId": "SYS-REQ-XSS-VM-01",
+                    "method": "Test",
+                    "criteria": "criteria",
+                }],
+                "satisfiedBy": [],
+                "tracesTo": [],
+            }],
+        }
+        req_path = _write_json(tmp_path, "req.json", req_data)
+        behave_path = _write_json(tmp_path, "behave.json", [])
+        trace_path = _write_json(tmp_path, "trace.json", _traceability_all_pass())
+
+        report = report_generator.build_report(req_path, behave_path, trace_path)
+        out_html = Path(tmp_path) / "report.html"
+        report_generator.write_html_report(
+            report, out_html,
+            requirements_raw=req_data,
+            behave_raw=[],
+            traceability_raw=_traceability_all_pass(),
+        )
+        html = out_html.read_text(encoding="utf-8")
+        # The raw </script> should NOT appear in the HTML
+        assert "</script><script>" not in html
+        # The escaped version should be present
+        assert r"<\/script>" in html or "\\u003c/script>" in html.lower()
+
+    def test_empty_behave_results(self, tmp_path):
+        """Report should handle empty Behave results gracefully."""
+        report = self._build(tmp_path, [], _traceability_all_pass())
+        # All VMs should still exist, just without test results
+        assert report["summary"]["total_vms"] == 4
+        assert report["summary"]["passed"] >= 0  # No crash
+
+    def test_null_gate_values(self, tmp_path):
+        """Null gate values in traceability should not crash."""
+        trace = {
+            "gate_a": None,
+            "gate_b": None,
+            "gate_c": None,
+        }
+        report = self._build(tmp_path, _behave_all_covered(), trace)
+        # Should produce a valid report (all VMs covered since no gates report issues)
+        assert report["summary"]["total_vms"] == 4
+
+    def test_missing_gate_keys(self, tmp_path):
+        """Traceability report with no gate keys should not crash."""
+        trace = {"timestamp": "2026-01-01"}
+        report = self._build(tmp_path, _behave_all_covered(), trace)
+        assert report["summary"]["total_vms"] == 4
+
+    def test_empty_verification_methods_array(self, tmp_path):
+        """A requirement with empty verificationMethods [] should get a fallback row."""
+        req_data = {
+            "exportMetadata": REQUIREMENTS_DATA["exportMetadata"],
+            "requirements": [{
+                "requirementId": "SYS-REQ-EMPTY",
+                "title": "Empty VMs",
+                "description": "",
+                "priority": "Low",
+                "status": "Draft",
+                "parentRequirementId": None,
+                "verificationMethods": [],
+                "satisfiedBy": [],
+                "tracesTo": [],
+            }],
+        }
+        report = self._build(tmp_path, [], {"covered": [], "uncovered": [], "drifted": [], "orphaned": []}, req_data)
+        assert report["summary"]["total_vms"] == 1  # Fallback row created
+
+    def test_optional_file_not_found(self, tmp_path):
+        """_load_optional_json should return None for non-existent file."""
+        result = report_generator._load_optional_json(Path(tmp_path) / "nonexistent.json")
+        assert result is None
+
+    def test_optional_file_none_path(self):
+        """_load_optional_json should return None for None path."""
+        result = report_generator._load_optional_json(None)
+        assert result is None
+
+    def test_optional_file_valid(self, tmp_path):
+        """_load_optional_json should load valid JSON."""
+        path = _write_json(tmp_path, "test.json", {"key": "value"})
+        result = report_generator._load_optional_json(path)
+        assert result == {"key": "value"}
+
+    def test_optional_file_invalid_json(self, tmp_path):
+        """_load_optional_json should return None for malformed JSON."""
+        path = Path(tmp_path) / "bad.json"
+        path.write_text("not json{{{", encoding="utf-8")
+        result = report_generator._load_optional_json(path)
+        assert result is None
+
+    def test_html_dashboard_with_empty_behave(self, tmp_path):
+        """Dashboard should render without crash when Behave data is empty."""
+        req_path = _write_json(tmp_path, "req.json", REQUIREMENTS_DATA)
+        behave_path = _write_json(tmp_path, "behave.json", [])
+        trace_path = _write_json(tmp_path, "trace.json", _traceability_all_pass())
+
+        report = report_generator.build_report(req_path, behave_path, trace_path)
+        out_html = Path(tmp_path) / "report.html"
+        report_generator.write_html_report(
+            report, out_html,
+            requirements_raw=REQUIREMENTS_DATA,
+            behave_raw=[],
+            traceability_raw=_traceability_all_pass(),
+        )
+        html = out_html.read_text(encoding="utf-8")
+        assert "const BEHAVE = []" in html
+        assert "No Behave test results available" in html
+
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 

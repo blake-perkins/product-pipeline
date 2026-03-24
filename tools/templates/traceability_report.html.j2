@@ -195,6 +195,7 @@
       .metric { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .filter-row { display: none; }
       .req-body, .scenario-list, .test-feature-body { display: block !important; }
+      .req-card, .gate-card, .test-feature { page-break-inside: avoid; }
       .btn { display: none; }
     }
 
@@ -367,7 +368,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
    HELPERS
    ================================================================ */
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-function badgeFor(status) { return '<span class="badge b-' + status + '">' + status + '</span>'; }
+const VALID_STATUSES = ['pass','fail','uncovered','drifted','manual','orphaned','stub'];
+function badgeFor(status) {
+  const cls = VALID_STATUSES.includes(status) ? status : 'manual';
+  return '<span class="badge b-' + cls + '">' + esc(status) + '</span>';
+}
 function fmtDur(s) { return s != null ? (s < 1 ? (s*1000).toFixed(0) + 'ms' : s.toFixed(2) + 's') : ''; }
 
 /* Build a lookup: reqId -> full requirement object from REQUIREMENTS */
@@ -433,6 +438,10 @@ function findScenariosForVM(vmId, reqId, reportRow) {
    ================================================================ */
 function renderTraceability() {
   const container = document.getElementById('trace-accordion');
+  if (!REPORT || !REPORT.requirements || !REPORT.requirements.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><h3>No Requirements Data</h3><p>No traceability data is available for this report.</p></div>';
+    return;
+  }
   /* Group report rows by requirement_id */
   const grouped = {};
   const reqOrder = [];
@@ -597,6 +606,21 @@ function applyFilters() {
     });
     card.style.display = anyVisible ? '' : 'none';
   });
+  /* Show empty state if all cards are hidden */
+  let noResults = document.getElementById('filter-empty-state');
+  const anyCards = document.querySelector('.req-card[style=""],.req-card:not([style])');
+  if (!anyCards && (status !== 'all' || method !== 'all' || search)) {
+    if (!noResults) {
+      noResults = document.createElement('div');
+      noResults.id = 'filter-empty-state';
+      noResults.className = 'empty-state';
+      noResults.innerHTML = '<h3>No matching results</h3><p>Try adjusting your filters or search term.</p>';
+      document.getElementById('trace-accordion').appendChild(noResults);
+    }
+    noResults.style.display = '';
+  } else if (noResults) {
+    noResults.style.display = 'none';
+  }
 }
 
 /* ================================================================
