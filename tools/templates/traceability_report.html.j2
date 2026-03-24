@@ -725,6 +725,13 @@ function applyFilters() {
     const cardMatchesSearch = !search || headerText.toLowerCase().includes(search);
 
     const vmRows = card.querySelectorAll('.vm-row');
+
+    /* Orphaned cards have no VM rows — only filter by search */
+    if (vmRows.length === 0) {
+      card.style.display = cardMatchesSearch ? '' : 'none';
+      return;
+    }
+
     let anyVisible = false;
     vmRows.forEach(vr => {
       const s = vr.getAttribute('data-status');
