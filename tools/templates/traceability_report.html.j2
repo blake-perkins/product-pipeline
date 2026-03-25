@@ -1707,11 +1707,13 @@ function renderReleases() {
     /* VC list */
     html += '<div style="padding:0 20px 12px">';
     vcDetails.forEach(vc => {
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:0.85rem;border-bottom:1px solid #f4f7fa">';
-      html += '<span style="font-family:monospace;font-weight:600;min-width:180px">' + esc(vc.vcId) + '</span>';
+      var reqId = vc.vcId.replace(/-VC-\d+$/, '');
+      html += '<div onclick="navigateToVC(\'' + esc(reqId) + '\',\'' + esc(vc.vcId) + '\')" style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:0.85rem;border-bottom:1px solid #f4f7fa;cursor:pointer;border-radius:4px;padding:4px 6px" onmouseover="this.style.background=\'#f0f4f8\'" onmouseout="this.style.background=\'none\'">';
+      html += '<span style="font-family:monospace;font-weight:600;min-width:180px;color:var(--ng-blue)">' + esc(vc.vcId) + '</span>';
       html += '<span style="min-width:100px;color:var(--text-muted)">' + esc(vc.method) + '</span>';
       html += badgeFor(vc.status);
       html += '<span style="flex:1;color:var(--text-muted);font-size:0.8rem">' + esc(vc.title) + '</span>';
+      html += '<span style="color:var(--text-muted);font-size:0.75rem">→</span>';
       html += '</div>';
     });
     html += '</div>';
