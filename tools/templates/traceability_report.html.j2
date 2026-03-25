@@ -790,7 +790,7 @@ function renderHero() {
   /* Show release-specific VC count (not cumulative) when a release is selected */
   var directVCs = SNAP.directVCScope;
   var heroVCCount = directVCs ? directVCs.size : (s.in_scope_vcs || s.total_vcs);
-  var heroTotalLabel = directVCs ? heroVCCount + ' VCs in this release' : (s.in_scope_vcs || s.total_vcs) + ' of ' + s.total_vcs + ' VCs in scope';
+  var heroTotalLabel = directVCs ? 'VCs in this release' : 'of ' + s.total_vcs + ' VCs in scope';
   html += '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">';
   html += '<span style="font-size:1.8rem;font-weight:700;color:var(--navy-1)">' + heroVCCount + '</span>';
   html += '<span style="font-size:0.85rem;color:var(--text-muted)">' + heroTotalLabel + '</span>';
