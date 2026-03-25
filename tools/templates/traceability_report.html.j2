@@ -96,6 +96,7 @@
     .req-card.rc-drifted { border-left-color: var(--drifted); }
     .req-card.rc-manual { border-left-color: var(--manual); }
     .req-card.rc-deferred { border-left-color: var(--deferred); }
+    .req-card.flash-highlight, .req-card.flash-highlight .req-header, .req-card.flash-highlight .req-body { background: #FFF3CD !important; transition: background 0.3s; }
     .req-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.15s; background: #fff; }
     .req-header:hover { background: #f7f8fa; }
     .req-header .arrow { transition: transform 0.2s; font-size: 0.9rem; color: var(--text-muted); }
@@ -805,14 +806,15 @@ function navigateToVC(reqId, vcId, isOrphan, orphanKey) {
   /* Collapse all previously open cards so only the target is expanded */
   document.querySelectorAll('.req-body.open').forEach(b => b.classList.remove('open'));
   document.querySelectorAll('.req-header .arrow.open').forEach(a => a.classList.remove('open'));
-  /* Also clear any previous highlights */
-  document.querySelectorAll('.req-card, .vc-row').forEach(el => { el.style.background = ''; });
+  /* Clear any previous highlights */
+  document.querySelectorAll('.flash-highlight').forEach(el => el.classList.remove('flash-highlight'));
 
   function flashHighlight(el) {
+    /* Walk up to the .req-card if we're on a child element */
+    let card = el.closest ? el.closest('.req-card') : el;
+    if (card) card.classList.add('flash-highlight');
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.style.transition = 'background 0.3s';
-    el.style.background = '#FFF3CD';
-    setTimeout(() => { el.style.background = ''; }, 2500);
+    setTimeout(() => { if (card) card.classList.remove('flash-highlight'); }, 2500);
   }
 
   /* For orphaned items, find the orphaned card directly */
