@@ -40,7 +40,7 @@ def generate(output_dir: Path):
         },
         "requirements": [
             {
-                # REQ-001: 2 VCs — VC-01 passes, VC-02 FAILS
+                # REQ-001: 2 VCs — both pass (shipped in 1.0.0)
                 "requirementId": "SYS-REQ-001",
                 "title": "Basic ICD Communications",
                 "description": "The system shall exchange messages with external systems per the ICD.",
@@ -55,8 +55,8 @@ def generate(output_dir: Path):
                     },
                     {
                         "verificationCriteriaId": "SYS-REQ-001-VC-02",
-                        "method": "Test",
-                        "criteria": "Verify that the system handles 100 concurrent ICD requests without dropping any.",
+                        "method": "Demonstration",
+                        "criteria": "Demonstrate correct round-trip ICD message exchange with the simulator.",
                     },
                 ],
                 "satisfiedBy": ["ComponentA", "ComponentB"],
@@ -81,7 +81,7 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-003: 2 VCs — VC-01 passes, VC-02 is UNCOVERED
+                # REQ-003: 2 VCs — VC-01 DRIFTED (criteria changed in 1.1.0), VC-02 passes
                 "requirementId": "SYS-REQ-003",
                 "title": "Graceful Degradation",
                 "description": "The system shall continue operating in degraded mode when a non-critical subsystem fails.",
@@ -92,7 +92,8 @@ def generate(output_dir: Path):
                     {
                         "verificationCriteriaId": "SYS-REQ-003-VC-01",
                         "method": "Demonstration",
-                        "criteria": "Demonstrate continued operation when logging subsystem is unavailable.",
+                        # Criteria CHANGED in 1.1.0 — now requires failover to backup logging
+                        "criteria": "Demonstrate continued operation when logging subsystem is unavailable, including automatic failover to backup logging.",
                     },
                     {
                         "verificationCriteriaId": "SYS-REQ-003-VC-02",
@@ -122,7 +123,7 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-005: 1 VC — DRIFTED (criteria changed)
+                # REQ-005: 1 VC — passes (shipped in 1.0.0)
                 "requirementId": "SYS-REQ-005",
                 "title": "Error Handling",
                 "description": "The system shall reject malformed ICD messages without crashing.",
@@ -133,8 +134,7 @@ def generate(output_dir: Path):
                     {
                         "verificationCriteriaId": "SYS-REQ-005-VC-01",
                         "method": "Test",
-                        # This criteria was CHANGED from baseline — triggers drift
-                        "criteria": "Verify that malformed IcdRequest results in WARN log, IcdResponse with INVALID_REQUEST, and an incident ticket is auto-created.",
+                        "criteria": "Verify that sending a malformed IcdRequest results in a WARN log and an IcdResponse with status INVALID_REQUEST.",
                     },
                 ],
                 "satisfiedBy": ["ComponentA"],
@@ -159,7 +159,7 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-007: 2 VCs (Test) — both pass, scoped to 1.1.0
+                # REQ-007: 2 VCs (Test) — VC-01 FAILS, VC-02 passes, scoped to 1.1.0
                 "requirementId": "SYS-REQ-007",
                 "title": "Configuration Management",
                 "description": "The system shall support runtime configuration updates without restart.",
@@ -257,13 +257,13 @@ def generate(output_dir: Path):
         return s
 
     behave_results = [
-        # Feature 1: Basic ICD — 2 scenarios for VC-01 (pass), 1 for VC-02 (FAIL)
+        # Feature 1: Basic ICD — all pass (shipped in 1.0.0)
         {
             "keyword": "Feature",
             "name": "Basic ICD Communications",
             "tags": ["REQ:SYS-REQ-001"],
             "location": "features/automated/sys_req_001_basic_comms.feature:2",
-            "status": "failed",
+            "status": "passed",
             "elements": [
                 {
                     "keyword": "Scenario",
@@ -280,29 +280,14 @@ def generate(output_dir: Path):
                 },
                 {
                     "keyword": "Scenario",
-                    "name": "All ICD responses are within latency threshold",
-                    "tags": ["VC:SYS-REQ-001-VC-01", "VER:Test"],
+                    "name": "Demonstrate successful ICD round-trip with simulator",
+                    "tags": ["VC:SYS-REQ-001-VC-02", "VER:Demonstration"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
                         step("Given ", "the simulation logs are loaded"),
-                        step("Then ", "every IcdResponse should occur within 500ms of its IcdRequest", duration=0.003),
-                        step("And ", "the average response time should be less than 200ms"),
-                    ],
-                },
-                {
-                    # VC-02: FAILS — load test scenario
-                    "keyword": "Scenario",
-                    "name": "System handles 100 concurrent ICD requests",
-                    "tags": ["VC:SYS-REQ-001-VC-02", "VER:Test"],
-                    "type": "scenario",
-                    "status": "failed",
-                    "steps": [
-                        step("Given ", "the simulation logs are loaded"),
-                        step("When ", "100 concurrent IcdRequests are sent"),
-                        step("Then ", "all 100 IcdResponses should be received", status="failed", duration=0.150,
-                             error="AssertionError: Expected 100 responses, got 87. 13 requests were dropped under load."),
-                        step("And ", "no IcdResponse should have status ERROR", status="skipped"),
+                        step("Then ", 'the product logs should contain "Received IcdRequest: test-001"'),
+                        step("And ", 'the product logs should contain "Sent IcdResponse: status=OK"'),
                     ],
                 },
             ],
@@ -375,25 +360,26 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 5: Configuration Management — both VCs pass
+        # Feature 5: Configuration Management — VC-01 FAILS, VC-02 passes
         {
             "keyword": "Feature",
             "name": "Configuration Management",
             "tags": ["REQ:SYS-REQ-007"],
             "location": "features/automated/sys_req_007_config_mgmt.feature:2",
-            "status": "passed",
+            "status": "failed",
             "elements": [
                 {
                     "keyword": "Scenario",
                     "name": "Configuration changes applied without restart",
                     "tags": ["VC:SYS-REQ-007-VC-01", "VER:Test"],
                     "type": "scenario",
-                    "status": "passed",
+                    "status": "failed",
                     "steps": [
                         step("Given ", "the system is running with default configuration"),
                         step("When ", "the configuration file is updated"),
-                        step("Then ", "the new configuration should be applied within 5 seconds", duration=0.003),
-                        step("And ", "no service interruption should occur"),
+                        step("Then ", "the new configuration should be applied within 5 seconds", status="failed", duration=0.008,
+                             error="AssertionError: Configuration update took 12.3 seconds, expected < 5 seconds. The hot-reload mechanism is not triggering on file change."),
+                        step("And ", "no service interruption should occur", status="skipped"),
                     ],
                 },
                 {
@@ -509,7 +495,7 @@ def generate(output_dir: Path):
         "requirements_total": 10,
         "features_scanned": 9,
         "vcs_total": 14,
-        "vcs_covered": 11,
+        "vcs_covered": 9,
         "gate_a": {
             "gate": "A",
             "passed": False,
@@ -529,15 +515,15 @@ def generate(output_dir: Path):
             "passed": False,
             "items": [
                 {
-                    "requirementId": "SYS-REQ-005",
-                    "verificationCriteriaId": "SYS-REQ-005-VC-01",
-                    "method": "Test",
-                    "title": "Error Handling",
+                    "requirementId": "SYS-REQ-003",
+                    "verificationCriteriaId": "SYS-REQ-003-VC-01",
+                    "method": "Demonstration",
+                    "title": "Graceful Degradation",
                     "oldHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
                     "newHash": "f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1",
-                    "oldCriteria": "Verify that sending a malformed IcdRequest results in a WARN log and an IcdResponse with status INVALID_REQUEST.",
-                    "newCriteria": "Verify that malformed IcdRequest results in WARN log, IcdResponse with INVALID_REQUEST, and an incident ticket is auto-created.",
-                    "affectedFeatureFiles": ["features/automated/sys_req_005_error_handling.feature"],
+                    "oldCriteria": "Demonstrate continued operation when logging subsystem is unavailable.",
+                    "newCriteria": "Demonstrate continued operation when logging subsystem is unavailable, including automatic failover to backup logging.",
+                    "affectedFeatureFiles": ["features/automated/sys_req_003_graceful_degradation.feature"],
                 },
             ],
             "message": "1 drifted verification criteria detected. Scenarios flagged for review.",
@@ -671,9 +657,8 @@ def generate(output_dir: Path):
             {
                 "version": "1.1.0",
                 "targetDate": "2026-09-01",
-                "description": "Degradation handling, configuration management, and ICD demonstration",
+                "description": "Degradation handling and configuration management",
                 "scope": [
-                    "SYS-REQ-001-VC-02",
                     "SYS-REQ-003",
                     "SYS-REQ-007",
                 ],
@@ -694,32 +679,16 @@ def generate(output_dir: Path):
     }
 
     # Update traceability to mark out-of-scope VCs as deferred
-    # Current release is 1.0.0. Out-of-scope VCs get deferred status.
-    # SYS-REQ-009-VC-02 (Demonstration) has no scenario even in its target release.
+    # Current release is 1.1.0. VCs in 2.0.0 are deferred.
+    # VCs in 1.0.0 and 1.1.0 are in-scope (cumulative).
     traceability_report["gate_a"]["items"] = [
         {
             "requirementId": "SYS-REQ-003",
             "verificationCriteriaId": "SYS-REQ-003-VC-02",
             "method": "Test",
             "title": "Graceful Degradation",
-            "deferred": True,
-            "targetRelease": "1.1.0",
-        },
-        {
-            "requirementId": "SYS-REQ-007",
-            "verificationCriteriaId": "SYS-REQ-007-VC-01",
-            "method": "Test",
-            "title": "Configuration Management",
-            "deferred": True,
-            "targetRelease": "1.1.0",
-        },
-        {
-            "requirementId": "SYS-REQ-007",
-            "verificationCriteriaId": "SYS-REQ-007-VC-02",
-            "method": "Test",
-            "title": "Configuration Management",
-            "deferred": True,
-            "targetRelease": "1.1.0",
+            "deferred": False,
+            "stubGenerated": "bdd/features/automated/sys_req_003_vc_02.feature",
         },
         {
             "requirementId": "SYS-REQ-008",
@@ -754,8 +723,8 @@ def generate(output_dir: Path):
             "targetRelease": "2.0.0",
         },
     ]
-    traceability_report["gate_a"]["passed"] = True
-    traceability_report["gate_a"]["message"] = "All in-scope verification criteria covered; 7 deferred to future releases."
+    traceability_report["gate_a"]["passed"] = False
+    traceability_report["gate_a"]["message"] = "1 uncovered in-scope VC (SYS-REQ-003-VC-02); 4 deferred to future releases."
 
     # ------------------------------------------------------------------
     # Write files

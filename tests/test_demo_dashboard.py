@@ -82,26 +82,26 @@ class TestDemoDashboard:
 
     def test_hero_coverage_percent(self):
         # Coverage is against in-scope VCs only (7 in-scope, all covered = 100%)
-        assert self.summary["coverage_percent"] == 100.0
+        assert self.summary["coverage_percent"] == 90.0
 
     def test_hero_total_vcs(self):
         assert self.summary["total_vcs"] == 14
 
     def test_hero_covered_vcs(self):
-        assert self.summary["covered_vcs"] == 7
+        assert self.summary["covered_vcs"] == 9
 
     def test_hero_passed(self):
-        assert self.summary["passed"] == 3
+        assert self.summary["passed"] == 5
 
     def test_hero_failed(self):
         assert self.summary["failed"] == 1
 
     def test_hero_uncovered(self):
         # SYS-REQ-003-VC-02 is now deferred, not uncovered
-        assert self.summary["uncovered_vcs"] == 0
+        assert self.summary["uncovered_vcs"] == 1
 
     def test_hero_deferred(self):
-        assert self.summary["deferred_vcs"] == 7
+        assert self.summary["deferred_vcs"] == 4
 
     def test_hero_drifted(self):
         assert self.summary["drifted_vcs"] == 1
@@ -130,28 +130,34 @@ class TestDemoDashboard:
         assert r["test_result"] == "passed"
         assert r["scenario_name"] is not None
 
-    def test_vc02_fail(self):
+    def test_vc02_pass(self):
+        """REQ-001-VC-02 shipped in 1.0.0 — now passes."""
         r = self.rows["SYS-REQ-001-VC-02"]
+        assert r["status"] == "pass"
+        assert r["test_result"] == "passed"
+
+    def test_req007_vc01_fail(self):
+        """REQ-007-VC-01 fails in 1.1.0 — config change test."""
+        r = self.rows["SYS-REQ-007-VC-01"]
         assert r["status"] == "fail"
         assert r["test_result"] == "failed"
-        assert r["scenario_name"] == "System handles 100 concurrent ICD requests"
 
     def test_req002_pass(self):
         r = self.rows["SYS-REQ-002-VC-01"]
         assert r["status"] == "pass"
         assert r["test_result"] == "passed"
 
-    def test_req003_vc01_pass(self):
+    def test_req003_vc01_drifted_in_release(self):
+        """REQ-003-VC-01 criteria changed in 1.1.0 model update."""
         r = self.rows["SYS-REQ-003-VC-01"]
-        assert r["status"] == "pass"
+        assert r["status"] == "drifted"
         assert r["method"] == "Demonstration"
 
-    def test_req003_vc02_deferred(self):
+    def test_req003_vc02_uncovered(self):
+        """SYS-REQ-003-VC-02 is in 1.1.0 scope but has no scenario."""
         r = self.rows["SYS-REQ-003-VC-02"]
-        assert r["status"] == "deferred"
+        assert r["status"] == "uncovered"
         assert r["test_result"] is None
-        assert r["scenario_name"] is None
-        assert r["target_release"] == "1.1.0"
 
     def test_req004_manual_analysis(self):
         r = self.rows["SYS-REQ-004-VC-01"]
@@ -160,11 +166,11 @@ class TestDemoDashboard:
         assert r["test_result"] is None
         assert r["scenario_name"] is None
 
-    def test_req005_drifted(self):
+    def test_req005_passes(self):
+        """REQ-005 shipped in 1.0.0 — passes."""
         r = self.rows["SYS-REQ-005-VC-01"]
-        assert r["status"] == "drifted"
-        assert r["test_result"] is None
-        assert r["scenario_name"] is None
+        assert r["status"] == "pass"
+
 
     def test_req006_manual_inspection(self):
         r = self.rows["SYS-REQ-006-VC-01"]
@@ -186,17 +192,15 @@ class TestDemoDashboard:
         assert vm02["scenario_name"] is None
 
     def test_drifted_vc_not_inheriting_results(self):
-        """REQ-005's VC is drifted. It must NOT show a test result."""
-        vc = self.rows["SYS-REQ-005-VC-01"]
+        """REQ-003-VC-01 is drifted. It must NOT show a test result."""
+        vc = self.rows["SYS-REQ-003-VC-01"]
         assert vc["test_result"] is None
 
     def test_fail_vc_gets_correct_scenario_not_sibling(self):
-        """REQ-001 VC-02 (fail) must get the load test scenario, not VC-01's scenario."""
-        vm02 = self.rows["SYS-REQ-001-VC-02"]
-        assert vm02["scenario_name"] == "System handles 100 concurrent ICD requests"
-        # Must NOT be any of VC-01's scenarios
-        assert vm02["scenario_name"] != "Valid ICD request produces correct response"
-        assert vm02["scenario_name"] != "All ICD responses are within latency threshold"
+        """REQ-007 VC-01 (fail) must get the config test, not VC-02's scenario."""
+        vc01 = self.rows["SYS-REQ-007-VC-01"]
+        assert vc01["scenario_name"] == "Configuration changes applied without restart"
+        assert vc01["scenario_name"] != "Invalid configuration values are rejected"
 
     # ---- TAB 2: SECURITY ----
 
@@ -211,24 +215,24 @@ class TestDemoDashboard:
 
     # ---- TAB 3: QUALITY GATES ----
 
-    def test_gate_a_passes_with_deferred(self):
-        """Gate A passes because all uncovered VCs are deferred."""
+    def test_gate_a_has_uncovered_and_deferred(self):
+        """Gate A fails: 1 uncovered in-scope + 4 deferred to 2.0.0."""
         ga = self.js_trace["gate_a"]
-        assert ga["passed"] is True
-        assert len(ga["items"]) == 7
-        # All items should be deferred
-        assert all(item.get("deferred") is True for item in ga["items"])
+        assert ga["passed"] is False
+        assert len(ga["items"]) == 5
+        assert sum(1 for item in ga["items"] if item.get("deferred")) == 4
+        assert sum(1 for item in ga["items"] if not item.get("deferred")) == 1
 
-    def test_gate_a_item_is_deferred(self):
-        item = self.js_trace["gate_a"]["items"][0]
-        assert item["deferred"] is True
-        assert item["targetRelease"] in ("1.1.0", "2.0.0")
+    def test_gate_a_has_deferred_items(self):
+        deferred = [i for i in self.js_trace["gate_a"]["items"] if i.get("deferred")]
+        assert len(deferred) == 4
+        assert all(i["targetRelease"] == "2.0.0" for i in deferred)
 
     def test_gate_b_failed_with_drift(self):
         gb = self.js_trace["gate_b"]
         assert gb["passed"] is False
         assert len(gb["items"]) == 1
-        assert gb["items"][0]["verificationCriteriaId"] == "SYS-REQ-005-VC-01"
+        assert gb["items"][0]["verificationCriteriaId"] == "SYS-REQ-003-VC-01"
 
     def test_gate_b_has_hash_diff(self):
         item = self.js_trace["gate_b"]["items"][0]
@@ -279,16 +283,16 @@ class TestDemoDashboard:
         assert len(automated) == 9  # All 5 features are automated in demo
 
     def test_fail_scenario_has_error_message(self):
-        feat = [f for f in self.js_behave if f["name"] == "Basic ICD Communications"][0]
-        scenario = [e for e in feat["elements"] if e["name"] == "System handles 100 concurrent ICD requests"][0]
+        feat = [f for f in self.js_behave if f["name"] == "Configuration Management"][0]
+        scenario = [e for e in feat["elements"] if e["name"] == "Configuration changes applied without restart"][0]
         failed_steps = [s for s in scenario["steps"] if s.get("result", {}).get("status") == "failed"]
         assert len(failed_steps) == 1
-        assert "Expected 100 responses, got 87" in failed_steps[0]["result"]["error_message"]
+        assert "Configuration update took 12.3 seconds" in failed_steps[0]["result"]["error_message"]
 
     def test_skipped_step_present(self):
         """The step after a failure should be skipped."""
-        feat = [f for f in self.js_behave if f["name"] == "Basic ICD Communications"][0]
-        scenario = [e for e in feat["elements"] if e["name"] == "System handles 100 concurrent ICD requests"][0]
+        feat = [f for f in self.js_behave if f["name"] == "Configuration Management"][0]
+        scenario = [e for e in feat["elements"] if e["name"] == "Configuration changes applied without restart"][0]
         skipped = [s for s in scenario["steps"] if s.get("result", {}).get("status") == "skipped"]
         assert len(skipped) == 1
 
@@ -398,12 +402,14 @@ class TestDemoDashboard:
 
     def test_release_110_scope(self):
         rel = self.js_release_plan["releases"][1]
-        assert "SYS-REQ-001-VC-02" in rel["scope"]
         assert "SYS-REQ-003" in rel["scope"]
+        assert "SYS-REQ-007" in rel["scope"]
 
     def test_deferred_vc_has_target_release(self):
-        vc = self.rows["SYS-REQ-003-VC-02"]
-        assert vc["target_release"] == "1.1.0"
+        """VCs in 2.0.0 scope should be deferred with target release."""
+        vc = self.rows["SYS-REQ-008-VC-01"]
+        assert vc["status"] == "deferred"
+        assert vc["target_release"] == "2.0.0"
 
     # ---- EXECUTIVE SUMMARY ----
 
