@@ -1442,9 +1442,9 @@ function renderExecutiveSummary() {
 
   html += '<div class="exec-grid">';
 
-  /* Section 2: Release Progress (left column) */
-  html += '<div class="exec-section">';
-  html += '<h3>Release Progress</h3>';
+  /* Section 2: Release Progress (left column) — click to navigate */
+  html += '<div class="exec-section" style="cursor:pointer" onclick="switchTab(\'releases\')" onmouseenter="this.style.borderColor=\'var(--blue-ng)\'" onmouseleave="this.style.borderColor=\'#e9ecef\'">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Release Progress</h3><span style="font-size:0.75rem;color:var(--blue-ng)">View Details &#8250;</span></div>';
   if (RELEASE_PLAN && RELEASE_PLAN.releases && RELEASE_PLAN.releases.length) {
     const reqToVCs = {};
     if (REQUIREMENTS && REQUIREMENTS.requirements) {
@@ -1513,9 +1513,9 @@ function renderExecutiveSummary() {
 
   html += '</div>'; /* close exec-grid */
 
-  /* Section 4: Cyber Risk Summary */
-  html += '<div class="exec-section" style="margin-bottom:20px">';
-  html += '<h3>Cyber Risk</h3>';
+  /* Section 4: Cyber Risk Summary — click to navigate */
+  html += '<div class="exec-section" style="margin-bottom:20px;cursor:pointer" onclick="switchTab(\'security\')" onmouseenter="this.style.borderColor=\'var(--blue-ng)\'" onmouseleave="this.style.borderColor=\'#e9ecef\'">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Cyber Risk</h3><span style="font-size:0.75rem;color:var(--blue-ng)">View Details &#8250;</span></div>';
   if (!GRYPE || !GRYPE.matches) {
     html += '<div style="color:var(--text-muted);font-size:0.85rem;font-style:italic">Cyber scan data not included in this build.</div>';
   } else if (GRYPE.matches.length === 0) {
