@@ -61,9 +61,6 @@
     .tab-btn { flex: none; padding: 12px 24px; border: none; background: none; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
     .tab-btn:hover { color: var(--text); background: #E8F4FB; }
     .tab-btn.active { color: var(--blue-ng); border-bottom-color: var(--blue-ng); }
-    .tab-btn .tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
-    .tab-dot.dot-fail { background: var(--fail); }
-    .tab-dot.dot-warn { background: var(--drifted); }
     .tab-panel { display: none; background: var(--card); border-radius: 0 0 10px 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .tab-panel.active { display: block; }
 
@@ -1815,31 +1812,6 @@ renderExecutiveSummary();
   if (el && REPORT && REPORT.generated_at) el.textContent = 'Generated: ' + fmtDate(REPORT.generated_at);
 })();
 
-/* Tab failure indicator dots */
-(function() {
-  if (!REPORT || !REPORT.summary) return;
-  const s = REPORT.summary;
-  function addDot(tabId, cls) {
-    const tab = document.getElementById(tabId);
-    if (tab && !tab.querySelector('.tab-dot')) {
-      const dot = document.createElement('span');
-      dot.className = 'tab-dot ' + cls;
-      tab.appendChild(dot);
-    }
-  }
-  /* Summary tab: red if no-go */
-  if (s.failed > 0 || s.uncovered_vcs > 0 || s.drifted_vcs > 0) addDot('tab-summary', 'dot-fail');
-  /* Gates tab: red if any gate failed */
-  if (TRACEABILITY && !TRACEABILITY.overall_pass) addDot('tab-gates', 'dot-fail');
-  /* Traceability tab: red if failures, orange if uncovered */
-  if (s.failed > 0) addDot('tab-traceability', 'dot-fail');
-  else if (s.uncovered_vcs > 0 || s.drifted_vcs > 0) addDot('tab-traceability', 'dot-warn');
-  /* Tests tab: red if any failed */
-  if (s.failed > 0) addDot('tab-tests', 'dot-fail');
-  /* Cyber tab: red if critical vulns */
-  if (GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical')) addDot('tab-security', 'dot-fail');
-  else if (GRYPE && GRYPE.matches && GRYPE.matches.length > 0) addDot('tab-security', 'dot-warn');
-})();
 </script>
 </body>
 </html>
