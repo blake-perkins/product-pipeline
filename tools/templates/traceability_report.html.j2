@@ -1702,8 +1702,8 @@ function renderExecutiveSummary() {
   let html = '';
 
   /* Section 1: Readiness Ring — or Shipped confirmation for released versions */
-  if (S.isReleased) {
-    var relObj = RELEASE_PLAN && RELEASE_PLAN.releases ? RELEASE_PLAN.releases.find(function(r) { return r.version === S.release; }) : null;
+  if (SNAP.isReleased) {
+    var relObj = RELEASE_PLAN && RELEASE_PLAN.releases ? RELEASE_PLAN.releases.find(function(r) { return r.version === SNAP.release; }) : null;
     html += '<div class="readiness">';
     html += '<div class="readiness-ring">';
     html += '<svg width="120" height="120" viewBox="0 0 120 120">';
@@ -1713,7 +1713,7 @@ function renderExecutiveSummary() {
     html += '</div>';
     html += '<div class="readiness-info">';
     html += '<h2 style="color:var(--pass)">Released</h2>';
-    html += '<p>Release ' + esc(S.release) + ' shipped successfully</p>';
+    html += '<p>Release ' + esc(SNAP.release) + ' shipped successfully</p>';
     html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">' + s.passed + ' verification criteria passed';
     if (relObj && relObj.targetDate) html += '<br>Target date: ' + fmtDate(relObj.targetDate + 'T00:00:00Z');
     html += '</div>';
