@@ -246,31 +246,38 @@
     <!-- Three-story hero: Release Scope → Test Results → Blockers -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:8px">
 
-      <!-- Story 1: Release Scope -->
-      <div style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e9ecef">
-        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px">Release Scope</div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">
-          <span style="font-size:2rem;font-weight:700;color:var(--navy-1)">{{ summary.in_scope_vcs | default(summary.total_vcs) }}</span>
-          <span style="font-size:0.9rem;color:var(--text-muted)">of {{ summary.total_vcs }} VCs in scope</span>
+      <!-- Story 1: Release Scope (click → Release Progress tab) -->
+      <div class="hero-card" onclick="switchTab('releases')" style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e9ecef;cursor:pointer;transition:all 0.15s" onmouseenter="this.style.borderColor='var(--blue-ng)';this.style.background='#f0f7fc'" onmouseleave="this.style.borderColor='#e9ecef';this.style.background='#f9fafb'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">Release Scope</span>
+          <span style="font-size:0.75rem;color:var(--blue-ng)">View Releases &#8250;</span>
         </div>
-        {% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}
-        <div style="font-size:0.85rem;color:var(--deferred)">{{ summary.deferred_vcs }} deferred to future releases</div>
-        {% endif %}
-        <div style="font-size:0.85rem;color:var(--text-muted)">{{ summary.manual }} require manual review</div>
+        <div id="hero-release-name" style="font-size:1.1rem;font-weight:700;color:var(--navy-1);margin-bottom:4px"></div>
+        <div id="hero-release-detail" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px"></div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">
+          <span style="font-size:1.8rem;font-weight:700;color:var(--navy-1)">{{ summary.in_scope_vcs | default(summary.total_vcs) }}</span>
+          <span style="font-size:0.85rem;color:var(--text-muted)">of {{ summary.total_vcs }} VCs in scope</span>
+        </div>
+        <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.5">
+          {% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}<div style="color:var(--deferred)">&#9201; {{ summary.deferred_vcs }} deferred to future releases</div>{% endif %}
+          <div>&#9995; {{ summary.manual }} require manual review</div>
+        </div>
       </div>
 
-      <!-- Story 2: Test Results -->
-      <div style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e9ecef">
-        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px">Test Results</div>
+      <!-- Story 2: Test Results (click → Test Execution tab) -->
+      <div class="hero-card" onclick="switchTab('tests')" style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e9ecef;cursor:pointer;transition:all 0.15s" onmouseenter="this.style.borderColor='var(--blue-ng)';this.style.background='#f0f7fc'" onmouseleave="this.style.borderColor='#e9ecef';this.style.background='#f9fafb'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">Test Results</span>
+          <span style="font-size:0.75rem;color:var(--blue-ng)">View Tests &#8250;</span>
+        </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">
-          <span style="font-size:2rem;font-weight:700;color:{% if summary.failed > 0 %}var(--fail){% else %}var(--pass){% endif %}">{{ summary.passed }}</span>
-          <span style="font-size:0.9rem;color:var(--text-muted)">passed</span>
+          <span style="font-size:1.8rem;font-weight:700;color:{% if summary.failed > 0 %}var(--fail){% else %}var(--pass){% endif %}">{{ summary.passed }}</span>
+          <span style="font-size:0.85rem;color:var(--text-muted)">passed</span>
           {% if summary.failed > 0 %}
-          <span style="font-size:2rem;font-weight:700;color:var(--fail);margin-left:8px">{{ summary.failed }}</span>
-          <span style="font-size:0.9rem;color:var(--text-muted)">failed</span>
+          <span style="font-size:1.8rem;font-weight:700;color:var(--fail);margin-left:8px">{{ summary.failed }}</span>
+          <span style="font-size:0.85rem;color:var(--text-muted)">failed</span>
           {% endif %}
         </div>
-        <!-- Mini bar showing pass/fail ratio of tested VCs only -->
         {% set tested = summary.passed + summary.failed %}
         {% if tested > 0 %}
         <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e9ecef">
@@ -279,18 +286,22 @@
         </div>
         <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">{{ ((summary.passed/tested)*100)|round(0)|int }}% pass rate</div>
         {% endif %}
+        <div id="hero-failed-list" style="font-size:0.82rem;margin-top:6px;line-height:1.5"></div>
       </div>
 
-      <!-- Story 3: Blockers -->
-      <div style="background:{% if summary.failed > 0 or summary.uncovered_vcs > 0 or summary.drifted_vcs > 0 %}#fef2f2{% else %}#f0fdf4{% endif %};border-radius:8px;padding:16px;border:1px solid {% if summary.failed > 0 or summary.uncovered_vcs > 0 or summary.drifted_vcs > 0 %}#fecaca{% else %}#bbf7d0{% endif %}">
-        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px">Blockers</div>
+      <!-- Story 3: Blockers (click → Quality Gates tab) -->
+      <div class="hero-card" onclick="switchTab('gates')" style="background:{% if summary.failed > 0 or summary.uncovered_vcs > 0 or summary.drifted_vcs > 0 %}#fef2f2{% else %}#f0fdf4{% endif %};border-radius:8px;padding:16px;border:1px solid {% if summary.failed > 0 or summary.uncovered_vcs > 0 or summary.drifted_vcs > 0 %}#fecaca{% else %}#bbf7d0{% endif %};cursor:pointer;transition:all 0.15s" onmouseenter="this.style.opacity='0.9'" onmouseleave="this.style.opacity='1'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">Blockers</span>
+          <span style="font-size:0.75rem;color:var(--blue-ng)">View Gates &#8250;</span>
+        </div>
         {% set blocker_count = summary.failed + summary.uncovered_vcs + summary.drifted_vcs + summary.orphaned_tests %}
         {% if blocker_count == 0 %}
         <div style="font-size:1.4rem;font-weight:700;color:var(--pass)">&#10003; None</div>
         <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">All quality gates passed</div>
         {% else %}
-        <div style="font-size:2rem;font-weight:700;color:var(--fail)">{{ blocker_count }}</div>
-        <div style="font-size:0.85rem;line-height:1.6;margin-top:4px" id="hero-blockers"></div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--fail)">{{ blocker_count }}</div>
+        <div style="font-size:0.82rem;line-height:1.6;margin-top:4px" id="hero-blockers"></div>
         {% endif %}
       </div>
 
@@ -437,13 +448,16 @@ const RELEASE_PLAN = {{ release_plan_json }};
 /* ================================================================
    TAB NAVIGATION
    ================================================================ */
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const btn = document.querySelector('[data-tab="' + tabName + '"]');
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('panel-' + tabName);
+  if (panel) { panel.classList.add('active'); panel.scrollIntoView({behavior:'smooth', block:'start'}); }
+}
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-  });
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
 /* ================================================================
@@ -778,11 +792,8 @@ function toggleAllReqs() {
 
 /* Navigate from Gate item to Traceability Matrix */
 function navigateToVC(reqId, vcId, isOrphan) {
-  /* Switch to Tab 1 */
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('[data-tab="traceability"]').classList.add('active');
-  document.getElementById('panel-traceability').classList.add('active');
+  /* Switch to Traceability tab */
+  switchTab('traceability');
 
   /* Clear filters so the target card is visible */
   ['f-status', 'f-method', 'f-search'].forEach(id => {
@@ -1471,10 +1482,37 @@ renderTests();
 renderMetadata();
 renderReleases();
 
-/* Hero: populate blockers list and bar legend */
+/* Hero: populate release info, blockers, failed list, bar legend */
 (function() {
   if (!REPORT || !REPORT.summary) return;
   const s = REPORT.summary;
+
+  /* Release name and details */
+  const relName = document.getElementById('hero-release-name');
+  const relDetail = document.getElementById('hero-release-detail');
+  if (relName && RELEASE_PLAN && RELEASE_PLAN.releases && RELEASE_PLAN.releases.length) {
+    /* Find the current release (last one whose scope contributes to in_scope_vcs) */
+    /* For now, show the first release that has in-scope VCs not yet fully covered, or the last one */
+    const releases = RELEASE_PLAN.releases;
+    const currentRel = releases[0]; /* First release is typically the current target */
+    relName.textContent = 'Release ' + (currentRel.version || '');
+    const parts = [];
+    if (currentRel.description) parts.push(currentRel.description);
+    if (currentRel.targetDate) parts.push('Target: ' + fmtDate(currentRel.targetDate + 'T00:00:00Z'));
+    relDetail.innerHTML = parts.join('<br>');
+  } else if (relName) {
+    relName.textContent = 'All Requirements';
+    if (relDetail) relDetail.textContent = 'No release plan defined';
+  }
+
+  /* Failed VC list in Test Results card */
+  const failList = document.getElementById('hero-failed-list');
+  if (failList && s.failed > 0) {
+    const failedVCs = (REPORT.requirements || []).filter(r => r.status === 'fail');
+    failList.innerHTML = failedVCs.map(r =>
+      '<div style="color:var(--fail)">&#10007; <strong>' + esc(r.vc_id) + '</strong> — ' + esc(r.title) + '</div>'
+    ).join('');
+  }
 
   /* Blockers list */
   const bl = document.getElementById('hero-blockers');
@@ -1482,16 +1520,16 @@ renderReleases();
     const lines = [];
     if (s.failed > 0) {
       const ids = (REPORT.requirements || []).filter(r => r.status === 'fail').map(r => r.vc_id).join(', ');
-      lines.push('<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + (ids ? ' (' + esc(ids) + ')' : '') + '</span>');
+      lines.push('<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + '</span>');
     }
     if (s.drifted_vcs > 0) {
-      lines.push('<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria drifted — review needed</span>');
+      lines.push('<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria drifted</span>');
     }
     if (s.uncovered_vcs > 0) {
-      lines.push('<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' uncovered — no scenario written</span>');
+      lines.push('<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' uncovered</span>');
     }
     if (s.orphaned_tests > 0) {
-      lines.push('<span style="color:var(--orphaned)">? ' + s.orphaned_tests + ' orphaned test' + (s.orphaned_tests > 1 ? 's' : '') + '</span>');
+      lines.push('<span style="color:var(--orphaned)">? ' + s.orphaned_tests + ' orphaned</span>');
     }
     bl.innerHTML = lines.join('<br>');
   }
