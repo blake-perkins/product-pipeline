@@ -635,8 +635,99 @@ function getFilteredReqIds() {
   });
 })();
 
+/* ================================================================
+   CENTRALIZED SNAPSHOT
+   ================================================================ */
+var SNAP = null;
+
+function buildSnapshot() {
+  var release = selectedRelease;
+  var isAll = (release === 'all');
+  var isReleased = !isAll && isReleasedVersion(release);
+  var vcScope = getFilteredVCIds();           // cumulative Set or null
+  var directVCScope = getReleaseDirectVCIds(); // direct Set or null
+
+  // Filtered report rows
+  var allRows = (REPORT && REPORT.requirements) || [];
+  var rows = vcScope ? allRows.filter(function(r) { return r.vc_id && vcScope.has(r.vc_id); }) : allRows;
+
+  // Orphaned tests — empty for released versions
+  var orphanedTests = isReleased ? [] : ((REPORT && REPORT.orphaned_tests) || []);
+
+  // Vulnerability matches — empty for released versions
+  var vulnMatches = isReleased ? [] : ((GRYPE && GRYPE.matches) || []);
+
+  // Gates — all pass with no items for released versions
+  var gates = {};
+  ['gate_a', 'gate_b', 'gate_c'].forEach(function(key) {
+    var raw = (TRACEABILITY && TRACEABILITY[key]) || {};
+    var allItems = raw.items || [];
+    var items = isReleased ? [] : (vcScope ? allItems.filter(function(item) {
+      var id = item.verificationCriteriaId || item.vc_id || '';
+      return !id || vcScope.has(id);
+    }) : allItems);
+    gates[key] = {
+      items: items,
+      passed: isReleased ? true : (vcScope ? items.length === 0 : raw.passed !== false),
+      message: isReleased ? '' : (raw.message || '')
+    };
+  });
+
+  // Filtered behave features (automated only, in scope)
+  function isManualFeature(feat) {
+    var tags = (feat.tags || []).map(function(t) { return (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase(); });
+    return tags.indexOf('manual') >= 0 || tags.indexOf('stub') >= 0 || tags.indexOf('auto_generated') >= 0;
+  }
+  var features = behaveFeatures.filter(function(f) { return !isManualFeature(f); });
+  if (vcScope) {
+    features = features.filter(function(feat) {
+      var allTags = [];
+      (feat.tags || []).forEach(function(t) { allTags.push((typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '')); });
+      (feat.elements || []).forEach(function(el) {
+        (el.tags || []).forEach(function(t) { allTags.push((typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '')); });
+      });
+      return allTags.some(function(tag) {
+        var vcMatch = tag.replace(/^VC[:\-_]/i, '');
+        return vcMatch !== tag && vcScope.has(vcMatch);
+      });
+    });
+  }
+
+  // Summary stats
+  var summary = { passed:0, failed:0, drifted_vcs:0, uncovered_vcs:0, manual:0, deferred_vcs:0, total_vcs:rows.length, in_scope_vcs:rows.length, total_requirements:0, orphaned_tests:orphanedTests.length };
+  var reqIdSet = new Set();
+  rows.forEach(function(r) {
+    reqIdSet.add(r.requirement_id);
+    if (r.status === 'pass') summary.passed++;
+    else if (r.status === 'fail') summary.failed++;
+    else if (r.status === 'drifted') summary.drifted_vcs++;
+    else if (r.status === 'uncovered') summary.uncovered_vcs++;
+    else if (r.status === 'manual') summary.manual++;
+    else if (r.status === 'deferred') { summary.deferred_vcs++; summary.in_scope_vcs--; }
+  });
+  summary.total_requirements = reqIdSet.size;
+  summary.coverage_percent = summary.in_scope_vcs > 0 ? Math.round(summary.passed / summary.in_scope_vcs * 100) : 0;
+
+  SNAP = {
+    release: release,
+    isAll: isAll,
+    isReleased: isReleased,
+    vcScope: vcScope,
+    directVCScope: directVCScope,
+    rows: rows,
+    allRows: allRows,
+    orphanedTests: orphanedTests,
+    vulnMatches: vulnMatches,
+    gates: gates,
+    allGatesPass: gates.gate_a.passed && gates.gate_b.passed && gates.gate_c.passed,
+    features: features,
+    summary: summary
+  };
+}
+
 function onReleaseFilterChange() {
   selectedRelease = document.getElementById('release-filter').value;
+  buildSnapshot();
   renderHero();
   renderTraceability();
   renderGates();
@@ -646,40 +737,13 @@ function onReleaseFilterChange() {
   applyFilters();
 }
 
-/* Compute filtered summary stats for hero and exec summary */
-function computeFilteredSummary() {
-  if (!REPORT || !REPORT.summary) return REPORT ? REPORT.summary : {};
-  const vcFilter = getFilteredVCIds();
-  if (!vcFilter) return REPORT.summary;
-  const allRows = REPORT.requirements || [];
-  const rows = allRows.filter(r => r.vc_id && vcFilter.has(r.vc_id));
-  const s = { passed: 0, failed: 0, drifted_vcs: 0, uncovered_vcs: 0, manual: 0, deferred_vcs: 0, orphaned_tests: 0, total_vcs: rows.length, in_scope_vcs: rows.length, total_requirements: 0 };
-  const reqIds = new Set();
-  rows.forEach(r => {
-    reqIds.add(r.requirement_id);
-    if (r.status === 'pass') s.passed++;
-    else if (r.status === 'fail') s.failed++;
-    else if (r.status === 'drifted') s.drifted_vcs++;
-    else if (r.status === 'uncovered') s.uncovered_vcs++;
-    else if (r.status === 'manual') s.manual++;
-    else if (r.status === 'deferred') { s.deferred_vcs++; s.in_scope_vcs--; }
-  });
-  s.total_requirements = reqIds.size;
-  var isCompReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
-  s.orphaned_tests = isCompReleased ? 0 : (REPORT.orphaned_tests ? REPORT.orphaned_tests.length : 0);
-  s.coverage_percent = s.in_scope_vcs > 0 ? Math.round(s.passed / s.in_scope_vcs * 100) : 0;
-  return s;
-}
-
 /* Render the hero section dynamically */
 function renderHero() {
   const container = document.getElementById('hero-dynamic');
   const badge = document.getElementById('hero-pipeline-badge');
   if (!container || !REPORT || !REPORT.summary) return;
-  const s = computeFilteredSummary();
-  const allRows = REPORT.requirements || [];
-  const vcFilter = getFilteredVCIds();
-  const rows = vcFilter ? allRows.filter(r => r.vc_id && vcFilter.has(r.vc_id)) : allRows;
+  const s = SNAP.summary;
+  const rows = SNAP.rows;
 
   /* Pipeline badge */
   const isPass = s.failed === 0 && s.uncovered_vcs === 0 && s.drifted_vcs === 0;
@@ -724,7 +788,7 @@ function renderHero() {
   html += '<div style="font-size:1.1rem;font-weight:700;color:var(--navy-1);margin-bottom:4px">' + esc(relName) + '</div>';
   html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px">' + relDetail + '</div>';
   /* Show release-specific VC count (not cumulative) when a release is selected */
-  var directVCs = getReleaseDirectVCIds();
+  var directVCs = SNAP.directVCScope;
   var heroVCCount = directVCs ? directVCs.size : (s.in_scope_vcs || s.total_vcs);
   var heroTotalLabel = directVCs ? heroVCCount + ' VCs in this release' : (s.in_scope_vcs || s.total_vcs) + ' of ' + s.total_vcs + ' VCs in scope';
   html += '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">';
@@ -772,8 +836,7 @@ function renderHero() {
   html += '</div>';
 
   /* Story 3: Blockers — suppress orphans for released versions */
-  var isHeroReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
-  var orphanCount = isHeroReleased ? 0 : s.orphaned_tests;
+  var orphanCount = SNAP.orphanedTests.length;
   var blockerCount = s.failed + s.uncovered_vcs + s.drifted_vcs + orphanCount;
   var hasBlockers = blockerCount > 0;
   html += '<div class="hero-card" onclick="switchTab(\'gates\')" style="background:' + (hasBlockers ? '#fef2f2' : '#f0fdf4') + ';border-radius:8px;padding:16px;border:1px solid ' + (hasBlockers ? '#fecaca' : '#bbf7d0') + ';cursor:pointer;transition:all 0.15s" onmouseenter="this.style.opacity=\'0.9\'" onmouseleave="this.style.opacity=\'1\'">';
@@ -836,12 +899,9 @@ function renderTraceability() {
     return;
   }
   /* Group report rows by requirement_id, filtered by release */
-  const vcFilter = getFilteredVCIds();
   const grouped = {};
   const reqOrder = [];
-  REPORT.requirements.forEach(row => {
-    /* If a release filter is active, skip VCs not in scope */
-    if (vcFilter && row.vc_id && !vcFilter.has(row.vc_id)) return;
+  SNAP.rows.forEach(row => {
     if (!grouped[row.requirement_id]) { grouped[row.requirement_id] = []; reqOrder.push(row.requirement_id); }
     grouped[row.requirement_id].push(row);
   });
@@ -967,11 +1027,10 @@ function renderTraceability() {
   });
 
   /* Orphaned tests — suppress for released versions */
-  var showOrphans = !(selectedRelease !== 'all' && isReleasedVersion(selectedRelease));
-  if (showOrphans && REPORT.orphaned_tests && REPORT.orphaned_tests.length) {
+  if (SNAP.orphanedTests.length) {
     html += '<h3 style="margin:20px 0 8px;color:var(--orphaned)">Orphaned Tests</h3>';
     html += '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px">These scenarios reference requirements or verification criteria that no longer exist in the model. They should be removed or reassigned.</p>';
-    REPORT.orphaned_tests.forEach(o => {
+    SNAP.orphanedTests.forEach(o => {
       const reqIds = (o.orphaned_req_ids || []).join(', ');
       const vcIds = (o.orphaned_vc_ids || o.orphaned_vm_ids || []).join(', ');
       const file = o.feature_file || '';
@@ -1216,11 +1275,10 @@ function renderSecurity() {
 
   let html = '';
   /* For released versions, vulnerabilities were resolved before shipping */
-  const isFilteredToReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
-  const matches = isFilteredToReleased ? [] : ((GRYPE && GRYPE.matches) || []);
+  const matches = SNAP.vulnMatches;
   const components = (SBOM && SBOM.components) || [];
 
-  if (isFilteredToReleased) {
+  if (SNAP.isReleased) {
     html += '<div style="padding:12px 16px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;margin-bottom:16px;font-size:0.9rem;color:var(--text-muted)">';
     html += '<strong style="color:var(--pass)">Release ' + esc(selectedRelease) + '</strong> shipped with all vulnerabilities resolved. Showing clean scan results for this release.';
     html += '</div>';
@@ -1416,29 +1474,22 @@ function renderGates() {
   const container = document.getElementById('gates-content');
   if (!TRACEABILITY) { container.innerHTML = '<div class="empty-state"><h3>No traceability data available</h3></div>'; return; }
 
-  const gates = [
+  const gatesMeta = [
     { key: 'gate_a', name: 'Gate A — Coverage', desc: 'Ensures every verification criteria has at least one Gherkin scenario. Generates stubs for any gaps.' },
     { key: 'gate_b', name: 'Gate B — Drift Detection', desc: 'Detects when requirement verification criteria change between model versions. Flags scenarios for review.' },
     { key: 'gate_c', name: 'Gate C — Orphan Detection', desc: 'Finds test scenarios referencing requirements or VCs that no longer exist in the model.' },
   ];
 
-  const vcFilter = getFilteredVCIds();
-  var isGateReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
   let html = '<div class="gate-cards">';
-  gates.forEach(g => {
-    const data = TRACEABILITY[g.key] || {};
-    const allItems = data.items || [];
-    /* For released versions, all gates passed — show no items */
-    const items = isGateReleased ? [] : (vcFilter ? allItems.filter(item => {
-      const id = item.verificationCriteriaId || item.vc_id || '';
-      return !id || vcFilter.has(id);
-    }) : allItems);
-    const passed = isGateReleased ? true : (vcFilter ? items.length === 0 : data.passed !== false);
+  gatesMeta.forEach(g => {
+    const gateData = SNAP.gates[g.key];
+    const items = gateData.items;
+    const passed = gateData.passed;
     const gateLabel = g.key === 'gate_a' ? 'A' : g.key === 'gate_b' ? 'B' : 'C';
     html += '<div class="gate-card ' + (passed ? 'gate-pass' : 'gate-fail') + '" data-gate="' + gateLabel + '">';
     html += '<div class="gate-title"><span class="gate-name">' + g.name + '</span>' + badgeFor(passed ? 'pass' : 'fail') + '</div>';
     html += '<div class="gate-desc">' + g.desc + '</div>';
-    if (!isGateReleased && data.message) html += '<p style="font-size:0.85rem;margin-bottom:8px">' + esc(data.message) + '</p>';
+    if (gateData.message) html += '<p style="font-size:0.85rem;margin-bottom:8px">' + esc(gateData.message) + '</p>';
     if (items.length === 0) {
       html += '<p style="color:var(--pass);font-size:0.85rem">No issues detected.</p>';
     }
@@ -1464,12 +1515,10 @@ function renderGates() {
   html += '</div>';
 
   /* Overall — use filtered stats when a release is selected */
-  var allGatesPass = isGateReleased ? true : gates.every(function(g) { var d = TRACEABILITY[g.key] || {}; var ai = d.items || []; return (vcFilter ? ai.filter(function(item) { var id = item.verificationCriteriaId || item.vc_id || ''; return !id || vcFilter.has(id); }).length === 0 : d.passed !== false); });
-  var fs = computeFilteredSummary();
   html += '<div style="margin-top:20px;text-align:center">';
-  html += '<strong>Overall Pipeline: </strong>' + badgeFor(allGatesPass ? 'pass' : 'fail');
+  html += '<strong>Overall Pipeline: </strong>' + badgeFor(SNAP.allGatesPass ? 'pass' : 'fail');
   html += '<span style="margin-left:8px;font-size:0.85rem;color:var(--text-muted)">';
-  html += (fs.total_requirements || TRACEABILITY.requirements_total) + ' requirements, ' + (fs.total_vcs || TRACEABILITY.vcs_total) + ' VCs';
+  html += (SNAP.summary.total_requirements || TRACEABILITY.requirements_total) + ' requirements, ' + (SNAP.summary.total_vcs || TRACEABILITY.vcs_total) + ' VCs';
   html += '</span></div>';
 
   container.innerHTML = html;
@@ -1481,27 +1530,7 @@ function renderGates() {
 function renderTests() {
   const container = document.getElementById('tests-content');
 
-  /* Filter out @manual / @STUB features — they aren't automated tests */
-  function isManualFeature(feat) {
-    const tags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase());
-    return tags.includes('manual') || tags.includes('stub') || tags.includes('auto_generated');
-  }
-  const vcFilter = getFilteredVCIds();
-  let automatedFeatures = behaveFeatures.filter(f => !isManualFeature(f));
-  /* If release filter is active, only show features with VCs in scope */
-  if (vcFilter) {
-    automatedFeatures = automatedFeatures.filter(feat => {
-      const fTags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, ''));
-      const allTags = [...fTags];
-      (feat.elements || []).forEach(el => {
-        (el.tags || []).forEach(t => allTags.push((typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '')));
-      });
-      return allTags.some(tag => {
-        const vcMatch = tag.replace(/^VC[:\-_]/i, '');
-        return vcMatch !== tag && vcFilter.has(vcMatch);
-      });
-    });
-  }
+  var automatedFeatures = SNAP.features;
 
   if (!automatedFeatures.length) {
     container.innerHTML = '<div class="empty-state"><h3>No Behave test results available</h3></div>';
@@ -1641,10 +1670,9 @@ function downloadJSON() {
 function renderExecutiveSummary() {
   const container = document.getElementById('summary-content');
   if (!REPORT || !REPORT.summary) { container.innerHTML = '<div class="empty-state"><h3>No data available</h3></div>'; return; }
-  const s = computeFilteredSummary();
-  const vcFilter = getFilteredVCIds();
-  const allRows = REPORT.requirements || [];
-  const rows = vcFilter ? allRows.filter(r => r.vc_id && vcFilter.has(r.vc_id)) : allRows;
+  const s = SNAP.summary;
+  const allRows = SNAP.allRows;
+  const rows = SNAP.rows;
 
   /* Calculate readiness percentage */
   const inScope = s.in_scope_vcs || s.total_vcs;
@@ -1653,8 +1681,7 @@ function renderExecutiveSummary() {
 
   /* Determine ring color — suppress CVE/orphan warnings for released versions */
   const hasFailures = s.failed > 0;
-  const isFilteredReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
-  const hasCriticalCVE = !isFilteredReleased && GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical');
+  const hasCriticalCVE = !SNAP.isReleased && GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical');
   const ringColor = (hasFailures || hasCriticalCVE) ? 'var(--fail)' : readinessPct >= 100 ? 'var(--pass)' : readinessPct >= 50 ? 'var(--blue-ng)' : 'var(--uncovered)';
 
   /* Build remaining items list */
@@ -1662,7 +1689,7 @@ function renderExecutiveSummary() {
   if (s.failed > 0) remaining.push('<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + ' to resolve</span>');
   if (s.drifted_vcs > 0) remaining.push('<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria change' + (s.drifted_vcs > 1 ? 's' : '') + ' to review</span>');
   if (s.uncovered_vcs > 0) remaining.push('<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' scenario' + (s.uncovered_vcs > 1 ? 's' : '') + ' to write</span>');
-  if (!isFilteredReleased && s.orphaned_tests > 0) remaining.push('<span style="color:var(--orphaned)">? ' + s.orphaned_tests + ' orphaned test' + (s.orphaned_tests > 1 ? 's' : '') + ' to clean up</span>');
+  if (SNAP.orphanedTests.length > 0) remaining.push('<span style="color:var(--orphaned)">? ' + SNAP.orphanedTests.length + ' orphaned test' + (SNAP.orphanedTests.length > 1 ? 's' : '') + ' to clean up</span>');
   if (hasCriticalCVE) remaining.push('<span style="color:var(--fail)">&#9888; Critical vulnerability to address</span>');
 
   /* Readiness label */
@@ -1761,7 +1788,7 @@ function renderExecutiveSummary() {
   rows.filter(r => r.status === 'uncovered').forEach(r => {
     issues.push({sev: 2, icon: '&#8212;', color: 'var(--uncovered)', text: '<strong>' + esc(r.vc_id) + '</strong> — uncovered (' + esc(r.method) + '): ' + esc(r.title), vcId: r.vc_id, reqId: r.requirement_id});
   });
-  if (!isFilteredReleased && REPORT.orphaned_tests) REPORT.orphaned_tests.forEach(o => {
+  SNAP.orphanedTests.forEach(o => {
     issues.push({sev: 3, icon: '?', color: 'var(--orphaned)', text: 'Orphaned: ' + esc(o.name || o.feature_file), vcId: '', reqId: ''});
   });
   issues.sort((a, b) => a.sev - b.sev);
@@ -1782,20 +1809,20 @@ function renderExecutiveSummary() {
   /* Section 4: Cyber Risk Summary — click to navigate */
   html += '<div class="exec-section" style="margin-bottom:20px;cursor:pointer" onclick="switchTab(\'security\')" onmouseenter="this.style.borderColor=\'var(--blue-ng)\'" onmouseleave="this.style.borderColor=\'#e9ecef\'">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Cyber Risk</h3><span style="font-size:0.75rem;color:var(--blue-ng)">View Details &#8250;</span></div>';
-  if (isFilteredReleased) {
+  if (SNAP.isReleased) {
     html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; All vulnerabilities resolved before release</div>';
   } else if (!GRYPE || !GRYPE.matches) {
     html += '<div style="color:var(--text-muted);font-size:0.85rem;font-style:italic">Cyber scan data not included in this build.</div>';
-  } else if (GRYPE.matches.length === 0) {
+  } else if (SNAP.vulnMatches.length === 0) {
     html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; No vulnerabilities detected</div>';
   } else {
     const sevCounts = {Critical:0, High:0, Medium:0, Low:0, Negligible:0};
-    GRYPE.matches.forEach(m => { const sv = (m.vulnerability||{}).severity||'Unknown'; if (sevCounts[sv] !== undefined) sevCounts[sv]++; });
+    SNAP.vulnMatches.forEach(m => { const sv = (m.vulnerability||{}).severity||'Unknown'; if (sevCounts[sv] !== undefined) sevCounts[sv]++; });
     const policyStatus = sevCounts.Critical > 0 ? 'FAIL' : sevCounts.High > 0 ? 'WARNING' : 'PASS';
     const policyColor = policyStatus === 'FAIL' ? 'var(--fail)' : policyStatus === 'WARNING' ? 'var(--drifted)' : 'var(--pass)';
     html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">';
     html += '<span style="font-weight:700;color:' + policyColor + '">Policy: ' + policyStatus + '</span>';
-    html += '<span style="font-size:0.85rem;color:var(--text-muted)">' + GRYPE.matches.length + ' total vulnerabilities</span>';
+    html += '<span style="font-size:0.85rem;color:var(--text-muted)">' + SNAP.vulnMatches.length + ' total vulnerabilities</span>';
     html += '</div>';
     html += '<div style="display:flex;gap:16px;font-size:0.85rem">';
     ['Critical','High','Medium','Low','Negligible'].forEach(sv => {
@@ -1956,6 +1983,7 @@ function renderReleases() {
 /* ================================================================
    INIT
    ================================================================ */
+buildSnapshot();
 renderHero();
 renderTraceability();
 renderSecurity();

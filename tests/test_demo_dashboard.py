@@ -451,8 +451,8 @@ class TestDemoDashboard:
         """Pipeline badge is now JS-rendered."""
         assert 'id="hero-pipeline-badge"' in self.html
 
-    def test_compute_filtered_summary_function_exists(self):
-        assert "function computeFilteredSummary()" in self.html
+    def test_build_snapshot_function_exists(self):
+        assert "function buildSnapshot()" in self.html
 
     def test_get_filtered_vc_ids_function_exists(self):
         assert "function getFilteredVCIds()" in self.html
@@ -478,20 +478,20 @@ class TestDemoDashboard:
         assert "getFilteredVCIds()" in self.html
 
     def test_gates_filter_items_by_release(self):
-        """Gate items are filtered by release scope."""
+        """Gate items are filtered by release scope via SNAP."""
         idx = self.html.index("function renderGates()")
         snippet = self.html[idx:idx+1000]
-        assert "vcFilter" in snippet
+        assert "SNAP.gates" in snippet
 
     def test_tests_filter_by_release(self):
-        """Test execution tab filters features by release scope."""
+        """Test execution tab filters features by release scope via SNAP."""
         idx = self.html.index("function renderTests()")
         snippet = self.html[idx:idx+800]
-        assert "vcFilter" in snippet
+        assert "SNAP.features" in snippet
 
     def test_cyber_released_version_clean(self):
-        """Released versions show clean cyber scan."""
-        assert "isFilteredToReleased" in self.html
+        """Released versions show clean cyber scan via SNAP."""
+        assert "SNAP.isReleased" in self.html
 
     def test_cache_control_headers(self):
         """Browser cache busting meta tags present."""
@@ -624,8 +624,8 @@ class TestDemoWithSBOM(TestDemoDashboard):
         assert "POLICY: FAIL" in self.html
 
     def test_cyber_released_clean_logic_in_html(self):
-        """HTML should contain logic to hide vulns for released versions."""
-        assert "isFilteredToReleased" in self.html
+        """HTML should contain logic to hide vulns for released versions via SNAP."""
+        assert "SNAP.isReleased" in self.html
 
     # Override tests that assume no SBOM/Grype
     def test_sbom_null(self):
