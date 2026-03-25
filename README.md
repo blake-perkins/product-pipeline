@@ -198,46 +198,51 @@ python3 tools/traceability_checker.py \
 
 The traceability checker (`tools/traceability_checker.py`) enforces three quality gates that run against every build. All three must pass for the pipeline to proceed.
 
-### Gate A: Uncovered Requirements
+### Gate A: Uncovered Verification Criteria
 
-**Problem:** A requirement exists in the Cameo model but has no corresponding BDD scenario.
+**Problem:** A verification criteria (VC) exists in the Cameo model but has no corresponding BDD scenario.
 
 **Behavior:**
-- Scans all `.feature` files for `@REQ:<id>` tags and compares against the requirements JSON export.
-- For any uncovered requirement, auto-generates a stub `.feature` file using the Jinja2 template (`tools/templates/stub_scenario.feature.j2`).
-- Test-method requirements generate stubs in `bdd/features/automated/`.
-- Non-Test-method requirements (Analysis, Demonstration, Inspection) generate stubs in `bdd/features/non_test/` with the `@manual` tag.
+- Scans all `.feature` files for `@VM:<id>` tags and compares against the requirements JSON export.
+- For any uncovered VC, auto-generates a stub `.feature` file using the Jinja2 template (`tools/templates/stub_scenario.feature.j2`).
+- Test/Demonstration VCs generate stubs in `bdd/features/automated/`.
+- Analysis/Inspection VCs generate stubs in `bdd/features/non_test/` with the `@manual` tag.
 - Generated stubs contain a deliberately failing step (`Then it should fail because it is not yet implemented`) to keep the pipeline red until real verification is authored.
 - When `--fail-on-uncovered` is set, the gate fails the pipeline.
+- **Release planning:** When a `release-plan.json` is provided, VCs that are out-of-scope for the current release are marked as **deferred** and do not count toward Gate A failure.
 
 ### Gate B: Verification Criteria Drift
 
-**Problem:** The `verificationCriteria` text for a requirement changed in the Cameo model, but the corresponding BDD scenarios have not been reviewed.
+**Problem:** The `criteria` text for a verification criteria changed in the Cameo model, but the corresponding BDD scenarios have not been reviewed.
 
 **Behavior:**
-- Compares SHA-256 hashes of current `verificationCriteria` against a stored baseline (`.traceability-baseline.json`).
+- Compares SHA-256 hashes of current criteria text against a stored baseline (`.traceability-baseline.json`).
+- The baseline also stores the original criteria text, enabling word-level diff display in the dashboard.
 - When drift is detected, injects the `@REVIEW_REQUIRED` tag into all affected `.feature` files.
 - Always fails the pipeline when drift is found — forces human review.
 - To resolve: update the BDD scenarios, remove `@REVIEW_REQUIRED` tags, and run `--update-baseline`.
 
 ### Gate C: Orphaned Scenarios
 
-**Problem:** A BDD scenario references a requirement ID (via `@REQ:<id>`) that no longer exists in the Cameo model.
+**Problem:** A BDD scenario references a requirement or VC ID (via `@REQ:<id>` or `@VM:<id>`) that no longer exists in the Cameo model.
 
 **Behavior:**
-- Identifies scenarios whose `@REQ` tags point to deleted or renamed requirements.
+- Identifies scenarios whose `@REQ` or `@VM` tags point to deleted or renamed requirements/VCs.
 - When `--fail-on-orphaned` is set, the gate fails the pipeline.
+- Orphaned scenarios can be kept as regression tests by removing the `@REQ:`/`@VM:` tags (see pipeline guide).
 
 ### Gherkin Tag Conventions
 
 | Tag | Meaning |
 |-----|---------|
-| `@REQ:<id>` | Links a feature/scenario to a Cameo requirement (e.g., `@REQ:SYS-REQ-001`) |
+| `@REQ:<id>` | Links a feature to a Cameo requirement (e.g., `@REQ:SYS-REQ-001`). Applied at **feature level**. |
+| `@VM:<id>` | Links a scenario to a specific verification criteria (e.g., `@VM:SYS-REQ-001-VM-01`). Applied at **scenario level**. |
 | `@VER:<method>` | Declares the INCOSE verification method (e.g., `@VER:Test`) |
 | `@STUB` | Marks an auto-generated stub awaiting real implementation |
 | `@AUTO_GENERATED` | Indicates the file was machine-generated |
 | `@manual` | Skipped by automated Behave runs; requires human verification |
 | `@REVIEW_REQUIRED` | Injected by Gate B; indicates criteria drift needing human review |
+| `@regression` | Test kept for regression value after its requirement was removed |
 | `@topology:<type>` | Scenario only runs under the specified deployment topology |
 
 ---

@@ -10,6 +10,11 @@ Implements three quality gates:
   Gate C: Orphaned Scenarios — Gherkin scenarios whose @REQ or @VM tag
           references a requirement or VM that no longer exists.
 
+When a release plan is provided (``--release-plan``), Gate A distinguishes
+between truly uncovered VMs (in-scope for the current release) and
+**deferred** VMs (scheduled for a future release).  Deferred VMs are
+reported but do not cause Gate A to fail.
+
 Exit codes:
   0  all gates pass
   1  one or more gates failed (or --fail-on-* triggered)
@@ -398,7 +403,21 @@ def generate_stubs(
 # Baseline management (Gate B helper)
 # ---------------------------------------------------------------------------
 def load_baseline(path: Path) -> tuple[dict[str, str], dict[str, str]]:
-    """Load .traceability-baseline.json -> (hashes, criteria) dicts keyed by vm_id."""
+    """Load the traceability baseline file.
+
+    Parameters
+    ----------
+    path:
+        Path to ``.traceability-baseline.json``.
+
+    Returns
+    -------
+    tuple[dict[str, str], dict[str, str]]
+        A ``(hashes, criteria)`` pair of dicts, each keyed by VM ID.
+        *hashes* maps VM IDs to their SHA-256 digest of the verification
+        criteria text; *criteria* maps VM IDs to the raw criteria string.
+        Returns empty dicts if the file does not exist.
+    """
     if not path.exists():
         return {}, {}
     with open(path, encoding="utf-8") as fh:
@@ -603,7 +622,39 @@ def run_gate_a(
     in_scope_vm_ids: set[str] | None = None,
     vm_to_release: dict[str, str] | None = None,
 ) -> GateResult:
-    """Gate A — Uncovered Verification Methods."""
+    """Gate A -- Uncovered Verification Methods.
+
+    Identifies VMs that have no matching ``@VM:`` tag in any ``.feature``
+    file and auto-generates stub features for them.
+
+    Parameters
+    ----------
+    requirements:
+        Mapping of requirement ID to :class:`Requirement` objects.
+    covered_vm_ids:
+        Set of VM IDs already covered by existing Gherkin scenarios.
+    stubs_output_dir:
+        Directory where generated stub ``.feature`` files are written.
+    non_test_output_dir:
+        Optional directory for non-test verification method stubs.
+    template_path:
+        Optional Jinja2 template for stub generation.
+    fail_on_uncovered:
+        If *True*, the gate fails when any in-scope VM is uncovered.
+    in_scope_vm_ids:
+        When provided (derived from a release plan), only VMs in this set
+        are considered in-scope for the current release.  VMs outside
+        this set are marked as **deferred** rather than uncovered, and
+        do not cause the gate to fail.
+    vm_to_release:
+        Mapping of deferred VM IDs to their target release labels,
+        used to annotate deferred items in the gate report.
+
+    Returns
+    -------
+    GateResult
+        Outcome of the gate, including itemised uncovered and deferred VMs.
+    """
     vm_to_release = vm_to_release or {}
 
     uncovered_vms: list[tuple[Requirement, VerificationMethod]] = []

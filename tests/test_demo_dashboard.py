@@ -52,6 +52,8 @@ class TestDemoDashboard:
         cls.req_raw = json.loads((cls.tmpdir / "requirements.json").read_text(encoding="utf-8"))
         cls.behave_raw = json.loads((cls.tmpdir / "behave-results.json").read_text(encoding="utf-8"))
         cls.trace_raw = json.loads((cls.tmpdir / "traceability_report.json").read_text(encoding="utf-8"))
+        release_plan_path = cls.tmpdir / "release-plan.json"
+        cls.release_plan_raw = json.loads(release_plan_path.read_text(encoding="utf-8")) if release_plan_path.is_file() else None
 
         html_path = cls.tmpdir / "dashboard.html"
         report_generator.write_json_report(cls.report, cls.tmpdir / "report.json")
@@ -60,6 +62,7 @@ class TestDemoDashboard:
             requirements_raw=cls.req_raw,
             behave_raw=cls.behave_raw,
             traceability_raw=cls.trace_raw,
+            release_plan_data=cls.release_plan_raw,
         )
         cls.html = html_path.read_text(encoding="utf-8")
 
@@ -70,6 +73,7 @@ class TestDemoDashboard:
         cls.js_trace = _extract_js_json(cls.html, "TRACEABILITY")
         cls.js_sbom = _extract_js_json(cls.html, "SBOM")
         cls.js_grype = _extract_js_json(cls.html, "GRYPE")
+        cls.js_release_plan = _extract_js_json(cls.html, "RELEASE_PLAN")
 
         cls.rows = {r["vm_id"]: r for r in cls.report["requirements"]}
         cls.summary = cls.report["summary"]
@@ -325,13 +329,14 @@ class TestDemoDashboard:
         assert 'id="panel-tests"' in self.html
         assert 'id="panel-export"' in self.html
 
-    def test_all_6_data_vars_injected(self):
+    def test_all_7_data_vars_injected(self):
         assert "const REPORT = " in self.html
         assert "const REQUIREMENTS = " in self.html
         assert "const BEHAVE = " in self.html
         assert "const TRACEABILITY = " in self.html
         assert "const SBOM = " in self.html
         assert "const GRYPE = " in self.html
+        assert "const RELEASE_PLAN = " in self.html
 
     def test_xss_protected(self):
         assert "</script><script>" not in self.html
@@ -370,6 +375,33 @@ class TestDemoDashboard:
     def test_traces_to_present(self):
         req003 = [r for r in self.js_reqs["requirements"] if r["requirementId"] == "SYS-REQ-003"][0]
         assert req003["tracesTo"] == ["SYS-REQ-001"]
+
+    # ---- RELEASE PLAN ----
+
+    def test_release_plan_loaded(self):
+        assert self.js_release_plan is not None
+
+    def test_release_plan_has_3_releases(self):
+        assert len(self.js_release_plan["releases"]) == 3
+
+    def test_release_versions(self):
+        versions = [r["version"] for r in self.js_release_plan["releases"]]
+        assert versions == ["1.0.0", "1.1.0", "2.0.0"]
+
+    def test_release_100_scope(self):
+        rel = self.js_release_plan["releases"][0]
+        assert "SYS-REQ-001" in rel["scope"]
+        assert "SYS-REQ-002" in rel["scope"]
+        assert "SYS-REQ-005" in rel["scope"]
+
+    def test_release_110_scope(self):
+        rel = self.js_release_plan["releases"][1]
+        assert "SYS-REQ-001-VM-02" in rel["scope"]
+        assert "SYS-REQ-003" in rel["scope"]
+
+    def test_deferred_vm_has_target_release(self):
+        vm = self.rows["SYS-REQ-003-VM-02"]
+        assert vm["target_release"] == "1.1.0"
 
 
 if __name__ == "__main__":

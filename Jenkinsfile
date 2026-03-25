@@ -116,12 +116,19 @@ spec:
             steps {
                 container('python') {
                     sh '''
+                        RELEASE_PLAN_ARG=""
+                        [ -f release-plan.json ] && RELEASE_PLAN_ARG="--release-plan release-plan.json"
+                        SBOM_ARG=""
+                        [ -f build/reports/security/sbom.json ] && SBOM_ARG="--sbom-path build/reports/security/sbom.json"
+                        GRYPE_ARG=""
+                        [ -f build/reports/security/grype-results.json ] && GRYPE_ARG="--grype-path build/reports/security/grype-results.json"
                         python3 tools/report_generator.py \
                             --requirements build/cameo/requirements/requirements.json \
                             --behave-results build/reports/bdd/behave-results.json \
                             --traceability-input build/reports/traceability/traceability_report.json \
                             --output-json build/reports/traceability/traceability_report.json \
-                            --output-html build/reports/traceability/traceability_report.html
+                            --output-html build/reports/traceability/traceability_report.html \
+                            $RELEASE_PLAN_ARG $SBOM_ARG $GRYPE_ARG
                     '''
                 }
             }

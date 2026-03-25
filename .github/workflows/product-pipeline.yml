@@ -175,12 +175,17 @@ jobs:
 
       - name: Generate Final Traceability Report
         run: |
+          RELEASE_PLAN_ARG=""
+          if [ -f release-plan.json ]; then
+            RELEASE_PLAN_ARG="--release-plan release-plan.json"
+          fi
           python tools/report_generator.py \
             --requirements build/cameo/requirements/requirements.json \
             --behave-results build/reports/bdd/behave-results.json \
             --traceability-input build/reports/traceability/traceability_report.json \
             --output-json build/reports/traceability/final_traceability_report.json \
-            --output-html build/reports/traceability/traceability_matrix.html
+            --output-html build/reports/traceability/traceability_matrix.html \
+            $RELEASE_PLAN_ARG
 
       - name: Generate Requirements Document
         run: |

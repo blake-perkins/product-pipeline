@@ -23,7 +23,10 @@ Typical CLI usage::
         --behave-results build/behave-results.json \
         --traceability-input build/traceability_report.json \
         --output-json build/traceability_matrix.json \
-        --output-html build/traceability_matrix.html
+        --output-html build/traceability_matrix.html \
+        [--sbom-path build/sbom.json] \
+        [--grype-path build/grype-results.json] \
+        [--release-plan build/release-plan.json]
 """
 
 from __future__ import annotations
@@ -178,8 +181,8 @@ def _index_behave_results(
 def _parse_traceability_data(
     trace_data: Dict[str, Any],
     all_vm_ids: set[str],
-) -> tuple[set[str], set[str], set[str], List[Dict[str, Any]]]:
-    """Extract covered/uncovered/drifted/orphaned VM IDs from the traceability report.
+) -> tuple[set[str], set[str], set[str], List[Dict[str, Any]], set[str], Dict[str, str]]:
+    """Extract coverage and deferral data from the traceability report.
 
     Supports two formats:
 
@@ -193,9 +196,12 @@ def _parse_traceability_data(
     Returns
     -------
     tuple
-        ``(covered_ids, uncovered_ids, drifted_ids, orphaned_tests)``
+        ``(covered_ids, uncovered_ids, drifted_ids, orphaned_tests, deferred_ids, deferred_releases)``
         where the ID sets contain VM IDs when available, otherwise
-        requirement IDs.
+        requirement IDs.  *deferred_ids* is the set of VM IDs whose
+        verification is deferred to a future release, and
+        *deferred_releases* maps each deferred VM ID to its target
+        release label.
     """
     # --- Flat format ---
     if "covered" in trace_data or "uncovered" in trace_data:
@@ -545,6 +551,9 @@ def write_html_report(
         Optional CycloneDX SBOM JSON from Syft.
     grype_data:
         Optional Grype vulnerability scan results JSON.
+    release_plan_data:
+        Optional release-plan JSON used to annotate deferred VMs and
+        their target releases in the HTML dashboard.
     """
     jinja_template = _try_load_jinja2_template(template_dir)
 
