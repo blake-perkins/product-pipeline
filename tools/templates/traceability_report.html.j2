@@ -754,10 +754,12 @@ function toggleVC(el) {
 function toggleAllReqs() {
   const bodies = document.querySelectorAll('.req-body');
   const btn = document.getElementById('btn-expand-all');
-  const anyOpen = Array.from(bodies).some(b => b.classList.contains('open'));
-  bodies.forEach(b => { anyOpen ? b.classList.remove('open') : b.classList.add('open'); });
-  document.querySelectorAll('.req-header .arrow').forEach(a => { anyOpen ? a.classList.remove('open') : a.classList.add('open'); });
-  if (btn) btn.textContent = anyOpen ? 'Expand All' : 'Collapse All';
+  const openCount = Array.from(bodies).filter(b => b.classList.contains('open')).length;
+  /* Collapse only if MORE THAN HALF are open — prevents collapsing when navigateToVC opened just one */
+  const shouldCollapse = openCount > bodies.length / 2;
+  bodies.forEach(b => { shouldCollapse ? b.classList.remove('open') : b.classList.add('open'); });
+  document.querySelectorAll('.req-header .arrow').forEach(a => { shouldCollapse ? a.classList.remove('open') : a.classList.add('open'); });
+  if (btn) btn.textContent = shouldCollapse ? 'Expand All' : 'Collapse All';
 }
 
 /* Navigate from Gate item to Traceability Matrix */
