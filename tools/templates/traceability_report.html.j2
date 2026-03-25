@@ -1423,23 +1423,22 @@ function renderGates() {
   ];
 
   const vcFilter = getFilteredVCIds();
+  var isGateReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
   let html = '<div class="gate-cards">';
   gates.forEach(g => {
     const data = TRACEABILITY[g.key] || {};
     const allItems = data.items || [];
-    /* Filter gate items by release scope */
-    var isGateReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
-    const items = vcFilter ? allItems.filter(item => {
+    /* For released versions, all gates passed — show no items */
+    const items = isGateReleased ? [] : (vcFilter ? allItems.filter(item => {
       const id = item.verificationCriteriaId || item.vc_id || '';
-      if (g.key === 'gate_c') return !isGateReleased; /* suppress orphans for released versions */
       return !id || vcFilter.has(id);
-    }) : allItems;
-    const passed = vcFilter ? items.length === 0 : data.passed !== false;
+    }) : allItems);
+    const passed = isGateReleased ? true : (vcFilter ? items.length === 0 : data.passed !== false);
     const gateLabel = g.key === 'gate_a' ? 'A' : g.key === 'gate_b' ? 'B' : 'C';
     html += '<div class="gate-card ' + (passed ? 'gate-pass' : 'gate-fail') + '" data-gate="' + gateLabel + '">';
     html += '<div class="gate-title"><span class="gate-name">' + g.name + '</span>' + badgeFor(passed ? 'pass' : 'fail') + '</div>';
     html += '<div class="gate-desc">' + g.desc + '</div>';
-    if (data.message) html += '<p style="font-size:0.85rem;margin-bottom:8px">' + esc(data.message) + '</p>';
+    if (!isGateReleased && data.message) html += '<p style="font-size:0.85rem;margin-bottom:8px">' + esc(data.message) + '</p>';
     if (items.length === 0) {
       html += '<p style="color:var(--pass);font-size:0.85rem">No issues detected.</p>';
     }
@@ -1465,7 +1464,7 @@ function renderGates() {
   html += '</div>';
 
   /* Overall — use filtered stats when a release is selected */
-  var allGatesPass = gates.every(function(g) { var d = TRACEABILITY[g.key] || {}; var ai = d.items || []; return (vcFilter ? ai.filter(function(item) { var id = item.verificationCriteriaId || item.vc_id || ''; if (g.key === 'gate_c') return !isGateReleased; return !id || vcFilter.has(id); }).length === 0 : d.passed !== false); });
+  var allGatesPass = isGateReleased ? true : gates.every(function(g) { var d = TRACEABILITY[g.key] || {}; var ai = d.items || []; return (vcFilter ? ai.filter(function(item) { var id = item.verificationCriteriaId || item.vc_id || ''; return !id || vcFilter.has(id); }).length === 0 : d.passed !== false); });
   var fs = computeFilteredSummary();
   html += '<div style="margin-top:20px;text-align:center">';
   html += '<strong>Overall Pipeline: </strong>' + badgeFor(allGatesPass ? 'pass' : 'fail');
