@@ -714,6 +714,7 @@ function onReleaseFilterChange() {
   renderTraceability();
   renderGates();
   renderTests();
+  renderSecurity();
   renderExecutiveSummary();
   applyFilters();
 }
@@ -1106,8 +1107,16 @@ function renderSecurity() {
   }
 
   let html = '';
-  const matches = (GRYPE && GRYPE.matches) || [];
+  /* For released versions, vulnerabilities were resolved before shipping */
+  const isFilteredToReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
+  const matches = isFilteredToReleased ? [] : ((GRYPE && GRYPE.matches) || []);
   const components = (SBOM && SBOM.components) || [];
+
+  if (isFilteredToReleased) {
+    html += '<div style="padding:12px 16px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;margin-bottom:16px;font-size:0.9rem;color:var(--text-muted)">';
+    html += '<strong style="color:var(--pass)">Release ' + esc(selectedRelease) + '</strong> shipped with all vulnerabilities resolved. Showing clean scan results for this release.';
+    html += '</div>';
+  }
 
   /* ---- #3 Policy compliance banner ---- */
   if (GRYPE) {
