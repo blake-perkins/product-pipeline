@@ -192,33 +192,26 @@ jobs:
 
       - name: Generate MBSE Traceability Dashboard
         run: |
-          # Build CLI args conditionally based on available data
-          RELEASE_PLAN_ARG=""
-          SBOM_ARG=""
-          GRYPE_ARG=""
-
-          if [ -f release-plan.json ]; then
-            RELEASE_PLAN_ARG="--release-plan release-plan.json"
-          fi
-
-          # Use demo SBOM/Grype data for prototype
-          # In production, Syft/Grype run against real container images
-          if [ -f build/demo/sbom.json ]; then
-            SBOM_ARG="--sbom-path build/demo/sbom.json"
-          fi
-          if [ -f build/demo/grype-results.json ]; then
-            GRYPE_ARG="--grype-path build/demo/grype-results.json"
-          fi
+          # For prototype: use demo data for all inputs so the dashboard
+          # exercises every state (pass, fail, uncovered, drifted, manual,
+          # orphaned, deferred) with SBOM/Grype and release planning.
+          #
+          # In production, replace these paths with real pipeline outputs:
+          #   --requirements   build/cameo/requirements/requirements.json
+          #   --behave-results build/reports/bdd/behave-results.json
+          #   --traceability-input build/reports/traceability/traceability_report.json
+          #   --sbom-path      build/reports/security/sbom.json
+          #   --grype-path     build/reports/security/grype-results.json
 
           python tools/report_generator.py \
-            --requirements build/cameo/requirements/requirements.json \
-            --behave-results build/reports/bdd/behave-results.json \
-            --traceability-input build/reports/traceability/traceability_report.json \
+            --requirements build/demo/requirements.json \
+            --behave-results build/demo/behave-results.json \
+            --traceability-input build/demo/traceability_report.json \
             --output-json build/reports/traceability/final_traceability_report.json \
             --output-html build/reports/traceability/MBSE_Traceability_Dashboard.html \
-            $RELEASE_PLAN_ARG \
-            $SBOM_ARG \
-            $GRYPE_ARG
+            --release-plan build/demo/release-plan.json \
+            --sbom-path build/demo/sbom.json \
+            --grype-path build/demo/grype-results.json
 
       - name: Generate Requirements Document
         run: |
