@@ -1744,7 +1744,7 @@ function renderExecutiveSummary() {
   rows.filter(r => r.status === 'uncovered').forEach(r => {
     issues.push({sev: 2, icon: '&#8212;', color: 'var(--uncovered)', text: '<strong>' + esc(r.vc_id) + '</strong> — uncovered (' + esc(r.method) + '): ' + esc(r.title), vcId: r.vc_id, reqId: r.requirement_id});
   });
-  if (REPORT.orphaned_tests) REPORT.orphaned_tests.forEach(o => {
+  if (!isFilteredReleased && REPORT.orphaned_tests) REPORT.orphaned_tests.forEach(o => {
     issues.push({sev: 3, icon: '?', color: 'var(--orphaned)', text: 'Orphaned: ' + esc(o.name || o.feature_file), vcId: '', reqId: ''});
   });
   issues.sort((a, b) => a.sev - b.sev);
