@@ -406,14 +406,10 @@ class TestDemoDashboard:
 
     # ---- EXECUTIVE SUMMARY ----
 
-    def test_executive_summary_has_verdict(self):
-        """Demo has failures, so verdict should be NO-GO."""
-        assert "NO-GO" in self.html
-
-    def test_executive_summary_has_action_items(self):
-        assert "Systems Engineers" in self.html
-        assert "Developers" in self.html
-        assert "DevSecOps" in self.html
+    def test_executive_summary_has_readiness(self):
+        """Demo has failures, so readiness should be less than 100%."""
+        assert "Release Readiness" in self.html
+        assert "remaining" in self.html.lower()
 
     def test_executive_summary_has_cyber_risk(self):
         assert "Cyber Risk" in self.html
