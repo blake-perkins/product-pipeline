@@ -699,6 +699,10 @@ python tools/report_generator.py \
   --output-html build/reports/traceability/traceability_matrix.html
 ```
 
+### Full Release Management Guide
+
+For detailed workflows including shipping a release, advancing the current version, moving VCs between releases, what-if analysis, and common scenarios, see [docs/release-management.md](release-management.md).
+
 ---
 
 ## 10. Traceability Dashboard
