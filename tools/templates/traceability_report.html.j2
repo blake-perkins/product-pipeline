@@ -1395,7 +1395,7 @@ function renderExecutiveSummary() {
 
   /* Calculate readiness percentage */
   const inScope = s.in_scope_vcs || s.total_vcs;
-  const resolved = s.passed + s.manual; /* passed tests + manual reviews = "done" */
+  const resolved = s.passed; /* only passed tests count as complete */
   const readinessPct = inScope > 0 ? Math.round(resolved / inScope * 100) : 0;
 
   /* Determine ring color */
@@ -1462,16 +1462,17 @@ function renderExecutiveSummary() {
         else if (reqToVCs[id]) reqToVCs[id].forEach(v => scopeVCs.push(v));
       });
       const total = scopeVCs.length;
-      const complete = scopeVCs.filter(id => { const st = vcStatus[id]; return st === 'pass' || st === 'manual'; }).length;
+      const complete = scopeVCs.filter(id => { const st = vcStatus[id]; return st === 'pass'; }).length;
+      const manualCount = scopeVCs.filter(id => { const st = vcStatus[id]; return st === 'manual'; }).length;
       const pct = total ? Math.round(complete / total * 100) : 0;
       html += '<div style="margin-bottom:12px">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
       html += '<span style="font-weight:600;font-size:0.9rem">Release ' + esc(rel.version) + '</span>';
-      html += '<span style="font-size:0.85rem;color:' + (pct === 100 ? 'var(--pass)' : 'var(--text-muted)') + ';font-weight:600">' + pct + '% (' + complete + '/' + total + ')</span>';
+      html += '<span style="font-size:0.85rem;color:' + (pct === 100 && manualCount === 0 ? 'var(--pass)' : 'var(--text-muted)') + ';font-weight:600">' + pct + '% (' + complete + '/' + total + ')' + (manualCount > 0 ? ' <span style="color:var(--manual);font-weight:400">+ ' + manualCount + ' manual</span>' : '') + '</span>';
       html += '</div>';
       html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e9ecef">';
       if (complete > 0) html += '<div style="width:' + (complete/total*100) + '%;background:var(--pass)"></div>';
-      if (total - complete > 0) html += '<div style="width:' + ((total-complete)/total*100) + '%;background:#e9ecef"></div>';
+      if (manualCount > 0) html += '<div style="width:' + (manualCount/total*100) + '%;background:var(--manual)" title="Manual: ' + manualCount + '"></div>';
       html += '</div>';
       if (rel.targetDate) html += '<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px">Target: ' + fmtDate(rel.targetDate + 'T00:00:00Z') + '</div>';
       html += '</div>';
@@ -1591,7 +1592,7 @@ function renderReleases() {
   const allPlannedVCs = cumulativeScopes.length > 0 ? cumulativeScopes[cumulativeScopes.length - 1] : new Set();
   const allComplete = Array.from(allPlannedVCs).filter(id => {
     const st = vcStatus[id];
-    return st && (st.status === 'pass' || st.status === 'manual');
+    return st && st.status === 'pass';
   });
 
   let html = '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px">';
@@ -1613,7 +1614,7 @@ function renderReleases() {
     });
 
     const total = scopeVCs.length;
-    const complete = counts.pass + counts.manual;
+    const complete = counts.pass;
     const pct = total ? Math.round(complete / total * 100) : 0;
 
     /* Is this the current release? */
