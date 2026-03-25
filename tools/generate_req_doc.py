@@ -44,10 +44,10 @@ def compute_statistics(requirements: list[dict]) -> str:
     by_status = Counter(r.get("status", "Unspecified") for r in requirements)
     by_verification: Counter = Counter()
     for r in requirements:
-        vms = r.get("verificationMethods", [])
-        if vms:
-            for vm in vms:
-                by_verification[vm.get("method", "Unspecified")] += 1
+        vcs = r.get("verificationCriteria", r.get("verificationMethods", []))
+        if vcs:
+            for vc in vcs:
+                by_verification[vc.get("method", "Unspecified")] += 1
         else:
             # Legacy fallback for single verificationMethod field
             by_verification[r.get("verificationMethod", "Unspecified")] += 1
@@ -135,24 +135,24 @@ def render_requirements(
         fields += render_field("Status", req.get("status"))
         fields += render_field("Parent Requirement", req.get("parentRequirementId"))
 
-        # Render verification methods (1-to-many)
-        vms = req.get("verificationMethods", [])
-        if vms:
-            vm_rows = ""
-            for vm in vms:
-                vm_id = escape(vm.get("verificationMethodId", ""))
-                method = escape(vm.get("method", ""))
-                criteria = escape(vm.get("criteria", ""))
-                vm_rows += (
-                    f'<tr><td><code>{vm_id}</code></td>'
+        # Render verification criteria (1-to-many)
+        vcs = req.get("verificationCriteria", req.get("verificationMethods", []))
+        if vcs:
+            vc_rows = ""
+            for vc in vcs:
+                vc_id = escape(vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
+                method = escape(vc.get("method", ""))
+                criteria = escape(vc.get("criteria", ""))
+                vc_rows += (
+                    f'<tr><td><code>{vc_id}</code></td>'
                     f'<td>{method}</td>'
                     f'<td>{criteria}</td></tr>\n'
                 )
             fields += (
-                f'<div class="field"><span class="field-label">Verification Methods:</span>'
+                f'<div class="field"><span class="field-label">Verification Criteria:</span>'
                 f'<table style="margin-top:4px;font-size:0.88em;">'
-                f'<tr><th>VM ID</th><th>Method</th><th>Criteria</th></tr>'
-                f'{vm_rows}</table></div>'
+                f'<tr><th>VC ID</th><th>Method</th><th>Criteria</th></tr>'
+                f'{vc_rows}</table></div>'
             )
 
         fields += render_field("Satisfied By", req.get("satisfiedBy"))

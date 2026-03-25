@@ -2,10 +2,10 @@
 Feature: SYS-REQ-006 - Visual Inspection of Connectors
   All external connectors shall be properly labeled and secured per the mechanical drawing.
 
-  Verification Method: Inspection
+  Verification Criteria Type: Inspection
   Verification Criteria: Inspect all external connectors for proper labeling per drawing MD-2024-001 and torque verification per specification.
 
-  @VM:SYS-REQ-006-VM-01
+  @VC:SYS-REQ-006-VC-01
   Scenario: Verify SYS-REQ-006 - Visual Inspection of Connectors
     Given the system is configured for inspection verification of "SYS-REQ-006"
     When the inspection verification is performed

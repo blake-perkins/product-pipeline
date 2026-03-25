@@ -2,7 +2,7 @@
 Feature: Error Message Handling
   Verify the system rejects malformed ICD messages gracefully.
 
-  @VM:SYS-REQ-005-VM-01 @VER:Test
+  @VC:SYS-REQ-005-VC-01 @VER:Test
   Scenario: Malformed messages are rejected with warnings
     Given the simulation logs are loaded
     Then the product logs should contain "Malformed message rejected"

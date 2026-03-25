@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate Gherkin .feature stub files for uncovered verification methods.
+"""Generate Gherkin .feature stub files for uncovered verification criteria.
 
 This module creates placeholder BDD feature files so that every verification
-method on every requirement in the Cameo export has at least one corresponding
+criteria on every requirement in the Cameo export has at least one corresponding
 scenario.  The generated stubs intentionally contain a failing step
 (``Then it should fail because it is not yet implemented``) to ensure the
 pipeline stays red until real tests are authored.
@@ -54,14 +54,14 @@ _MANUAL_TAG = "@manual"
 _INLINE_TEMPLATE = textwrap.dedent(
     """\
     {feature_tags}
-    Feature: {vm_id} - {title} ({method})
+    Feature: {vc_id} - {title} ({method})
       {description}
 
       Verification Method: {method}
       Verification Criteria: {criteria}
 
-      @VM:{vm_id}
-      Scenario: Verify {vm_id} - {title}
+      @VC:{vc_id}
+      Scenario: Verify {vc_id} - {title}
         Given the system is configured for {method_lower} verification of "{req_id}"
         When the {method_lower} verification is performed
         Then it should fail because it is not yet implemented
@@ -120,22 +120,22 @@ def _try_load_jinja2_template(template_dir: Optional[Path] = None):
 
 def _render_stub(
     requirement: Dict[str, Any],
-    vm: Dict[str, Any],
+    vc: Dict[str, Any],
     *,
     is_manual: bool,
     jinja_template: Any = None,
 ) -> str:
-    """Render a single Gherkin stub for a verification method on *requirement*.
+    """Render a single Gherkin stub for a verification criteria on *requirement*.
 
     Parameters
     ----------
     requirement:
         A single requirement dict from the Cameo export.
-    vm:
-        A single verification method dict from the requirement's
-        ``verificationMethods`` list.
+    vc:
+        A single verification criteria dict from the requirement's
+        ``verificationCriteria`` list.
     is_manual:
-        Whether this VM uses a manual verification method.
+        Whether this VC uses a manual verification method.
     jinja_template:
         An optional pre-loaded Jinja2 ``Template`` object.  When *None* the
         built-in inline template is used instead.
@@ -148,17 +148,17 @@ def _render_stub(
     req_id: str = requirement["requirementId"]
     title: str = requirement.get("title", req_id)
     description: str = requirement.get("description", "")
-    vm_id: str = vm["verificationMethodId"]
-    method: str = vm.get("method", "Test")
-    criteria: str = vm.get("criteria", "")
+    vc_id: str = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
+    method: str = vc.get("method", "Test")
+    criteria: str = vc.get("criteria", "")
 
     if jinja_template is not None:
         return jinja_template.render(
             requirement=requirement,
-            vm=vm,
+            vc=vc,
         )
 
-    # Inline fallback — @REQ: at feature level, @VM: at scenario level
+    # Inline fallback — @REQ: at feature level, @VC: at scenario level
     if is_manual:
         feature_tags = f"@REQ:{req_id} {_MANUAL_TAG} {_STUB_TAG} {_AUTO_TAG}"
     else:
@@ -167,7 +167,7 @@ def _render_stub(
     return _INLINE_TEMPLATE.format(
         feature_tags=feature_tags,
         req_id=req_id,
-        vm_id=vm_id,
+        vc_id=vc_id,
         title=title,
         description=description,
         method=method,
@@ -186,11 +186,11 @@ def generate_stubs(
     output_dir: Path,
     non_test_output_dir: Path,
     *,
-    covered_vm_ids: Optional[set[str]] = None,
+    covered_vc_ids: Optional[set[str]] = None,
     template_dir: Optional[Path] = None,
     dry_run: bool = False,
 ) -> List[Path]:
-    """Generate Gherkin stubs for uncovered verification methods.
+    """Generate Gherkin stubs for uncovered verification criteria.
 
     Parameters
     ----------
@@ -202,9 +202,9 @@ def generate_stubs(
         Target base directory for manual stubs (Analysis / Inspection).
         Sub-directories ``analysis/``, ``inspection/``, or
         ``demonstration/`` are created automatically.
-    covered_vm_ids:
-        Optional set of verification method IDs that already have feature
-        files.  When *None*, stubs are generated for **all** VMs (useful
+    covered_vc_ids:
+        Optional set of verification criteria IDs that already have feature
+        files.  When *None*, stubs are generated for **all** VCs (useful
         for bootstrapping).
     template_dir:
         Override directory for Jinja2 templates.
@@ -217,8 +217,8 @@ def generate_stubs(
     list[Path]
         Paths of the feature files that were (or would be) created.
     """
-    if covered_vm_ids is None:
-        covered_vm_ids = set()
+    if covered_vc_ids is None:
+        covered_vc_ids = set()
 
     jinja_template = _try_load_jinja2_template(template_dir)
 
@@ -226,24 +226,24 @@ def generate_stubs(
 
     for req in requirements:
         req_id: str = req["requirementId"]
-        verification_methods: List[Dict[str, Any]] = req.get("verificationMethods", [])
+        verification_criteria: List[Dict[str, Any]] = req.get("verificationCriteria", req.get("verificationMethods", []))
 
-        if not verification_methods:
-            logger.warning("Requirement %s has no verificationMethods – skipping.", req_id)
+        if not verification_criteria:
+            logger.warning("Requirement %s has no verificationCriteria – skipping.", req_id)
             continue
 
-        for vm in verification_methods:
-            vm_id: str = vm["verificationMethodId"]
+        for vc in verification_criteria:
+            vc_id: str = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
 
-            if vm_id in covered_vm_ids:
-                logger.debug("Skipping %s – already covered.", vm_id)
+            if vc_id in covered_vc_ids:
+                logger.debug("Skipping %s – already covered.", vc_id)
                 continue
 
-            method: str = vm.get("method", "Test")
+            method: str = vc.get("method", "Test")
             is_manual = method in _MANUAL_VERIFICATION_METHODS
 
             # Determine target path
-            filename = f"{_slugify(vm_id)}.feature"
+            filename = f"{_slugify(vc_id)}.feature"
 
             if method in _AUTOMATED_VERIFICATION_METHODS:
                 target_path = output_dir / filename
@@ -256,7 +256,7 @@ def generate_stubs(
                 logger.info("Stub already exists, skipping: %s", target_path)
                 continue
 
-            content = _render_stub(req, vm, is_manual=is_manual, jinja_template=jinja_template)
+            content = _render_stub(req, vc, is_manual=is_manual, jinja_template=jinja_template)
 
             if not dry_run:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -275,7 +275,7 @@ def generate_stubs(
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate Gherkin stub files for uncovered verification methods.",
+        description="Generate Gherkin stub files for uncovered verification criteria.",
     )
     parser.add_argument(
         "--requirements",

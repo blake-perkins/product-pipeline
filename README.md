@@ -203,7 +203,7 @@ The traceability checker (`tools/traceability_checker.py`) enforces three qualit
 **Problem:** A verification criteria (VC) exists in the Cameo model but has no corresponding BDD scenario.
 
 **Behavior:**
-- Scans all `.feature` files for `@VM:<id>` tags and compares against the requirements JSON export.
+- Scans all `.feature` files for `@VC:<id>` tags and compares against the requirements JSON export.
 - For any uncovered VC, auto-generates a stub `.feature` file using the Jinja2 template (`tools/templates/stub_scenario.feature.j2`).
 - Test/Demonstration VCs generate stubs in `bdd/features/automated/`.
 - Analysis/Inspection VCs generate stubs in `bdd/features/non_test/` with the `@manual` tag.
@@ -224,20 +224,20 @@ The traceability checker (`tools/traceability_checker.py`) enforces three qualit
 
 ### Gate C: Orphaned Scenarios
 
-**Problem:** A BDD scenario references a requirement or VC ID (via `@REQ:<id>` or `@VM:<id>`) that no longer exists in the Cameo model.
+**Problem:** A BDD scenario references a requirement or VC ID (via `@REQ:<id>` or `@VC:<id>`) that no longer exists in the Cameo model.
 
 **Behavior:**
-- Identifies scenarios whose `@REQ` or `@VM` tags point to deleted or renamed requirements/VCs.
+- Identifies scenarios whose `@REQ` or `@VC` tags point to deleted or renamed requirements/VCs.
 - When `--fail-on-orphaned` is set, the gate fails the pipeline.
-- Orphaned scenarios can be kept as regression tests by removing the `@REQ:`/`@VM:` tags (see pipeline guide).
+- Orphaned scenarios can be kept as regression tests by removing the `@REQ:`/`@VC:` tags (see pipeline guide).
 
 ### Gherkin Tag Conventions
 
 | Tag | Meaning |
 |-----|---------|
 | `@REQ:<id>` | Links a feature to a Cameo requirement (e.g., `@REQ:SYS-REQ-001`). Applied at **feature level**. |
-| `@VM:<id>` | Links a scenario to a specific verification criteria (e.g., `@VM:SYS-REQ-001-VM-01`). Applied at **scenario level**. |
-| `@VER:<method>` | Declares the INCOSE verification method (e.g., `@VER:Test`) |
+| `@VC:<id>` | Links a scenario to a specific verification criteria (e.g., `@VC:SYS-REQ-001-VC-01`). Applied at **scenario level**. |
+| `@VER:<method>` | Declares the INCOSE verification criteria (e.g., `@VER:Test`) |
 | `@STUB` | Marks an auto-generated stub awaiting real implementation |
 | `@AUTO_GENERATED` | Indicates the file was machine-generated |
 | `@manual` | Skipped by automated Behave runs; requires human verification |
@@ -453,9 +453,9 @@ Pipeline timeout: 60 minutes. Build history retained for 30 builds.
 
 ---
 
-## INCOSE Verification Methods
+## INCOSE Verification Criteria
 
-The pipeline supports all four INCOSE verification methods. Each requirement in the Cameo model specifies its `verificationMethod`, which determines how it is handled:
+The pipeline supports all four INCOSE verification criteria. Each requirement in the Cameo model specifies its verification method, which determines how it is handled:
 
 | Method | Tag | Handling |
 |--------|-----|----------|
@@ -504,7 +504,7 @@ This product-pipeline then:
 
 1. Fetches the published zip via Gradle dependency resolution (`configurations.cameoModel`).
 2. Unpacks it to `build/cameo/`, which contains:
-   - `requirements/requirements.json` — structured requirements with IDs, titles, descriptions, verification methods, and verification criteria.
+   - `requirements/requirements.json` — structured requirements with IDs, titles, descriptions, verification criteria, and verification criteria.
    - `proto/` — protobuf definitions for ICD message schemas.
 3. Runs traceability gates against the extracted requirements.
 
@@ -521,7 +521,7 @@ cameo.version=0.2.0
 
 1. Create or edit a `.feature` file in `bdd/features/automated/`.
 2. Tag it with `@REQ:<requirement-id>` linking to the Cameo requirement.
-3. Add `@VER:<method>` to declare the verification method.
+3. Add `@VER:<method>` to declare the verification criteria.
 4. Implement step definitions in `bdd/features/steps/`. Steps must perform pure log file assertions -- no network calls.
 5. Run the traceability checker locally to verify coverage.
 

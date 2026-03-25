@@ -1,17 +1,17 @@
-{% set is_manual = vm.method not in ["Test", "Demonstration"] -%}
+{% set is_manual = vc.method not in ["Test", "Demonstration"] -%}
 {% if is_manual -%}
 @REQ:{{ requirement.requirementId }} @manual @STUB @AUTO_GENERATED
 {% else -%}
 @REQ:{{ requirement.requirementId }} @STUB @AUTO_GENERATED
 {% endif -%}
-Feature: {{ vm.verificationMethodId }} - {{ requirement.title }} ({{ vm.method }})
+Feature: {{ vc.verificationCriteriaId }} - {{ requirement.title }} ({{ vc.method }})
   {{ requirement.description | default("No description provided.", true) }}
 
-  Verification Method: {{ vm.method }}
-  Verification Criteria: {{ vm.criteria | default("N/A", true) }}
+  Verification Method: {{ vc.method }}
+  Verification Criteria: {{ vc.criteria | default("N/A", true) }}
 
-  @VM:{{ vm.verificationMethodId }}
-  Scenario: Verify {{ vm.verificationMethodId }} - {{ requirement.title }}
-    Given the system is configured for {{ vm.method | lower }} verification of "{{ requirement.requirementId }}"
-    When the {{ vm.method | lower }} verification is performed
+  @VC:{{ vc.verificationCriteriaId }}
+  Scenario: Verify {{ vc.verificationCriteriaId }} - {{ requirement.title }}
+    Given the system is configured for {{ vc.method | lower }} verification of "{{ requirement.requirementId }}"
+    When the {{ vc.method | lower }} verification is performed
     Then it should fail because it is not yet implemented

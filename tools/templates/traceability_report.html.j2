@@ -101,20 +101,20 @@
     .req-title { flex: 1; font-size: 0.9rem; }
     .mini-bar { display: flex; width: 80px; height: 8px; border-radius: 4px; overflow: hidden; background: #e9ecef; }
     .mini-bar span { height: 100%; }
-    .vm-summary { font-size: 0.75rem; color: var(--text-muted); min-width: 100px; text-align: right; }
+    .vc-summary { font-size: 0.75rem; color: var(--text-muted); min-width: 100px; text-align: right; }
     .req-body { display: none; border-top: 1px solid #e9ecef; padding: 0; background: #f9fafb; }
     .req-body.open { display: block; }
     .req-desc { padding: 10px 16px; font-size: 0.85rem; color: var(--text-muted); background: #f9fafb; border-bottom: 1px solid #e9ecef; }
-    .vm-row { border-bottom: 1px solid #e9ecef; background: #fff; margin: 0 12px; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e9ecef; }
-    .vm-row:last-child { margin-bottom: 8px; }
-    .vm-header { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; font-size: 0.85rem; }
-    .vm-header:hover { background: #f7f8fa; border-radius: 6px; }
-    .vm-header .arrow { font-size: 0.6rem; color: var(--text-muted); transition: transform 0.2s; }
-    .vm-header .arrow.open { transform: rotate(90deg); }
-    .vm-id { font-family: monospace; font-weight: 600; min-width: 180px; }
-    .vm-method { min-width: 100px; color: var(--text-muted); }
-    .vm-feature { font-size: 0.8rem; color: var(--text-muted); flex: 1; text-align: right; font-family: monospace; }
-    .vm-criteria { padding: 8px 14px; font-size: 0.82rem; color: var(--text-muted); font-style: italic; border-top: 1px solid #f0f0f0; }
+    .vc-row { border-bottom: 1px solid #e9ecef; background: #fff; margin: 0 12px; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e9ecef; }
+    .vc-row:last-child { margin-bottom: 8px; }
+    .vc-header { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; font-size: 0.85rem; }
+    .vc-header:hover { background: #f7f8fa; border-radius: 6px; }
+    .vc-header .arrow { font-size: 0.6rem; color: var(--text-muted); transition: transform 0.2s; }
+    .vc-header .arrow.open { transform: rotate(90deg); }
+    .vc-id { font-family: monospace; font-weight: 600; min-width: 180px; }
+    .vc-method { min-width: 100px; color: var(--text-muted); }
+    .vc-feature { font-size: 0.8rem; color: var(--text-muted); flex: 1; text-align: right; font-family: monospace; }
+    .vc-criteria { padding: 8px 14px; font-size: 0.82rem; color: var(--text-muted); font-style: italic; border-top: 1px solid #f0f0f0; }
     .scenario-list { display: none; }
     .scenario-list.open { display: block; }
     .scenario-item { padding: 8px 14px; border-top: 1px solid #f0f0f0; }
@@ -245,11 +245,11 @@
         <div class="lbl">VC Coverage</div>
       </div>
       <div class="metric">
-        <div class="val">{{ summary.total_vms }}</div>
+        <div class="val">{{ summary.total_vcs }}</div>
         <div class="lbl">Total VCs</div>
       </div>
       <div class="metric">
-        <div class="val">{{ summary.covered_vms }}</div>
+        <div class="val">{{ summary.covered_vcs }}</div>
         <div class="lbl">Covered</div>
       </div>
       <div class="metric m-pass">
@@ -261,38 +261,38 @@
         <div class="lbl">Failed</div>
       </div>
       <div class="metric m-uncov">
-        <div class="val">{{ summary.uncovered_vms }}</div>
+        <div class="val">{{ summary.uncovered_vcs }}</div>
         <div class="lbl">Uncovered</div>
       </div>
       <div class="metric m-drift">
-        <div class="val">{{ summary.drifted_vms }}</div>
+        <div class="val">{{ summary.drifted_vcs }}</div>
         <div class="lbl">Drifted</div>
       </div>
       <div class="metric">
         <div class="val">{{ summary.manual }}</div>
         <div class="lbl">Manual</div>
       </div>
-      {% if summary.deferred_vms is defined and summary.deferred_vms > 0 %}
+      {% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}
       <div class="metric" style="background:var(--deferred)">
-        <div class="val">{{ summary.deferred_vms }}</div>
+        <div class="val">{{ summary.deferred_vcs }}</div>
         <div class="lbl">Deferred</div>
       </div>
       {% endif %}
     </div>
     <div>
       <div class="cov-label">
-        <span>Verification Criteria Breakdown ({{ summary.in_scope_vms | default(summary.total_vms) }} in-scope{% if summary.deferred_vms is defined and summary.deferred_vms > 0 %}, {{ summary.deferred_vms }} deferred{% endif %})</span>
-        <span>{{ summary.covered_vms }} / {{ summary.in_scope_vms | default(summary.total_vms) }} VCs covered</span>
+        <span>Verification Criteria Breakdown ({{ summary.in_scope_vcs | default(summary.total_vcs) }} in-scope{% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}, {{ summary.deferred_vcs }} deferred{% endif %})</span>
+        <span>{{ summary.covered_vcs }} / {{ summary.in_scope_vcs | default(summary.total_vcs) }} VCs covered</span>
       </div>
       <div class="cov-bar" style="display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--border);background:#E8F4FB">
-        {% if summary.total_vms > 0 %}
-        {% set tw = summary.total_vms %}
+        {% if summary.total_vcs > 0 %}
+        {% set tw = summary.total_vcs %}
         {% if summary.passed > 0 %}<div style="width:{{ (summary.passed/tw*100)|round(1) }}%;background:var(--pass)" title="Passed: {{ summary.passed }}"></div>{% endif %}
         {% if summary.failed > 0 %}<div style="width:{{ (summary.failed/tw*100)|round(1) }}%;background:var(--fail)" title="Failed: {{ summary.failed }}"></div>{% endif %}
-        {% if summary.drifted_vms > 0 %}<div style="width:{{ (summary.drifted_vms/tw*100)|round(1) }}%;background:var(--drifted)" title="Drifted: {{ summary.drifted_vms }}"></div>{% endif %}
-        {% if summary.uncovered_vms > 0 %}<div style="width:{{ (summary.uncovered_vms/tw*100)|round(1) }}%;background:var(--uncovered)" title="Uncovered: {{ summary.uncovered_vms }}"></div>{% endif %}
+        {% if summary.drifted_vcs > 0 %}<div style="width:{{ (summary.drifted_vcs/tw*100)|round(1) }}%;background:var(--drifted)" title="Drifted: {{ summary.drifted_vcs }}"></div>{% endif %}
+        {% if summary.uncovered_vcs > 0 %}<div style="width:{{ (summary.uncovered_vcs/tw*100)|round(1) }}%;background:var(--uncovered)" title="Uncovered: {{ summary.uncovered_vcs }}"></div>{% endif %}
         {% if summary.manual > 0 %}<div style="width:{{ (summary.manual/tw*100)|round(1) }}%;background:var(--manual)" title="Manual: {{ summary.manual }}"></div>{% endif %}
-        {% if summary.deferred_vms is defined and summary.deferred_vms > 0 %}<div style="width:{{ (summary.deferred_vms/tw*100)|round(1) }}%;background:var(--deferred)" title="Deferred: {{ summary.deferred_vms }}"></div>{% endif %}
+        {% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}<div style="width:{{ (summary.deferred_vcs/tw*100)|round(1) }}%;background:var(--deferred)" title="Deferred: {{ summary.deferred_vcs }}"></div>{% endif %}
         {% endif %}
       </div>
     </div>
@@ -470,11 +470,11 @@ function renderDiff(diffTokens) {
   }).join('');
 }
 
-/* Build lookup: vmId -> gate B item for drift data */
+/* Build lookup: vcId -> gate B item for drift data */
 const driftLookup = {};
 if (TRACEABILITY && TRACEABILITY.gate_b && TRACEABILITY.gate_b.items) {
   TRACEABILITY.gate_b.items.forEach(item => {
-    const id = item.verificationMethodId || item.vm_id || '';
+    const id = item.verificationCriteriaId || item.vc_id || '';
     if (id) driftLookup[id] = item;
   });
 }
@@ -508,7 +508,7 @@ const behaveLookup = {};
 const behaveFeatures = Array.isArray(BEHAVE) ? BEHAVE : (BEHAVE && BEHAVE.features ? BEHAVE.features : []);
 behaveFeatures.forEach(f => {
   const tags = (f.tags || []).map(t => typeof t === 'string' ? t : (t.name || ''));
-  /* Index by feature name and by REQ/VM tags */
+  /* Index by feature name and by REQ/VC tags */
   behaveLookup[f.name] = f;
   tags.forEach(tag => {
     const clean = tag.replace(/^@/, '');
@@ -516,8 +516,8 @@ behaveFeatures.forEach(f => {
   });
 });
 
-/* Find behave scenarios matching a given VM ID */
-function findScenariosForVM(vmId, reqId, reportRow) {
+/* Find behave scenarios matching a given VC ID */
+function findScenariosForVC(vcId, reqId, reportRow) {
   /* Don't look for scenarios if this VC is uncovered or drifted — there aren't real ones */
   if (reportRow && (reportRow.status === 'uncovered' || reportRow.status === 'drifted')) {
     return [];
@@ -529,10 +529,10 @@ function findScenariosForVM(vmId, reqId, reportRow) {
       if (el.keyword === 'Background') return;
       const sTags = (el.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, ''));
       const allTags = [...fTags, ...sTags];
-      const hasVM = allTags.some(t => t.replace(/^VM[:\-_]/i, '') === vmId);
+      const hasVC = allTags.some(t => t.replace(/^VC[:\-_]/i, '') === vcId);
       const hasReq = allTags.some(t => t.replace(/^REQ[:\-_]/i, '') === reqId);
-      /* Match by: (1) explicit VM tag, or (2) scenario name from report */
-      if (hasVM) {
+      /* Match by: (1) explicit VC tag, or (2) scenario name from report */
+      if (hasVC) {
         results.push({ scenario: el, featureName: feat.name, featureFile: feat.location || feat.filename || '' });
       } else if (hasReq && reportRow && reportRow.scenario_name && el.name === reportRow.scenario_name) {
         results.push({ scenario: el, featureName: feat.name, featureFile: feat.location || feat.filename || '' });
@@ -591,7 +591,7 @@ function renderTraceability() {
     });
     miniBar += '</div>';
 
-    const vmSummary = rows.length + ' VC' + (rows.length > 1 ? 's' : '');
+    const vcSummary = rows.length + ' VC' + (rows.length > 1 ? 's' : '');
 
     /* Worst-status determines the card's left-border color */
     const STATUS_PRIORITY = ['fail','drifted','uncovered','deferred','manual','pass'];
@@ -606,7 +606,7 @@ function renderTraceability() {
     html += '<span class="req-id">' + esc(reqId) + '</span>';
     html += '<span class="req-title">' + esc(title) + '</span>';
     html += miniBar;
-    html += '<span class="vm-summary">' + vmSummary + '</span>';
+    html += '<span class="vc-summary">' + vcSummary + '</span>';
     html += '</div>';
 
     html += '<div class="req-body">';
@@ -616,33 +616,33 @@ function renderTraceability() {
     if (desc) html += '</div>';
 
     rows.forEach(row => {
-      const vmId = row.vm_id || '';
-      const scenarios = findScenariosForVM(vmId, reqId, row);
+      const vcId = row.vc_id || '';
+      const scenarios = findScenariosForVC(vcId, reqId, row);
 
-      html += '<div class="vm-row" data-status="' + row.status + '" data-method="' + esc(row.method) + '">';
-      html += '<div class="vm-header" onclick="toggleVM(this)">';
+      html += '<div class="vc-row" data-status="' + row.status + '" data-method="' + esc(row.method) + '">';
+      html += '<div class="vc-header" onclick="toggleVC(this)">';
       html += '<span class="arrow">&#9654;</span>';
-      html += '<span class="vm-id">' + esc(vmId || reqId) + '</span>';
-      html += '<span class="vm-method">' + esc(row.method) + '</span>';
+      html += '<span class="vc-id">' + esc(vcId || reqId) + '</span>';
+      html += '<span class="vc-method">' + esc(row.method) + '</span>';
       html += badgeFor(row.status);
       if (scenarios.length > 0) html += '<span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto">(' + scenarios.length + ' scenario' + (scenarios.length > 1 ? 's' : '') + ')</span>';
-      html += '<span class="vm-feature">' + esc(row.feature_file || '') + '</span>';
+      html += '<span class="vc-feature">' + esc(row.feature_file || '') + '</span>';
       html += '</div>';
 
       /* Criteria display — show diff for drifted VCs */
-      if (row.status === 'drifted' && driftLookup[vmId]) {
-        const drift = driftLookup[vmId];
+      if (row.status === 'drifted' && driftLookup[vcId]) {
+        const drift = driftLookup[vcId];
         if (drift.oldCriteria && drift.newCriteria) {
           const diff = wordDiff(drift.oldCriteria, drift.newCriteria);
-          html += '<div class="vm-criteria" style="font-style:normal">';
+          html += '<div class="vc-criteria" style="font-style:normal">';
           html += '<div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Criteria Changed</div>';
           html += '<div style="font-size:0.85rem;line-height:1.6">' + renderDiff(diff) + '</div>';
           html += '</div>';
         } else {
-          if (row.criteria) html += '<div class="vm-criteria">' + esc(row.criteria) + '</div>';
+          if (row.criteria) html += '<div class="vc-criteria">' + esc(row.criteria) + '</div>';
         }
       } else if (row.criteria) {
-        html += '<div class="vm-criteria">' + esc(row.criteria) + '</div>';
+        html += '<div class="vc-criteria">' + esc(row.criteria) + '</div>';
       }
 
       /* Action hint for non-pass statuses */
@@ -693,7 +693,7 @@ function renderTraceability() {
     html += '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px">These scenarios reference requirements or verification criteria that no longer exist in the model. They should be removed or reassigned.</p>';
     REPORT.orphaned_tests.forEach(o => {
       const reqIds = (o.orphaned_req_ids || []).join(', ');
-      const vmIds = (o.orphaned_vm_ids || []).join(', ');
+      const vcIds = (o.orphaned_vc_ids || o.orphaned_vm_ids || []).join(', ');
       const file = o.feature_file || '';
       const name = o.name || file || 'Unknown scenario';
       html += '<div class="req-card" style="border-color:var(--orphaned)">';
@@ -704,7 +704,7 @@ function renderTraceability() {
       html += '<div class="req-body open" style="display:block;padding:12px 16px">';
       if (file) html += '<div style="margin-bottom:6px"><strong>Feature file:</strong> <code style="font-size:0.85rem">' + esc(file) + '</code></div>';
       if (reqIds) html += '<div style="margin-bottom:6px"><strong>References deleted requirement(s):</strong> <code style="font-size:0.85rem;color:var(--fail)">' + esc(reqIds) + '</code></div>';
-      if (vmIds) html += '<div style="margin-bottom:6px"><strong>References deleted VC(s):</strong> <code style="font-size:0.85rem;color:var(--fail)">' + esc(vmIds) + '</code></div>';
+      if (vcIds) html += '<div style="margin-bottom:6px"><strong>References deleted VC(s):</strong> <code style="font-size:0.85rem;color:var(--fail)">' + esc(vcIds) + '</code></div>';
       html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:8px"><strong>Action required:</strong> Delete this feature file or update its tags to reference a valid requirement.</div>';
       html += '</div>';
       html += '</div>';
@@ -730,7 +730,7 @@ function toggleReq(el) {
   arrow.classList.toggle('open');
 }
 
-function toggleVM(el) {
+function toggleVC(el) {
   /* Toggle the scenario-list (skip criteria div if present) */
   let sibling = el.nextElementSibling;
   while (sibling && !sibling.classList.contains('scenario-list')) sibling = sibling.nextElementSibling;
@@ -751,7 +751,7 @@ function toggleAllReqs() {
 }
 
 /* Navigate from Gate item to Traceability Matrix */
-function navigateToVC(reqId, vmId, isOrphan) {
+function navigateToVC(reqId, vcId, isOrphan) {
   /* Switch to Tab 1 */
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -781,15 +781,15 @@ function navigateToVC(reqId, vmId, isOrphan) {
       if (arrow) arrow.classList.add('open');
     }
 
-    /* Find the VM row and highlight it */
-    let targetVM = null;
-    targetCard.querySelectorAll('.vm-row').forEach(vr => {
-      const vmHeader = vr.querySelector('.vm-id');
-      if (vmHeader && vmHeader.textContent.trim() === vmId) targetVM = vr;
+    /* Find the VC row and highlight it */
+    let targetVC = null;
+    targetCard.querySelectorAll('.vc-row').forEach(vr => {
+      const vcHeader = vr.querySelector('.vc-id');
+      if (vcHeader && vcHeader.textContent.trim() === vcId) targetVC = vr;
     });
 
     /* Scroll to target */
-    const scrollTarget = targetVM || targetCard;
+    const scrollTarget = targetVC || targetCard;
     scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     /* Flash highlight */
@@ -823,13 +823,13 @@ function applyFilters() {
   const search = document.getElementById('f-search').value.toLowerCase();
 
   document.querySelectorAll('.req-card').forEach(card => {
-    /* Search only matches against req header (ID + title) and VM header (VM ID) */
+    /* Search only matches against req header (ID + title) and VC header (VC ID) */
     const headerText = (card.querySelector('.req-header') || {}).textContent || '';
     const cardMatchesSearch = !search || headerText.toLowerCase().includes(search);
 
-    const vmRows = card.querySelectorAll('.vm-row');
+    const vmRows = card.querySelectorAll('.vc-row');
 
-    /* Orphaned cards have no VM rows — only filter by search */
+    /* Orphaned cards have no VC rows — only filter by search */
     if (vmRows.length === 0) {
       card.style.display = cardMatchesSearch ? '' : 'none';
       return;
@@ -839,7 +839,7 @@ function applyFilters() {
     vmRows.forEach(vr => {
       const s = vr.getAttribute('data-status');
       const m = vr.getAttribute('data-method');
-      const vmHeaderText = (vr.querySelector('.vm-header') || {}).textContent || '';
+      const vmHeaderText = (vr.querySelector('.vc-header') || {}).textContent || '';
       const vmMatchesSearch = !search || vmHeaderText.toLowerCase().includes(search) || cardMatchesSearch;
       let show = true;
       if (status !== 'all' && s !== status) show = false;
@@ -873,7 +873,7 @@ function applyFilters() {
     parent.normalize();
   });
   if (search) {
-    document.querySelectorAll('.req-card:not([style*="none"]) .req-id, .req-card:not([style*="none"]) .req-title, .vm-row:not([style*="none"]) .vm-id').forEach(el => {
+    document.querySelectorAll('.req-card:not([style*="none"]) .req-id, .req-card:not([style*="none"]) .req-title, .vc-row:not([style*="none"]) .vc-id').forEach(el => {
       const text = el.textContent;
       const idx = text.toLowerCase().indexOf(search);
       if (idx >= 0) {
@@ -1113,8 +1113,8 @@ function renderGates() {
       html += '<p style="color:var(--pass);font-size:0.85rem">No issues detected.</p>';
     }
     items.forEach(item => {
-      const id = item.verificationMethodId || item.vm_id || item.requirementId || '';
-      const reqId = item.requirementId || (id.match(/^(.*)-VM-\d+$/) || [])[1] || '';
+      const id = item.verificationCriteriaId || item.vc_id || item.requirementId || '';
+      const reqId = item.requirementId || (id.match(/^(.*)-VC-\d+$/) || [])[1] || '';
       const isOrphan = g.key === 'gate_c';
       html += '<div class="gate-item" style="cursor:pointer" onclick="navigateToVC(\'' + esc(reqId) + '\',\'' + esc(id) + '\',' + isOrphan + ')" title="Click to view in Traceability Matrix">';
       html += '<span class="gi-id" style="color:var(--blue-ng)">' + esc(id) + '</span> <span style="font-size:0.75rem;color:var(--text-muted)">&#x2197;</span>';
@@ -1135,7 +1135,7 @@ function renderGates() {
   html += '<div style="margin-top:20px;text-align:center">';
   html += '<strong>Overall Pipeline: </strong>' + badgeFor(TRACEABILITY.overall_pass ? 'pass' : 'fail');
   html += '<span style="margin-left:8px;font-size:0.85rem;color:var(--text-muted)">';
-  html += TRACEABILITY.requirements_total + ' requirements, ' + TRACEABILITY.vms_total + ' VCs, ' + TRACEABILITY.features_scanned + ' features scanned';
+  html += TRACEABILITY.requirements_total + ' requirements, ' + TRACEABILITY.vcs_total + ' VCs, ' + TRACEABILITY.features_scanned + ' features scanned';
   html += '</span></div>';
 
   container.innerHTML = html;
@@ -1270,7 +1270,7 @@ function renderMetadata() {
     ['Project Name', meta.projectName || '—'],
     ['Export Timestamp', meta.exportTimestamp || '—'],
     ['Total Requirements', (REPORT.summary && REPORT.summary.total_requirements) || '—'],
-    ['Total VCs', (REPORT.summary && REPORT.summary.total_vms) || '—'],
+    ['Total VCs', (REPORT.summary && REPORT.summary.total_vcs) || '—'],
     ['Report Generated', REPORT.generated_at || '—'],
     ['Features Scanned', (TRACEABILITY && TRACEABILITY.features_scanned) || '—'],
   ];
@@ -1299,26 +1299,26 @@ function renderReleases() {
   const releases = RELEASE_PLAN.releases;
   const rows = REPORT && REPORT.requirements ? REPORT.requirements : [];
 
-  /* Build a lookup: vmId -> status from report */
-  const vmStatus = {};
-  rows.forEach(r => { if (r.vm_id) vmStatus[r.vm_id] = r; });
+  /* Build a lookup: vcId -> status from report */
+  const vcStatus = {};
+  rows.forEach(r => { if (r.vc_id) vcStatus[r.vc_id] = r; });
 
-  /* Build a lookup: reqId -> all VM IDs */
-  const reqToVMs = {};
+  /* Build a lookup: reqId -> all VC IDs */
+  const reqToVCs = {};
   if (REQUIREMENTS && REQUIREMENTS.requirements) {
     REQUIREMENTS.requirements.forEach(req => {
-      reqToVMs[req.requirementId] = (req.verificationMethods || []).map(vm => vm.verificationMethodId);
+      reqToVCs[req.requirementId] = (req.verificationCriteria || req.verificationMethods || []).map(vc => vc.verificationCriteriaId || vc.verificationMethodId);
     });
   }
 
-  /* Expand scope IDs to VM IDs */
+  /* Expand scope IDs to VC IDs */
   function expandScope(scopeIds) {
     const vms = [];
     (scopeIds || []).forEach(id => {
-      if (id.match(/-VM-\d+$/)) {
+      if (id.match(/-VC-\d+$/)) {
         vms.push(id);
-      } else if (reqToVMs[id]) {
-        reqToVMs[id].forEach(vmId => vms.push(vmId));
+      } else if (reqToVCs[id]) {
+        reqToVCs[id].forEach(vcId => vms.push(vcId));
       }
     });
     return vms;
@@ -1333,36 +1333,36 @@ function renderReleases() {
   });
 
   /* Overall program progress */
-  const allPlannedVMs = cumulativeScopes.length > 0 ? cumulativeScopes[cumulativeScopes.length - 1] : new Set();
-  const allComplete = Array.from(allPlannedVMs).filter(id => {
-    const st = vmStatus[id];
+  const allPlannedVCs = cumulativeScopes.length > 0 ? cumulativeScopes[cumulativeScopes.length - 1] : new Set();
+  const allComplete = Array.from(allPlannedVCs).filter(id => {
+    const st = vcStatus[id];
     return st && (st.status === 'pass' || st.status === 'manual');
   });
 
   let html = '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px">';
   html += '<div class="info-item"><div class="info-label">Total Releases</div><div class="info-value">' + releases.length + '</div></div>';
-  html += '<div class="info-item"><div class="info-label">Total Planned VCs</div><div class="info-value">' + allPlannedVMs.size + '</div></div>';
-  html += '<div class="info-item"><div class="info-label">Program Completion</div><div class="info-value" style="color:' + (allComplete.length === allPlannedVMs.size ? 'var(--pass)' : 'var(--text)') + '">' + (allPlannedVMs.size ? Math.round(allComplete.length / allPlannedVMs.size * 100) : 0) + '%</div></div>';
+  html += '<div class="info-item"><div class="info-label">Total Planned VCs</div><div class="info-value">' + allPlannedVCs.size + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Program Completion</div><div class="info-value" style="color:' + (allComplete.length === allPlannedVCs.size ? 'var(--pass)' : 'var(--text)') + '">' + (allPlannedVCs.size ? Math.round(allComplete.length / allPlannedVCs.size * 100) : 0) + '%</div></div>';
   html += '</div>';
 
   releases.forEach((rel, ri) => {
-    const scopeVMs = expandScope(rel.scope);
+    const scopeVCs = expandScope(rel.scope);
     const counts = { pass: 0, fail: 0, uncovered: 0, drifted: 0, manual: 0, deferred: 0 };
-    const vmDetails = [];
+    const vcDetails = [];
 
-    scopeVMs.forEach(vmId => {
-      const row = vmStatus[vmId];
+    scopeVCs.forEach(vcId => {
+      const row = vcStatus[vcId];
       const st = row ? row.status : 'uncovered';
       counts[st] = (counts[st] || 0) + 1;
-      vmDetails.push({ vmId, status: st, title: row ? row.title : '', method: row ? row.method : '' });
+      vcDetails.push({ vcId, status: st, title: row ? row.title : '', method: row ? row.method : '' });
     });
 
-    const total = scopeVMs.length;
+    const total = scopeVCs.length;
     const complete = counts.pass + counts.manual;
     const pct = total ? Math.round(complete / total * 100) : 0;
 
     /* Is this the current release? */
-    const currentVersion = (REPORT && REPORT.summary && REPORT.summary.in_scope_vms !== REPORT.summary.total_vms) ? '' : '';
+    const currentVersion = (REPORT && REPORT.summary && REPORT.summary.in_scope_vcs !== REPORT.summary.total_vcs) ? '' : '';
 
     /* Target date formatting */
     const targetDate = rel.targetDate ? fmtDate(rel.targetDate + 'T00:00:00Z') : '';
@@ -1401,12 +1401,12 @@ function renderReleases() {
 
     /* VC list */
     html += '<div style="padding:0 20px 12px">';
-    vmDetails.forEach(vm => {
+    vcDetails.forEach(vc => {
       html += '<div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:0.85rem;border-bottom:1px solid #f4f7fa">';
-      html += '<span style="font-family:monospace;font-weight:600;min-width:180px">' + esc(vm.vmId) + '</span>';
-      html += '<span style="min-width:100px;color:var(--text-muted)">' + esc(vm.method) + '</span>';
-      html += badgeFor(vm.status);
-      html += '<span style="flex:1;color:var(--text-muted);font-size:0.8rem">' + esc(vm.title) + '</span>';
+      html += '<span style="font-family:monospace;font-weight:600;min-width:180px">' + esc(vc.vcId) + '</span>';
+      html += '<span style="min-width:100px;color:var(--text-muted)">' + esc(vc.method) + '</span>';
+      html += badgeFor(vc.status);
+      html += '<span style="flex:1;color:var(--text-muted);font-size:0.8rem">' + esc(vc.title) + '</span>';
       html += '</div>';
     });
     html += '</div>';
@@ -1438,15 +1438,15 @@ renderReleases();
     TRACEABILITY && TRACEABILITY.gate_c && !TRACEABILITY.gate_c.passed,
   ].filter(Boolean).length;
 
-  if (s.failed === 0 && s.uncovered_vms === 0 && s.drifted_vms === 0 && gatesFailed === 0) {
-    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vms + '</strong> verification criteria passed. All quality gates passed.';
+  if (s.failed === 0 && s.uncovered_vcs === 0 && s.drifted_vcs === 0 && gatesFailed === 0) {
+    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vcs + '</strong> verification criteria passed. All quality gates passed.';
     el.style.borderLeftColor = 'var(--pass)';
   } else {
     const issues = [];
     if (s.failed > 0) issues.push(s.failed + ' failed');
-    if (s.uncovered_vms > 0) issues.push(s.uncovered_vms + ' uncovered');
-    if (s.drifted_vms > 0) issues.push(s.drifted_vms + ' drifted');
-    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vms + '</strong> verification criteria passed. ' +
+    if (s.uncovered_vcs > 0) issues.push(s.uncovered_vcs + ' uncovered');
+    if (s.drifted_vcs > 0) issues.push(s.drifted_vcs + ' drifted');
+    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vcs + '</strong> verification criteria passed. ' +
       '<strong>' + issues.join(', ') + '</strong> — see Quality Gates for details.';
     el.style.borderLeftColor = s.failed > 0 ? 'var(--fail)' : 'var(--uncovered)';
   }

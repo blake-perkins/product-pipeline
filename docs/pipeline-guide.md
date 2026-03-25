@@ -62,10 +62,10 @@ Cameo Model ──> JSON Export ──> Versioned Artifact (Repo 1)
 ### Key Principles
 
 - **Model is the source of truth.** Requirements and ICD definitions originate in Cameo. The pipeline consumes exports -- it never modifies the model.
-- **Traceability is enforced, not optional.** The pipeline will not pass if any verification method lacks a test scenario. No exceptions.
+- **Traceability is enforced, not optional.** The pipeline will not pass if any verification criteria lacks a test scenario. No exceptions.
 - **Tests are passive log analyzers.** BDD scenarios read log files collected after simulation runs. They do not interact with running systems. This makes tests deterministic and reproducible.
 - **Clean break versioning.** Model artifacts are semantically versioned. The product pipeline pins to a specific model version, ensuring reproducibility.
-- **Collaborative test authoring.** Systems engineers and developers co-author Gherkin specifications. SEs define *what* to verify (the Feature/Scenario language that captures requirement intent and verification methodology). Developers implement *how* to verify it (the Python step definitions behind the Given/When/Then lines). Neither role works in isolation.
+- **Collaborative test authoring.** Systems engineers and developers co-author Gherkin specifications. SEs define *what* to verify (the Feature/Scenario language that captures requirement intent and verification criteriaology). Developers implement *how* to verify it (the Python step definitions behind the Given/When/Then lines). Neither role works in isolation.
 
 ---
 
@@ -116,9 +116,9 @@ Your role has two parts:
 
 1. **Model and export.** You maintain the Cameo model and run the export macros. When you export and push, the pipeline handles validation and artifact publishing.
 
-2. **Co-author Gherkin specifications.** When new requirements or verification methods are added, you work with developers to write the Gherkin Feature and Scenario text. You are the domain expert -- you know what the requirement means and what the verification method is intended to prove. The Gherkin language (Given/When/Then) is plain English and does not require programming knowledge.
+2. **Co-author Gherkin specifications.** When new requirements or verification criteria are added, you work with developers to write the Gherkin Feature and Scenario text. You are the domain expert -- you know what the requirement means and what the verification criteria is intended to prove. The Gherkin language (Given/When/Then) is plain English and does not require programming knowledge.
 
-You do **not** need to write the Python step implementation code behind the Gherkin steps. That is the developer's responsibility. Your role is to ensure the specification language accurately captures the intent of the requirement and the verification methodology.
+You do **not** need to write the Python step implementation code behind the Gherkin steps. That is the developer's responsibility. Your role is to ensure the specification language accurately captures the intent of the requirement and the verification criteriaology.
 
 ### Step-by-Step Export Process
 
@@ -138,7 +138,7 @@ You do **not** need to write the Python step implementation code behind the Gher
    | What Changed | Bump | Example |
    |---|---|---|
    | Removed a proto field, changed a type, renumbered fields | MAJOR | 1.2.0 → 2.0.0 |
-   | New requirement, new VM, new interface, new field (additive) | MINOR | 1.2.0 → 1.3.0 |
+   | New requirement, new VC, new interface, new field (additive) | MINOR | 1.2.0 → 1.3.0 |
    | Typo fix, description edit, criteria text update | PATCH | 1.2.0 → 1.2.1 |
 
 5. **Commit and push:**
@@ -159,8 +159,8 @@ Every requirement in the model must have:
 - A **Requirement ID** (tagged value `Id`): pattern `SYS-REQ-001`
 - A **Title**: short descriptive name
 - A **Description**: full requirement text (the "shall" statement)
-- One or more **Verification Methods**, each with:
-  - A **Verification Method ID**: scoped format `SYS-REQ-001-VM-01`
+- One or more **Verification Criteria**, each with:
+  - A **Verification Criteria ID**: scoped format `SYS-REQ-001-VC-01`
   - A **Method**: one of `Analysis`, `Demonstration`, `Inspection`, or `Test` (INCOSE ADIT)
   - **Criteria**: specific, measurable criteria for how this method verifies the requirement
 
@@ -168,7 +168,7 @@ The Groovy macro automatically extracts these fields and structures them into th
 
 #### Example: What the Macro Produces
 
-For a requirement "Basic ICD Communications" with two verification methods:
+For a requirement "Basic ICD Communications" with two verification criteria:
 
 ```json
 {
@@ -179,14 +179,14 @@ For a requirement "Basic ICD Communications" with two verification methods:
   "priority": "High",
   "status": "Approved",
   "parentRequirementId": null,
-  "verificationMethods": [
+  "verificationCriteria": [
     {
-      "verificationMethodId": "SYS-REQ-001-VM-01",
+      "verificationCriteriaId": "SYS-REQ-001-VC-01",
       "method": "Test",
       "criteria": "Verify that a valid IcdRequest produces a valid IcdResponse within 500ms."
     },
     {
-      "verificationMethodId": "SYS-REQ-001-VM-02",
+      "verificationCriteriaId": "SYS-REQ-001-VC-02",
       "method": "Demonstration",
       "criteria": "Demonstrate correct round-trip ICD message exchange with the simulator."
     }
@@ -201,14 +201,14 @@ For a requirement "Basic ICD Communications" with two verification methods:
 | Action | Pipeline Effect | Your Role |
 |---|---|---|
 | Add a new requirement | Gate A fires: a stub test is auto-generated. The stub intentionally fails, signaling that a real test is needed. | Work with the developer to co-author the Gherkin Feature and Scenario text that replaces the stub. You define what the scenario should verify; the developer implements the step code. |
-| Add a new VM to an existing requirement | Same as above -- a stub is generated for the new VM. | Same as above -- help write the Gherkin scenario for the new VM. |
+| Add a new VC to an existing requirement | Same as above -- a stub is generated for the new VC. | Same as above -- help write the Gherkin scenario for the new VC. |
 | Change verification criteria text | Gate B fires: `@REVIEW_REQUIRED` tag is injected into the affected feature file. Pipeline fails until reviewed. | Review the existing scenario with the developer. Confirm whether the Gherkin text still captures the intent of the updated criteria, or whether the scenario needs to be rewritten. |
 | Remove a requirement | Gate C fires: any test scenarios still referencing the removed requirement are flagged as orphans. Pipeline fails until cleaned up. | Confirm the removal with the developer so they can delete the orphaned scenario. |
 | Change a description or title (no criteria change) | No gate fires. The change flows through to reports without blocking. | No action needed. |
 
 ### Co-Authoring Gherkin Specifications
 
-When a new requirement or VM needs a test, you and the developer sit down together. Here is how the responsibility splits:
+When a new requirement or VC needs a test, you and the developer sit down together. Here is how the responsibility splits:
 
 **You (Systems Engineer) own:**
 - The Feature description (what capability is being verified)
@@ -228,7 +228,7 @@ The verification criteria says: *"Verify that a valid IcdRequest produces a vali
 
 You write the Gherkin:
 ```gherkin
-@VM:SYS-REQ-001-VM-01 @VER:Test
+@VC:SYS-REQ-001-VC-01 @VER:Test
 Scenario: Valid ICD request produces correct response within latency budget
   Given the simulation logs are loaded
   Then the product logs should contain "Received IcdRequest: test-001"
@@ -246,7 +246,7 @@ The developer implements the step `within 500ms of the request` by writing Pytho
 
 ### Overview
 
-Every verification method (VM) on every requirement must have at least one Gherkin scenario. The pipeline enforces this automatically. When a new VM appears without a scenario, the pipeline generates a failing stub.
+Every verification criteria (VC) on every requirement must have at least one Gherkin scenario. The pipeline enforces this automatically. When a new VC appears without a scenario, the pipeline generates a failing stub.
 
 **Your responsibilities:**
 - **Implement step definitions** (the Python code behind Given/When/Then lines)
@@ -280,29 +280,29 @@ This separation means:
 
 ### Tag Conventions
 
-Tags link Gherkin scenarios to requirements and verification methods.
+Tags link Gherkin scenarios to requirements and verification criteria.
 
 ```gherkin
 @REQ:SYS-REQ-001                              ← Feature level: which requirement
 Feature: Basic ICD Communications
   ...
 
-  @VM:SYS-REQ-001-VM-01 @VER:Test             ← Scenario level: which VM
+  @VC:SYS-REQ-001-VC-01 @VER:Test             ← Scenario level: which VC
   Scenario: Valid ICD request produces response
     ...
 
-  @VM:SYS-REQ-001-VM-02 @VER:Demonstration    ← Different VM, same requirement
+  @VC:SYS-REQ-001-VC-02 @VER:Demonstration    ← Different VC, same requirement
   Scenario: Demonstrate round-trip exchange
     ...
 ```
 
 **Rules:**
 - `@REQ:<id>` goes on the **Feature** line. All scenarios in the file inherit it.
-- `@VM:<id>` goes on the **Scenario** line. Each scenario declares which VM it covers.
-- `@VER:<method>` is optional but recommended for readability. It indicates the INCOSE verification method (Test, Demonstration, Analysis, Inspection).
+- `@VC:<id>` goes on the **Scenario** line. Each scenario declares which VC it covers.
+- `@VER:<method>` is optional but recommended for readability. It indicates the INCOSE verification criteria (Test, Demonstration, Analysis, Inspection).
 - A scenario can have multiple `@REQ:` tags if it covers multiple requirements.
-- A VM can be covered by multiple scenarios (many-to-many relationship).
-- A VM is considered "covered" if **at least one** scenario references its `@VM:` tag.
+- A VC can be covered by multiple scenarios (many-to-many relationship).
+- A VC is considered "covered" if **at least one** scenario references its `@VC:` tag.
 
 ### File Organization
 
@@ -324,24 +324,24 @@ bdd/features/
 └── environment.py                  ← Loads log files into context at startup
 ```
 
-- **`automated/`** contains scenarios with verification methods `Test` or `Demonstration`. These are executed by Behave in the pipeline.
-- **`non_test/`** contains scenarios with verification methods `Analysis` or `Inspection`. These are tagged `@manual` and tracked for traceability but not executed. They represent verification that happens outside the pipeline (e.g., a thermal analysis report, a physical inspection).
+- **`automated/`** contains scenarios with verification criteria `Test` or `Demonstration`. These are executed by Behave in the pipeline.
+- **`non_test/`** contains scenarios with verification criteria `Analysis` or `Inspection`. These are tagged `@manual` and tracked for traceability but not executed. They represent verification that happens outside the pipeline (e.g., a thermal analysis report, a physical inspection).
 
 ### Writing a New Scenario
 
-When the pipeline generates a stub for an uncovered VM, you'll see a file like this:
+When the pipeline generates a stub for an uncovered VC, you'll see a file like this:
 
 ```gherkin
 @REQ:SYS-REQ-007 @STUB @AUTO_GENERATED
-Feature: SYS-REQ-007-VM-01 - Data Logging (Test)
+Feature: SYS-REQ-007-VC-01 - Data Logging (Test)
   The system shall log all inbound messages to persistent storage.
 
-  Verification Method: Test
+  Verification Criteria: Test
   Verification Criteria: Verify that every inbound ICD message appears in the log
   within 1 second of receipt.
 
-  @VM:SYS-REQ-007-VM-01
-  Scenario: Verify SYS-REQ-007-VM-01 - Data Logging
+  @VC:SYS-REQ-007-VC-01
+  Scenario: Verify SYS-REQ-007-VC-01 - Data Logging
     Given the system is configured for test verification of "SYS-REQ-007"
     When the test verification is performed
     Then it should fail because it is not yet implemented
@@ -358,7 +358,7 @@ Feature: SYS-REQ-007-VM-01 - Data Logging (Test)
    Feature: Data Logging
      Verify that the system logs all inbound messages to persistent storage.
 
-     @VM:SYS-REQ-007-VM-01 @VER:Test
+     @VC:SYS-REQ-007-VC-01 @VER:Test
      Scenario: All inbound messages appear in logs
        Given the simulation logs are loaded
        Then the product logs should contain "Received IcdRequest: test-001"
@@ -400,7 +400,7 @@ All step implementations read from `context.product_logs` and `context.simulator
 
 If you need a step that doesn't exist, add it to the appropriate steps file. Log entries are expected to be JSON-structured (one JSON object per line).
 
-### Manual Verification Methods (Analysis / Inspection)
+### Manual Verification Criteria (Analysis / Inspection)
 
 For requirements verified by Analysis or Inspection, the pipeline does not run the scenario. Instead, the feature file serves as a **traceability placeholder**:
 
@@ -409,7 +409,7 @@ For requirements verified by Analysis or Inspection, the pipeline does not run t
 Feature: Thermal Analysis Compliance
   The system shall operate within the thermal envelope.
 
-  @VM:SYS-REQ-004-VM-01
+  @VC:SYS-REQ-004-VC-01
   Scenario: Thermal analysis confirms operating range
     Given verification evidence is documented
     Then the analysis report is attached to the verification record
@@ -423,16 +423,16 @@ The `@manual` tag tells Behave to skip this scenario during execution. It still 
 
 The pipeline enforces three quality gates that run before any tests execute. All three must pass for the pipeline to succeed.
 
-### Gate A: Uncovered Verification Methods
+### Gate A: Uncovered Verification Criteria
 
-**What it checks:** Every verification method (VM) in `requirements.json` has at least one Gherkin scenario with a matching `@VM:<id>` tag.
+**What it checks:** Every verification criteria (VC) in `requirements.json` has at least one Gherkin scenario with a matching `@VC:<id>` tag.
 
-**When it fires:** A new requirement or VM is added to the model without a corresponding test scenario.
+**When it fires:** A new requirement or VC is added to the model without a corresponding test scenario.
 
 **What it does:**
-1. Generates a stub `.feature` file for each uncovered VM
+1. Generates a stub `.feature` file for each uncovered VC
 2. The stub contains a `Then it should fail because it is not yet implemented` step that raises `NotImplementedError`
-3. Reports the uncovered VMs in the traceability output
+3. Reports the uncovered VCs in the traceability output
 
 **Pipeline behavior:** Configurable via `--fail-on-uncovered` flag. When enabled, the pipeline fails. When disabled (current CI default), the pipeline warns but continues -- the stub will cause BDD to fail later.
 
@@ -443,12 +443,12 @@ The pipeline enforces three quality gates that run before any tests execute. All
 
 ### Gate B: Verification Criteria Drift
 
-**What it checks:** The SHA-256 hash of each VM's `criteria` text matches the hash stored in `.traceability-baseline.json`.
+**What it checks:** The SHA-256 hash of each VC's `criteria` text matches the hash stored in `.traceability-baseline.json`.
 
-**When it fires:** A systems engineer updates the verification criteria text for an existing VM in the Cameo model, but the existing Gherkin scenario has not been reviewed against the new criteria.
+**When it fires:** A systems engineer updates the verification criteria text for an existing VC in the Cameo model, but the existing Gherkin scenario has not been reviewed against the new criteria.
 
 **What it does:**
-1. Identifies which VMs have changed criteria
+1. Identifies which VCs have changed criteria
 2. Injects a `@REVIEW_REQUIRED` tag into the affected feature file(s)
 3. Fails the pipeline with a clear message listing drifted VMs
 
@@ -472,27 +472,27 @@ The pipeline enforces three quality gates that run before any tests execute. All
 
 ### Gate C: Orphaned Scenarios
 
-**What it checks:** Every `@REQ:<id>` and `@VM:<id>` tag in the feature files references a requirement or VM that still exists in `requirements.json`.
+**What it checks:** Every `@REQ:<id>` and `@VC:<id>` tag in the feature files references a requirement or VC that still exists in `requirements.json`.
 
-**When it fires:** A requirement or VM is removed from the Cameo model, but Gherkin scenarios still reference it.
+**When it fires:** A requirement or VC is removed from the Cameo model, but Gherkin scenarios still reference it.
 
 **What it does:**
-1. Lists all orphaned requirement IDs and VM IDs
+1. Lists all orphaned requirement IDs and VC IDs
 2. Lists which feature files contain the orphaned references
 3. Fails the pipeline
 
 **Developer action:**
 1. Open the listed feature file(s)
-2. Either delete the scenario (if the requirement is truly removed) or reassign it to a different requirement/VM if the ID was renamed
+2. Either delete the scenario (if the requirement is truly removed) or reassign it to a different requirement/VC if the ID was renamed
 3. Commit and push
 
 ### Gate Summary
 
 | Gate | Trigger | Pipeline Effect | Developer Action |
 |---|---|---|---|
-| **A** (Uncovered) | New VM without a scenario | Generates stub, warns or fails | Write a real scenario |
-| **B** (Drift) | VM criteria text changed | Injects `@REVIEW_REQUIRED`, fails | Review scenario, update if needed, update baseline |
-| **C** (Orphaned) | VM/requirement removed from model | Fails | Delete or reassign orphaned scenarios |
+| **A** (Uncovered) | New VC without a scenario | Generates stub, warns or fails | Write a real scenario |
+| **B** (Drift) | VC criteria text changed | Injects `@REVIEW_REQUIRED`, fails | Review scenario, update if needed, update baseline |
+| **C** (Orphaned) | VC/requirement removed from model | Fails | Delete or reassign orphaned scenarios |
 
 ---
 
@@ -516,7 +516,7 @@ The pipeline enforces three quality gates that run before any tests execute. All
 | Stage | What Runs | Fails When |
 |---|---|---|
 | Fetch Cameo Model | Downloads and unpacks the versioned zip from Nexus | Version not found in Nexus |
-| Traceability Check | `traceability_checker.py` -- runs Gates A, B, C | Uncovered VMs (if `--fail-on-uncovered`), drift, or orphans |
+| Traceability Check | `traceability_checker.py` -- runs Gates A, B, C | Uncovered VCs (if `--fail-on-uncovered`), drift, or orphans |
 | Deploy + Simulate | `run_simulations.sh` -- Helm install product + simulator, run simulations, collect logs, tear down | Deployment fails, simulations time out |
 | BDD Log Analysis | `behave` -- runs Gherkin scenarios against collected logs | Any scenario fails |
 | Traceability Report | `report_generator.py` -- merges requirements + test results → HTML/JSON | Never (runs `if: always()`) |
@@ -541,21 +541,21 @@ Each requirement in `requirements.json` has the following structure:
 | `priority` | enum | No | `Critical`, `High`, `Medium`, `Low` |
 | `status` | string | No | Requirement status (e.g., `Approved`, `Draft`) |
 | `parentRequirementId` | string/null | No | Parent requirement ID for hierarchy |
-| `verificationMethods` | array | Yes | One or more verification methods (see below) |
+| `verificationCriteria` | array | Yes | One or more verification criteria (see below) |
 | `satisfiedBy` | string[] | No | Model elements that satisfy this requirement |
 | `tracesTo` | string[] | No | Related requirement IDs |
 
-### Verification Method Schema
+### Verification Criteria Schema
 
-Each item in the `verificationMethods` array:
+Each item in the `verificationCriteria` array:
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `verificationMethodId` | string | Yes | Scoped ID. Pattern: `SYS-REQ-001-VM-01` |
+| `verificationCriteriaId` | string | Yes | Scoped ID. Pattern: `SYS-REQ-001-VC-01` |
 | `method` | enum | Yes | `Analysis`, `Demonstration`, `Inspection`, or `Test` |
 | `criteria` | string | Yes | Specific, measurable verification criteria |
 
-### Verification Method Types (INCOSE ADIT)
+### Verification Criteria Types (INCOSE ADIT)
 
 | Method | Automated? | Feature Location | Pipeline Behavior |
 |---|---|---|---|
@@ -566,14 +566,14 @@ Each item in the `verificationMethods` array:
 
 ### Traceability Baseline (`.traceability-baseline.json`)
 
-This file is committed to Git. It stores SHA-256 hashes of each VM's criteria text for drift detection.
+This file is committed to Git. It stores SHA-256 hashes of each VC's criteria text for drift detection.
 
 ```json
 {
-  "SYS-REQ-001-VM-01": {
+  "SYS-REQ-001-VC-01": {
     "criteria_hash": "a1b2c3d4e5f6..."
   },
-  "SYS-REQ-001-VM-02": {
+  "SYS-REQ-001-VC-02": {
     "criteria_hash": "b2c3d4e5f6a7..."
   }
 }
@@ -589,14 +589,14 @@ The pipeline produces two report types, both published as build artifacts.
 
 ### Traceability Matrix (HTML)
 
-Generated by `report_generator.py`. Shows one row per verification method:
+Generated by `report_generator.py`. Shows one row per verification criteria:
 
 | Column | Description |
 |---|---|
-| Requirement ID | The requirement this VM belongs to |
-| VM ID | The specific verification method ID |
+| Requirement ID | The requirement this VC belongs to |
+| VC ID | The specific verification criteria ID |
 | Title | Requirement title |
-| Method | ADIT verification method |
+| Method | ADIT verification criteria |
 | Criteria | Verification criteria text |
 | Status | Covered / Uncovered / Drifted / Orphaned |
 | Test Result | Pass / Fail / Skipped / Not Run |
@@ -607,15 +607,15 @@ Color coding:
 - **Green**: Covered and passing
 - **Red**: Uncovered or failing
 - **Yellow**: Drifted (criteria changed, review required)
-- **Gray**: Manual verification method (Analysis/Inspection)
+- **Gray**: Manual verification criteria (Analysis/Inspection)
 
 ### Requirements Document (HTML)
 
 Generated by `generate_req_doc.py`. Formatted requirements document with:
 - Requirement hierarchy (parent/child nesting)
-- All verification methods per requirement in a sub-table
+- All verification criteria per requirement in a sub-table
 - Priority color coding
-- Summary statistics (by priority, status, verification method)
+- Summary statistics (by priority, status, verification criteria)
 - Table of contents with anchor links
 
 ---
@@ -648,7 +648,7 @@ Create `release-plan.json` in the repository root:
       "targetDate": "2026-09-01",
       "description": "Degradation handling",
       "scope": [
-        "SYS-REQ-001-VM-02",
+        "SYS-REQ-001-VC-02",
         "SYS-REQ-003"
       ]
     }
@@ -658,7 +658,7 @@ Create `release-plan.json` in the repository root:
 
 **Scope supports both levels:**
 - A **requirement ID** (e.g., `SYS-REQ-001`) means **all its VCs** are in scope for that release.
-- A **VC ID** (e.g., `SYS-REQ-001-VM-02`) means **only that specific VC**.
+- A **VC ID** (e.g., `SYS-REQ-001-VC-02`) means **only that specific VC**.
 
 ### How Scope Is Resolved
 
@@ -751,10 +751,10 @@ python tools/report_generator.py \
 **Who acts:** SE exports and co-authors Gherkin, Developer implements steps.
 
 1. SE runs the export macro and pushes.
-2. Pipeline runs. Gate A detects the uncovered VM(s). A stub is generated.
+2. Pipeline runs. Gate A detects the uncovered VC(s). A stub is generated.
 3. If `--fail-on-uncovered` is enabled, the pipeline fails at the traceability check.
 4. If not, the pipeline continues but Behave fails on the stub's `NotImplementedError`.
-5. SE and developer meet. SE explains the requirement intent and verification methodology. Together they co-author the Gherkin Feature and Scenario text.
+5. SE and developer meet. SE explains the requirement intent and verification criteriaology. Together they co-author the Gherkin Feature and Scenario text.
 6. Developer implements any new step definitions needed for the scenario.
 7. Developer commits and pushes. Pipeline passes.
 
@@ -776,20 +776,20 @@ python tools/report_generator.py \
 **Who acts:** SE exports, SE confirms removal, Developer cleans up.
 
 1. SE removes the requirement in Cameo, runs the export macro, and pushes.
-2. Pipeline runs. Gate C detects orphaned `@REQ:` and/or `@VM:` tags.
+2. Pipeline runs. Gate C detects orphaned `@REQ:` and/or `@VC:` tags.
 3. Pipeline fails, listing the orphaned scenarios and their files.
 4. SE confirms the removal is intentional. Developer chooses one of two options:
 
 **Option A: Delete the scenario** — Remove the feature file or the specific scenario. This is the right choice when the test is no longer valuable.
 
-**Option B: Keep as a regression test** — If the scenario is still valuable even though the requirement is gone (e.g., it catches real bugs), remove the `@REQ:` and `@VM:` tags so the traceability checker no longer tracks it. The scenario will still run in Behave as a normal test, but it won't appear in the traceability dashboard or trigger Gate C. Replace the traceability tags with a descriptive tag like `@regression`:
+**Option B: Keep as a regression test** — If the scenario is still valuable even though the requirement is gone (e.g., it catches real bugs), remove the `@REQ:` and `@VC:` tags so the traceability checker no longer tracks it. The scenario will still run in Behave as a normal test, but it won't appear in the traceability dashboard or trigger Gate C. Replace the traceability tags with a descriptive tag like `@regression`:
 
 ```gherkin
 # Before (orphaned — Gate C fails):
 @REQ:SYS-REQ-099
 Feature: Legacy Telemetry Validation
 
-  @VM:SYS-REQ-099-VM-01 @VER:Test
+  @VC:SYS-REQ-099-VC-01 @VER:Test
   Scenario: Telemetry packets are within expected range
 
 # After (regression test — invisible to traceability, still runs in Behave):
@@ -801,13 +801,13 @@ Feature: Legacy Telemetry Validation
 
 5. Developer commits and pushes. Pipeline passes.
 
-### Scenario: A new VM is added to an existing requirement
+### Scenario: A new VC is added to an existing requirement
 
 **Who acts:** Same as adding a new requirement.
 
-1. SE adds a second verification method to an existing requirement and exports.
-2. Gate A detects the uncovered VM. A stub is generated for just the new VM.
-3. Developer adds a new scenario to the existing feature file with the new `@VM:` tag.
+1. SE adds a second verification criteria to an existing requirement and exports.
+2. Gate A detects the uncovered VC. A stub is generated for just the new VC.
+3. Developer adds a new scenario to the existing feature file with the new `@VC:` tag.
 4. No need to create a new file -- add the scenario to the existing feature file for that requirement.
 
 ### Scenario: Running the traceability checker locally
@@ -853,9 +853,9 @@ LOG_DIR=../build/logs python -m behave features/automated/sys_req_001_basic_comm
 LOG_DIR=../build/logs python -m behave --no-capture features/automated/
 ```
 
-### Troubleshooting: Pipeline fails with "uncovered verification methods"
+### Troubleshooting: Pipeline fails with "uncovered verification criteria"
 
-Check the traceability checker output for the list of uncovered VM IDs. For each one:
+Check the traceability checker output for the list of uncovered VC IDs. For each one:
 1. Determine if a feature file should exist (is this a new requirement?).
 2. If a stub was generated, find it in `bdd/features/automated/` or `bdd/features/non_test/`.
 3. Replace the stub with a real scenario. See [Writing a New Scenario](#writing-a-new-scenario).
@@ -900,9 +900,9 @@ No pipeline script makes external network calls. All URLs point to internal infr
 Every requirement can be traced through the following chain:
 
 ```
-Cameo Model (requirement + VM)
+Cameo Model (requirement + VC)
     → requirements.json (versioned artifact)
-        → @REQ: + @VM: tags in .feature file
+        → @REQ: + @VC: tags in .feature file
             → Behave test execution (pass/fail)
                 → Traceability matrix (HTML report)
                     → Release bundle
@@ -943,5 +943,5 @@ product-release-X.Y.Z.zip
 | Known vulnerability disclosure | Grype scan results included in release bundle |
 | Build provenance | SLSA provenance attestation |
 | Artifact integrity | cosign signatures on zip and container images |
-| Requirement traceability | Traceability matrix linking requirements → VMs → tests → results |
+| Requirement traceability | Traceability matrix linking requirements → VCs → tests → results |
 | Configuration management | Semantic versioning, Git tags, Nexus artifacts |

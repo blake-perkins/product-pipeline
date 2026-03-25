@@ -2,9 +2,9 @@
 """Generate demo data that exercises every dashboard state.
 
 States covered:
-  - PASS:      VM covered, Behave test passed
-  - FAIL:      VM covered, Behave test failed
-  - UNCOVERED: No scenario exists for a VM
+  - PASS:      VC covered, Behave test passed
+  - FAIL:      VC covered, Behave test failed
+  - UNCOVERED: No scenario exists for a VC
   - DRIFTED:   Verification criteria changed since baseline
   - MANUAL:    Analysis / Inspection verification methods
   - ORPHANED:  Scenario references a requirement that doesn't exist
@@ -29,7 +29,7 @@ def generate(output_dir: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
-    # 1. Requirements (6 requirements, 10 VMs)
+    # 1. Requirements (6 requirements, 10 VCs)
     # ------------------------------------------------------------------
     requirements = {
         "exportMetadata": {
@@ -40,21 +40,21 @@ def generate(output_dir: Path):
         },
         "requirements": [
             {
-                # REQ-001: 2 VMs — VM-01 passes, VM-02 FAILS
+                # REQ-001: 2 VCs — VC-01 passes, VC-02 FAILS
                 "requirementId": "SYS-REQ-001",
                 "title": "Basic ICD Communications",
                 "description": "The system shall exchange messages with external systems per the ICD.",
                 "priority": "High",
                 "status": "Approved",
                 "parentRequirementId": None,
-                "verificationMethods": [
+                "verificationCriteria": [
                     {
-                        "verificationMethodId": "SYS-REQ-001-VM-01",
+                        "verificationCriteriaId": "SYS-REQ-001-VC-01",
                         "method": "Test",
                         "criteria": "Verify that a valid IcdRequest produces a valid IcdResponse within 500ms.",
                     },
                     {
-                        "verificationMethodId": "SYS-REQ-001-VM-02",
+                        "verificationCriteriaId": "SYS-REQ-001-VC-02",
                         "method": "Test",
                         "criteria": "Verify that the system handles 100 concurrent ICD requests without dropping any.",
                     },
@@ -63,16 +63,16 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-002: 1 VM — passes
+                # REQ-002: 1 VC — passes
                 "requirementId": "SYS-REQ-002",
                 "title": "Health Monitoring",
                 "description": "The system shall report health status at a configurable interval.",
                 "priority": "High",
                 "status": "Approved",
                 "parentRequirementId": None,
-                "verificationMethods": [
+                "verificationCriteria": [
                     {
-                        "verificationMethodId": "SYS-REQ-002-VM-01",
+                        "verificationCriteriaId": "SYS-REQ-002-VC-01",
                         "method": "Test",
                         "criteria": "Verify health status messages are emitted at configured interval.",
                     },
@@ -81,21 +81,21 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-003: 2 VMs — VM-01 passes, VM-02 is UNCOVERED
+                # REQ-003: 2 VCs — VC-01 passes, VC-02 is UNCOVERED
                 "requirementId": "SYS-REQ-003",
                 "title": "Graceful Degradation",
                 "description": "The system shall continue operating in degraded mode when a non-critical subsystem fails.",
                 "priority": "Medium",
                 "status": "Approved",
                 "parentRequirementId": None,
-                "verificationMethods": [
+                "verificationCriteria": [
                     {
-                        "verificationMethodId": "SYS-REQ-003-VM-01",
+                        "verificationCriteriaId": "SYS-REQ-003-VC-01",
                         "method": "Demonstration",
                         "criteria": "Demonstrate continued operation when logging subsystem is unavailable.",
                     },
                     {
-                        "verificationMethodId": "SYS-REQ-003-VM-02",
+                        "verificationCriteriaId": "SYS-REQ-003-VC-02",
                         "method": "Test",
                         "criteria": "Verify via log analysis that critical messages are processed during subsystem failure.",
                     },
@@ -104,16 +104,16 @@ def generate(output_dir: Path):
                 "tracesTo": ["SYS-REQ-001"],
             },
             {
-                # REQ-004: 1 VM (Analysis) — MANUAL
+                # REQ-004: 1 VC (Analysis) — MANUAL
                 "requirementId": "SYS-REQ-004",
                 "title": "Thermal Analysis Compliance",
                 "description": "The system shall operate within the thermal envelope defined in the environmental spec.",
                 "priority": "Critical",
                 "status": "Approved",
                 "parentRequirementId": None,
-                "verificationMethods": [
+                "verificationCriteria": [
                     {
-                        "verificationMethodId": "SYS-REQ-004-VM-01",
+                        "verificationCriteriaId": "SYS-REQ-004-VC-01",
                         "method": "Analysis",
                         "criteria": "Thermal analysis report confirms all components within operating temperature range.",
                     },
@@ -122,16 +122,16 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-005: 1 VM — DRIFTED (criteria changed)
+                # REQ-005: 1 VC — DRIFTED (criteria changed)
                 "requirementId": "SYS-REQ-005",
                 "title": "Error Handling",
                 "description": "The system shall reject malformed ICD messages without crashing.",
                 "priority": "High",
                 "status": "Approved",
                 "parentRequirementId": "SYS-REQ-001",
-                "verificationMethods": [
+                "verificationCriteria": [
                     {
-                        "verificationMethodId": "SYS-REQ-005-VM-01",
+                        "verificationCriteriaId": "SYS-REQ-005-VC-01",
                         "method": "Test",
                         # This criteria was CHANGED from baseline — triggers drift
                         "criteria": "Verify that malformed IcdRequest results in WARN log, IcdResponse with INVALID_REQUEST, and an incident ticket is auto-created.",
@@ -141,16 +141,16 @@ def generate(output_dir: Path):
                 "tracesTo": ["SYS-REQ-001"],
             },
             {
-                # REQ-006: 1 VM (Inspection) — MANUAL
+                # REQ-006: 1 VC (Inspection) — MANUAL
                 "requirementId": "SYS-REQ-006",
                 "title": "Physical Interface Inspection",
                 "description": "All physical connectors shall conform to MIL-DTL-38999 Series III.",
                 "priority": "Medium",
                 "status": "Approved",
                 "parentRequirementId": None,
-                "verificationMethods": [
+                "verificationCriteria": [
                     {
-                        "verificationMethodId": "SYS-REQ-006-VM-01",
+                        "verificationCriteriaId": "SYS-REQ-006-VC-01",
                         "method": "Inspection",
                         "criteria": "Visual and dimensional inspection of all connectors against MIL-DTL-38999.",
                     },
@@ -175,7 +175,7 @@ def generate(output_dir: Path):
         return s
 
     behave_results = [
-        # Feature 1: Basic ICD — 2 scenarios for VM-01 (pass), 1 for VM-02 (FAIL)
+        # Feature 1: Basic ICD — 2 scenarios for VC-01 (pass), 1 for VC-02 (FAIL)
         {
             "keyword": "Feature",
             "name": "Basic ICD Communications",
@@ -186,7 +186,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "Valid ICD request produces correct response",
-                    "tags": ["VM:SYS-REQ-001-VM-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-001-VC-01", "VER:Test"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
@@ -199,7 +199,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "All ICD responses are within latency threshold",
-                    "tags": ["VM:SYS-REQ-001-VM-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-001-VC-01", "VER:Test"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
@@ -209,10 +209,10 @@ def generate(output_dir: Path):
                     ],
                 },
                 {
-                    # VM-02: FAILS — load test scenario
+                    # VC-02: FAILS — load test scenario
                     "keyword": "Scenario",
                     "name": "System handles 100 concurrent ICD requests",
-                    "tags": ["VM:SYS-REQ-001-VM-02", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-001-VC-02", "VER:Test"],
                     "type": "scenario",
                     "status": "failed",
                     "steps": [
@@ -236,7 +236,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "Health status messages are emitted at interval",
-                    "tags": ["VM:SYS-REQ-002-VM-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-002-VC-01", "VER:Test"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
@@ -247,7 +247,7 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 3: Graceful Degradation — VM-01 passes (only VM-01 has a scenario)
+        # Feature 3: Graceful Degradation — VC-01 passes (only VC-01 has a scenario)
         {
             "keyword": "Feature",
             "name": "Graceful Degradation",
@@ -258,7 +258,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "System continues processing when non-critical subsystem fails",
-                    "tags": ["VM:SYS-REQ-003-VM-01", "VER:Demonstration"],
+                    "tags": ["VC:SYS-REQ-003-VC-01", "VER:Demonstration"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
@@ -268,10 +268,10 @@ def generate(output_dir: Path):
                         step("And ", "no crash or panic entries should appear in the product logs"),
                     ],
                 },
-                # NOTE: No scenario for VM-02 — it is UNCOVERED
+                # NOTE: No scenario for VC-02 — it is UNCOVERED
             ],
         },
-        # Feature 4: Error Handling — has a scenario but VM is DRIFTED
+        # Feature 4: Error Handling — has a scenario but VC is DRIFTED
         {
             "keyword": "Feature",
             "name": "Error Message Handling",
@@ -282,7 +282,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "Malformed messages are rejected with warnings",
-                    "tags": ["VM:SYS-REQ-005-VM-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-005-VC-01", "VER:Test"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
@@ -304,7 +304,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "Telemetry packets are within expected range",
-                    "tags": ["VM:SYS-REQ-099-VM-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-099-VC-01", "VER:Test"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
@@ -323,18 +323,18 @@ def generate(output_dir: Path):
         "timestamp": "2026-03-24T10:05:00Z",
         "requirements_total": 6,
         "features_scanned": 5,
-        "vms_total": 8,
-        "vms_covered": 6,
+        "vcs_total": 8,
+        "vcs_covered": 6,
         "gate_a": {
             "gate": "A",
             "passed": False,
             "items": [
                 {
                     "requirementId": "SYS-REQ-003",
-                    "verificationMethodId": "SYS-REQ-003-VM-02",
+                    "verificationCriteriaId": "SYS-REQ-003-VC-02",
                     "method": "Test",
                     "title": "Graceful Degradation",
-                    "stubGenerated": "bdd/features/automated/sys_req_003_vm_02.feature",
+                    "stubGenerated": "bdd/features/automated/sys_req_003_vc_02.feature",
                 },
             ],
             "message": "1 uncovered verification criteria found; 1 stub generated.",
@@ -345,7 +345,7 @@ def generate(output_dir: Path):
             "items": [
                 {
                     "requirementId": "SYS-REQ-005",
-                    "verificationMethodId": "SYS-REQ-005-VM-01",
+                    "verificationCriteriaId": "SYS-REQ-005-VC-01",
                     "method": "Test",
                     "title": "Error Handling",
                     "oldHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
@@ -365,7 +365,7 @@ def generate(output_dir: Path):
                     "featureFile": "features/automated/sys_req_099_telemetry.feature",
                     "scenarioName": "Telemetry packets are within expected range",
                     "orphanedReqIds": ["SYS-REQ-099"],
-                    "orphanedVmIds": ["SYS-REQ-099-VM-01"],
+                    "orphanedVcIds": ["SYS-REQ-099-VC-01"],
                 },
             ],
             "message": "1 orphaned scenario found referencing deleted requirement SYS-REQ-099.",
@@ -487,7 +487,7 @@ def generate(output_dir: Path):
                 "targetDate": "2026-09-01",
                 "description": "Degradation handling and ICD demonstration verification",
                 "scope": [
-                    "SYS-REQ-001-VM-02",
+                    "SYS-REQ-001-VC-02",
                     "SYS-REQ-003",
                 ],
             },
@@ -503,14 +503,14 @@ def generate(output_dir: Path):
         ],
     }
 
-    # Update traceability to mark out-of-scope VMs as deferred
-    # For demo, current release is 1.0.0 so REQ-003-VM-02, REQ-004, REQ-006 are deferred
-    # REQ-001-VM-02 is in 1.0.0 scope (via SYS-REQ-001) so it stays uncovered
-    # But SYS-REQ-003-VM-02 is in 1.1.0 so it should be deferred
+    # Update traceability to mark out-of-scope VCs as deferred
+    # For demo, current release is 1.0.0 so REQ-003-VC-02, REQ-004, REQ-006 are deferred
+    # REQ-001-VC-02 is in 1.0.0 scope (via SYS-REQ-001) so it stays uncovered
+    # But SYS-REQ-003-VC-02 is in 1.1.0 so it should be deferred
     traceability_report["gate_a"]["items"] = [
         {
             "requirementId": "SYS-REQ-003",
-            "verificationMethodId": "SYS-REQ-003-VM-02",
+            "verificationCriteriaId": "SYS-REQ-003-VC-02",
             "method": "Test",
             "title": "Graceful Degradation",
             "deferred": True,
@@ -518,7 +518,7 @@ def generate(output_dir: Path):
         },
     ]
     traceability_report["gate_a"]["passed"] = True
-    traceability_report["gate_a"]["message"] = "All in-scope verification methods covered; 1 deferred to future releases."
+    traceability_report["gate_a"]["message"] = "All in-scope verification criteria covered; 1 deferred to future releases."
 
     # ------------------------------------------------------------------
     # Write files
@@ -537,14 +537,14 @@ def generate(output_dir: Path):
 
     print()
     print("Demo data states:")
-    print("  SYS-REQ-001-VM-01  Test           -> PASS   (2 passing scenarios)")
-    print("  SYS-REQ-001-VM-02  Test           -> FAIL   (load test drops 13 requests)")
-    print("  SYS-REQ-002-VM-01  Test           -> PASS")
-    print("  SYS-REQ-003-VM-01  Demonstration  -> PASS")
-    print("  SYS-REQ-003-VM-02  Test           -> UNCOVERED (no scenario written)")
-    print("  SYS-REQ-004-VM-01  Analysis       -> MANUAL")
-    print("  SYS-REQ-005-VM-01  Test           -> DRIFTED (criteria changed)")
-    print("  SYS-REQ-006-VM-01  Inspection     -> MANUAL")
+    print("  SYS-REQ-001-VC-01  Test           -> PASS   (2 passing scenarios)")
+    print("  SYS-REQ-001-VC-02  Test           -> FAIL   (load test drops 13 requests)")
+    print("  SYS-REQ-002-VC-01  Test           -> PASS")
+    print("  SYS-REQ-003-VC-01  Demonstration  -> PASS")
+    print("  SYS-REQ-003-VC-02  Test           -> UNCOVERED (no scenario written)")
+    print("  SYS-REQ-004-VC-01  Analysis       -> MANUAL")
+    print("  SYS-REQ-005-VC-01  Test           -> DRIFTED (criteria changed)")
+    print("  SYS-REQ-006-VC-01  Inspection     -> MANUAL")
     print("  SYS-REQ-099        (deleted)       -> ORPHANED (test references removed req)")
     print()
     print(f"Now run:\n  python tools/report_generator.py \\")

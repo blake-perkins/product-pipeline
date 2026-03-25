@@ -4,7 +4,7 @@
 Tests cover:
 - report_generator.py data merging logic
 - HTML dashboard rendering and data injection
-- Scenario-to-VM matching accuracy
+- Scenario-to-VC matching accuracy
 - Status assignment correctness
 - Edge cases (uncovered, drifted, manual, orphaned)
 """
@@ -40,10 +40,10 @@ REQUIREMENTS_DATA = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
-                {"verificationMethodId": "SYS-REQ-001-VM-01", "method": "Test",
+            "verificationCriteria": [
+                {"verificationCriteriaId": "SYS-REQ-001-VC-01", "method": "Test",
                  "criteria": "Verify valid IcdRequest produces valid IcdResponse within 500ms."},
-                {"verificationMethodId": "SYS-REQ-001-VM-02", "method": "Demonstration",
+                {"verificationCriteriaId": "SYS-REQ-001-VC-02", "method": "Demonstration",
                  "criteria": "Demonstrate round-trip ICD exchange with simulator."},
             ],
             "satisfiedBy": ["ComponentA"],
@@ -56,8 +56,8 @@ REQUIREMENTS_DATA = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
-                {"verificationMethodId": "SYS-REQ-002-VM-01", "method": "Test",
+            "verificationCriteria": [
+                {"verificationCriteriaId": "SYS-REQ-002-VC-01", "method": "Test",
                  "criteria": "Verify health status messages emitted at interval."},
             ],
             "satisfiedBy": ["ComponentA"],
@@ -70,8 +70,8 @@ REQUIREMENTS_DATA = {
             "priority": "Critical",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
-                {"verificationMethodId": "SYS-REQ-004-VM-01", "method": "Analysis",
+            "verificationCriteria": [
+                {"verificationCriteriaId": "SYS-REQ-004-VC-01", "method": "Analysis",
                  "criteria": "Thermal analysis confirms operating temperature range."},
             ],
             "satisfiedBy": [],
@@ -101,7 +101,7 @@ def _make_behave_scenario(name, status="passed", tags=None, steps=None):
 
 
 def _behave_all_covered():
-    """Behave results where VM-01 and VM-02 both have proper @VM: tags."""
+    """Behave results where VC-01 and VC-02 both have proper @VC: tags."""
     return [
         {
             "keyword": "Feature",
@@ -112,15 +112,15 @@ def _behave_all_covered():
             "elements": [
                 _make_behave_scenario(
                     "Valid ICD request produces correct response",
-                    tags=["VM:SYS-REQ-001-VM-01", "VER:Test"],
+                    tags=["VC:SYS-REQ-001-VC-01", "VER:Test"],
                 ),
                 _make_behave_scenario(
                     "All ICD responses within latency threshold",
-                    tags=["VM:SYS-REQ-001-VM-01", "VER:Test"],
+                    tags=["VC:SYS-REQ-001-VC-01", "VER:Test"],
                 ),
                 _make_behave_scenario(
                     "Demonstrate round-trip ICD exchange",
-                    tags=["VM:SYS-REQ-001-VM-02", "VER:Demonstration"],
+                    tags=["VC:SYS-REQ-001-VC-02", "VER:Demonstration"],
                 ),
             ],
         },
@@ -133,7 +133,7 @@ def _behave_all_covered():
             "elements": [
                 _make_behave_scenario(
                     "Health status messages are emitted",
-                    tags=["VM:SYS-REQ-002-VM-01", "VER:Test"],
+                    tags=["VC:SYS-REQ-002-VC-01", "VER:Test"],
                 ),
             ],
         },
@@ -148,7 +148,7 @@ def _traceability_all_pass():
         "features_scanned": 3,
         "vms_total": 4,
         "vms_covered": 4,
-        "gate_a": {"gate": "A", "passed": True, "items": [], "message": "All VMs covered."},
+        "gate_a": {"gate": "A", "passed": True, "items": [], "message": "All VCs covered."},
         "gate_b": {"gate": "B", "passed": True, "items": [], "message": "No drift."},
         "gate_c": {"gate": "C", "passed": True, "items": [], "message": "No orphans."},
         "overall_pass": True,
@@ -156,7 +156,7 @@ def _traceability_all_pass():
 
 
 def _traceability_with_uncovered():
-    """Gate results: VM-02 is uncovered."""
+    """Gate results: VC-02 is uncovered."""
     return {
         "timestamp": "2026-03-10T15:00:00Z",
         "requirements_total": 3,
@@ -165,9 +165,9 @@ def _traceability_with_uncovered():
         "vms_covered": 3,
         "gate_a": {
             "gate": "A", "passed": False,
-            "items": [{"verificationMethodId": "SYS-REQ-001-VM-02", "method": "Demonstration",
+            "items": [{"verificationCriteriaId": "SYS-REQ-001-VC-02", "method": "Demonstration",
                         "title": "Basic ICD Communications", "stubGenerated": "stubs/vm02.feature"}],
-            "message": "1 uncovered VM.",
+            "message": "1 uncovered VC.",
         },
         "gate_b": {"gate": "B", "passed": True, "items": [], "message": "No drift."},
         "gate_c": {"gate": "C", "passed": True, "items": [], "message": "No orphans."},
@@ -175,8 +175,8 @@ def _traceability_with_uncovered():
     }
 
 
-def _behave_without_vm02():
-    """Behave results missing VM-02 scenario (it's uncovered)."""
+def _behave_without_vc02():
+    """Behave results missing VC-02 scenario (it's uncovered)."""
     return [
         {
             "keyword": "Feature",
@@ -187,7 +187,7 @@ def _behave_without_vm02():
             "elements": [
                 _make_behave_scenario(
                     "Valid ICD request produces correct response",
-                    tags=["VM:SYS-REQ-001-VM-01", "VER:Test"],
+                    tags=["VC:SYS-REQ-001-VC-01", "VER:Test"],
                 ),
             ],
         },
@@ -200,7 +200,7 @@ def _behave_without_vm02():
             "elements": [
                 _make_behave_scenario(
                     "Health status messages are emitted",
-                    tags=["VM:SYS-REQ-002-VM-01", "VER:Test"],
+                    tags=["VC:SYS-REQ-002-VC-01", "VER:Test"],
                 ),
             ],
         },
@@ -230,70 +230,70 @@ class TestBuildReport:
         return report_generator.build_report(req_path, behave_path, trace_path)
 
     def test_all_covered_status(self, tmp_path):
-        """When all VMs have scenarios, no VM should be uncovered."""
+        """When all VCs have scenarios, no VC should be uncovered."""
         report = self._build(tmp_path, _behave_all_covered(), _traceability_all_pass())
         summary = report["summary"]
-        assert summary["total_vms"] == 4
-        assert summary["covered_vms"] == 4
-        assert summary["uncovered_vms"] == 0
-        assert summary["passed"] == 3  # Test + Demonstration VMs (not Analysis)
-        assert summary["manual"] == 1  # Analysis VM
+        assert summary["total_vcs"] == 4
+        assert summary["covered_vcs"] == 4
+        assert summary["uncovered_vcs"] == 0
+        assert summary["passed"] == 3  # Test + Demonstration VCs (not Analysis)
+        assert summary["manual"] == 1  # Analysis VC
         assert summary["failed"] == 0
 
     def test_all_covered_vm_statuses(self, tmp_path):
-        """Each VM row should have the correct status."""
+        """Each VC row should have the correct status."""
         report = self._build(tmp_path, _behave_all_covered(), _traceability_all_pass())
-        rows = {r["vm_id"]: r for r in report["requirements"]}
+        rows = {r["vc_id"]: r for r in report["requirements"]}
 
-        assert rows["SYS-REQ-001-VM-01"]["status"] == "pass"
-        assert rows["SYS-REQ-001-VM-02"]["status"] == "pass"
-        assert rows["SYS-REQ-002-VM-01"]["status"] == "pass"
-        assert rows["SYS-REQ-004-VM-01"]["status"] == "manual"
+        assert rows["SYS-REQ-001-VC-01"]["status"] == "pass"
+        assert rows["SYS-REQ-001-VC-02"]["status"] == "pass"
+        assert rows["SYS-REQ-002-VC-01"]["status"] == "pass"
+        assert rows["SYS-REQ-004-VC-01"]["status"] == "manual"
 
     def test_uncovered_vm_has_no_test_result(self, tmp_path):
-        """An uncovered VM must NOT inherit test results from sibling VMs."""
-        report = self._build(tmp_path, _behave_without_vm02(), _traceability_with_uncovered())
-        rows = {r["vm_id"]: r for r in report["requirements"]}
+        """An uncovered VC must NOT inherit test results from sibling VCs."""
+        report = self._build(tmp_path, _behave_without_vc02(), _traceability_with_uncovered())
+        rows = {r["vc_id"]: r for r in report["requirements"]}
 
-        vm02 = rows["SYS-REQ-001-VM-02"]
-        assert vm02["status"] == "uncovered"
-        assert vm02["test_result"] is None, \
-            f"Uncovered VM should have no test_result, got: {vm02['test_result']}"
-        assert vm02["scenario_name"] is None, \
-            f"Uncovered VM should have no scenario_name, got: {vm02['scenario_name']}"
-        assert vm02["feature_file"] is None
+        vc02 = rows["SYS-REQ-001-VC-02"]
+        assert vc02["status"] == "uncovered"
+        assert vc02["test_result"] is None, \
+            f"Uncovered VC should have no test_result, got: {vm02['test_result']}"
+        assert vc02["scenario_name"] is None, \
+            f"Uncovered VC should have no scenario_name, got: {vm02['scenario_name']}"
+        assert vc02["feature_file"] is None
 
     def test_uncovered_vm_does_not_inflate_pass_count(self, tmp_path):
-        """Uncovered VMs should not count toward passed or failed."""
-        report = self._build(tmp_path, _behave_without_vm02(), _traceability_with_uncovered())
+        """Uncovered VCs should not count toward passed or failed."""
+        report = self._build(tmp_path, _behave_without_vc02(), _traceability_with_uncovered())
         summary = report["summary"]
-        assert summary["passed"] == 2  # VM-01 + REQ-002-VM-01
+        assert summary["passed"] == 2  # VC-01 + REQ-002-VC-01
         assert summary["failed"] == 0
-        assert summary["uncovered_vms"] == 1
+        assert summary["uncovered_vcs"] == 1
 
     def test_manual_vm_has_no_test_result(self, tmp_path):
-        """Analysis/Inspection VMs should be 'manual' with no test result."""
+        """Analysis/Inspection VCs should be 'manual' with no test result."""
         report = self._build(tmp_path, _behave_all_covered(), _traceability_all_pass())
-        rows = {r["vm_id"]: r for r in report["requirements"]}
+        rows = {r["vc_id"]: r for r in report["requirements"]}
 
-        vm_analysis = rows["SYS-REQ-004-VM-01"]
-        assert vm_analysis["status"] == "manual"
-        assert vm_analysis["test_result"] is None
-        assert vm_analysis["scenario_name"] is None
+        vc_analysis = rows["SYS-REQ-004-VC-01"]
+        assert vc_analysis["status"] == "manual"
+        assert vc_analysis["test_result"] is None
+        assert vc_analysis["scenario_name"] is None
 
-    def test_vm_level_behave_matching(self, tmp_path):
-        """When Behave has @VM: tags, each VM should get its own scenario."""
+    def test_vc_level_behave_matching(self, tmp_path):
+        """When Behave has @VC: tags, each VC should get its own scenario."""
         report = self._build(tmp_path, _behave_all_covered(), _traceability_all_pass())
-        rows = {r["vm_id"]: r for r in report["requirements"]}
+        rows = {r["vc_id"]: r for r in report["requirements"]}
 
-        # VM-01 should match a VM-01 scenario (last one wins in current impl)
-        vm01 = rows["SYS-REQ-001-VM-01"]
-        assert vm01["scenario_name"] is not None
-        assert vm01["test_result"] == "passed"
+        # VC-01 should match a VC-01 scenario (last one wins in current impl)
+        vc01 = rows["SYS-REQ-001-VC-01"]
+        assert vc01["scenario_name"] is not None
+        assert vc01["test_result"] == "passed"
 
-        # VM-02 should get the Demonstration scenario, not a VM-01 scenario
-        vm02 = rows["SYS-REQ-001-VM-02"]
-        assert vm02["scenario_name"] == "Demonstrate round-trip ICD exchange"
+        # VC-02 should get the Demonstration scenario, not a VC-01 scenario
+        vc02 = rows["SYS-REQ-001-VC-02"]
+        assert vc02["scenario_name"] == "Demonstrate round-trip ICD exchange"
 
     def test_failed_scenario_status(self, tmp_path):
         """A failed Behave scenario should result in status 'fail'."""
@@ -303,45 +303,45 @@ class TestBuildReport:
                 "location": "f.feature", "status": "failed",
                 "elements": [
                     _make_behave_scenario("Failing test", status="failed",
-                                          tags=["VM:SYS-REQ-001-VM-01"]),
-                    _make_behave_scenario("Demo", tags=["VM:SYS-REQ-001-VM-02"]),
+                                          tags=["VC:SYS-REQ-001-VC-01"]),
+                    _make_behave_scenario("Demo", tags=["VC:SYS-REQ-001-VC-02"]),
                 ],
             },
             {
                 "keyword": "Feature", "name": "Health", "tags": ["REQ:SYS-REQ-002"],
                 "location": "h.feature", "status": "passed",
-                "elements": [_make_behave_scenario("Health", tags=["VM:SYS-REQ-002-VM-01"])],
+                "elements": [_make_behave_scenario("Health", tags=["VC:SYS-REQ-002-VC-01"])],
             },
         ]
         report = self._build(tmp_path, behave, _traceability_all_pass())
-        rows = {r["vm_id"]: r for r in report["requirements"]}
+        rows = {r["vc_id"]: r for r in report["requirements"]}
 
-        assert rows["SYS-REQ-001-VM-01"]["status"] == "fail"
-        assert rows["SYS-REQ-001-VM-01"]["test_result"] == "failed"
+        assert rows["SYS-REQ-001-VC-01"]["status"] == "fail"
+        assert rows["SYS-REQ-001-VC-01"]["test_result"] == "failed"
         assert report["summary"]["failed"] == 1
 
     def test_coverage_percent_calculation(self, tmp_path):
-        """Coverage should be covered_vms / total_vms * 100."""
-        report = self._build(tmp_path, _behave_without_vm02(), _traceability_with_uncovered())
+        """Coverage should be covered_vcs / total_vcs * 100."""
+        report = self._build(tmp_path, _behave_without_vc02(), _traceability_with_uncovered())
         summary = report["summary"]
         expected = 3 / 4 * 100  # 75%
         assert summary["coverage_percent"] == round(expected, 2)
 
     def test_drifted_vm_has_no_test_result(self, tmp_path):
-        """Drifted VMs should not inherit test results."""
+        """Drifted VCs should not inherit test results."""
         trace = _traceability_all_pass()
         trace["gate_b"] = {
             "gate": "B", "passed": False,
-            "items": [{"verificationMethodId": "SYS-REQ-001-VM-01",
+            "items": [{"verificationCriteriaId": "SYS-REQ-001-VC-01",
                         "oldHash": "aaa", "newHash": "bbb"}],
             "message": "1 drifted.",
         }
         report = self._build(tmp_path, _behave_all_covered(), trace)
-        rows = {r["vm_id"]: r for r in report["requirements"]}
+        rows = {r["vc_id"]: r for r in report["requirements"]}
 
-        assert rows["SYS-REQ-001-VM-01"]["status"] == "drifted"
-        assert rows["SYS-REQ-001-VM-01"]["test_result"] is None
-        assert rows["SYS-REQ-001-VM-01"]["scenario_name"] is None
+        assert rows["SYS-REQ-001-VC-01"]["status"] == "drifted"
+        assert rows["SYS-REQ-001-VC-01"]["test_result"] is None
+        assert rows["SYS-REQ-001-VC-01"]["scenario_name"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -405,13 +405,13 @@ class TestHTMLDashboard:
         assert "SYS-REQ-002" in html
         assert "SYS-REQ-004" in html
 
-    def test_html_contains_vm_ids(self, tmp_path):
-        """All VM IDs should appear in the injected data."""
+    def test_html_contains_vc_ids(self, tmp_path):
+        """All VC IDs should appear in the injected data."""
         html = self._generate_html(tmp_path)
-        assert "SYS-REQ-001-VM-01" in html
-        assert "SYS-REQ-001-VM-02" in html
-        assert "SYS-REQ-002-VM-01" in html
-        assert "SYS-REQ-004-VM-01" in html
+        assert "SYS-REQ-001-VC-01" in html
+        assert "SYS-REQ-001-VC-02" in html
+        assert "SYS-REQ-002-VC-01" in html
+        assert "SYS-REQ-004-VC-01" in html
 
     def test_html_coverage_metric(self, tmp_path):
         """Hero header should show correct coverage percentage."""
@@ -470,9 +470,9 @@ class TestHTMLDashboard:
             assert "https://" not in head, "External HTTPS resource in <head>"
 
     def test_html_uncovered_dashboard(self, tmp_path):
-        """Dashboard with uncovered VMs should show lower coverage."""
-        html = self._generate_html(tmp_path, _behave_without_vm02(), _traceability_with_uncovered())
-        assert "75%" in html  # 3/4 VMs covered
+        """Dashboard with uncovered VCs should show lower coverage."""
+        html = self._generate_html(tmp_path, _behave_without_vc02(), _traceability_with_uncovered())
+        assert "75%" in html  # 3/4 VCs covered
 
     def test_html_model_metadata(self, tmp_path):
         """Export tab should contain model metadata from requirements."""
@@ -499,24 +499,24 @@ class TestTagExtraction:
         result = report_generator._extract_req_ids_from_tags(tags)
         assert result == {"SYS-REQ-001"}
 
-    def test_extract_vm_ids(self):
-        tags = ["VM:SYS-REQ-001-VM-01", "VER:Test"]
-        result = report_generator._extract_vm_ids_from_tags(tags)
-        assert result == {"SYS-REQ-001-VM-01"}
+    def test_extract_vc_ids(self):
+        tags = ["VC:SYS-REQ-001-VC-01", "VER:Test"]
+        result = report_generator._extract_vc_ids_from_tags(tags)
+        assert result == {"SYS-REQ-001-VC-01"}
 
-    def test_extract_vm_ids_with_at_prefix(self):
-        tags = ["@VM:SYS-REQ-001-VM-01"]
-        result = report_generator._extract_vm_ids_from_tags(tags)
-        assert result == {"SYS-REQ-001-VM-01"}
+    def test_extract_vc_ids_with_at_prefix(self):
+        tags = ["@VC:SYS-REQ-001-VC-01"]
+        result = report_generator._extract_vc_ids_from_tags(tags)
+        assert result == {"SYS-REQ-001-VC-01"}
 
-    def test_is_vm_id_valid(self):
-        assert report_generator._is_vm_id("SYS-REQ-001-VM-01") is True
-        assert report_generator._is_vm_id("SYS-REQ-001") is False
-        assert report_generator._is_vm_id("not-a-vm") is False
+    def test_is_vc_id_valid(self):
+        assert report_generator._is_vc_id("SYS-REQ-001-VC-01") is True
+        assert report_generator._is_vc_id("SYS-REQ-001") is False
+        assert report_generator._is_vc_id("not-a-vc") is False
 
     def test_is_requirement_id_valid(self):
         assert report_generator._is_requirement_id("SYS-REQ-001") is True
-        assert report_generator._is_requirement_id("SYS-REQ-001-VM-01") is False
+        assert report_generator._is_requirement_id("SYS-REQ-001-VC-01") is False
 
 
 # ---------------------------------------------------------------------------
@@ -527,29 +527,29 @@ class TestTagExtraction:
 class TestBehaveIndexing:
     """Tests for _index_behave_results correctness."""
 
-    def test_vm_level_indexing(self):
-        """Scenarios with @VM: tags should be indexed by VM ID."""
+    def test_vc_level_indexing(self):
+        """Scenarios with @VC: tags should be indexed by VC ID."""
         behave = _behave_all_covered()
-        req_map, vm_map = report_generator._index_behave_results(behave)
+        req_map, vc_map = report_generator._index_behave_results(behave)
 
-        assert "SYS-REQ-001-VM-01" in vm_map
-        assert "SYS-REQ-001-VM-02" in vm_map
-        assert "SYS-REQ-002-VM-01" in vm_map
+        assert "SYS-REQ-001-VC-01" in vc_map
+        assert "SYS-REQ-001-VC-02" in vc_map
+        assert "SYS-REQ-002-VC-01" in vc_map
 
     def test_req_level_indexing(self):
         """Feature-level @REQ: tags should index by requirement ID."""
         behave = _behave_all_covered()
-        req_map, vm_map = report_generator._index_behave_results(behave)
+        req_map, vc_map = report_generator._index_behave_results(behave)
 
         assert "SYS-REQ-001" in req_map
         assert "SYS-REQ-002" in req_map
 
-    def test_vm_index_gets_correct_scenario(self):
-        """VM-02 should be mapped to the Demonstration scenario, not VM-01."""
+    def test_vc_index_gets_correct_scenario(self):
+        """VC-02 should be mapped to the Demonstration scenario, not VC-01."""
         behave = _behave_all_covered()
-        _, vm_map = report_generator._index_behave_results(behave)
+        _, vc_map = report_generator._index_behave_results(behave)
 
-        assert vm_map["SYS-REQ-001-VM-02"]["name"] == "Demonstrate round-trip ICD exchange"
+        assert vc_map["SYS-REQ-001-VC-02"]["name"] == "Demonstrate round-trip ICD exchange"
 
     def test_feature_tag_inheritance(self):
         """Scenarios inherit feature-level tags."""
@@ -559,16 +559,16 @@ class TestBehaveIndexing:
             "location": "test.feature",
             "elements": [{
                 "keyword": "Scenario", "name": "S1",
-                "tags": ["VM:SYS-REQ-001-VM-01"],
+                "tags": ["VC:SYS-REQ-001-VC-01"],
                 "steps": [{"keyword": "Given ", "name": "x",
                            "result": {"status": "passed", "duration": 0.001}}],
                 "status": "passed",
             }],
         }]
-        req_map, vm_map = report_generator._index_behave_results(behave)
-        # Both req and vm should be indexed
+        req_map, vc_map = report_generator._index_behave_results(behave)
+        # Both req and vc should be indexed
         assert "SYS-REQ-001" in req_map
-        assert "SYS-REQ-001-VM-01" in vm_map
+        assert "SYS-REQ-001-VC-01" in vc_map
 
 
 # ---------------------------------------------------------------------------
@@ -581,29 +581,29 @@ class TestTraceabilityParsing:
 
     def test_gate_based_format(self):
         trace = _traceability_with_uncovered()
-        all_vms = {"SYS-REQ-001-VM-01", "SYS-REQ-001-VM-02",
-                    "SYS-REQ-002-VM-01", "SYS-REQ-004-VM-01"}
+        all_vms = {"SYS-REQ-001-VC-01", "SYS-REQ-001-VC-02",
+                    "SYS-REQ-002-VC-01", "SYS-REQ-004-VC-01"}
         covered, uncovered, drifted, orphaned, deferred, deferred_releases = report_generator._parse_traceability_data(
             trace, all_vms
         )
-        assert "SYS-REQ-001-VM-02" in uncovered
-        assert "SYS-REQ-001-VM-02" not in covered
+        assert "SYS-REQ-001-VC-02" in uncovered
+        assert "SYS-REQ-001-VC-02" not in covered
         assert len(drifted) == 0
         assert len(orphaned) == 0
         assert len(deferred) == 0
 
     def test_flat_format(self):
         trace = {
-            "covered": ["SYS-REQ-001-VM-01"],
-            "uncovered": ["SYS-REQ-001-VM-02"],
+            "covered": ["SYS-REQ-001-VC-01"],
+            "uncovered": ["SYS-REQ-001-VC-02"],
             "drifted": [],
             "orphaned": [],
         }
         covered, uncovered, drifted, orphaned, deferred, deferred_releases = report_generator._parse_traceability_data(
             trace, set()
         )
-        assert "SYS-REQ-001-VM-01" in covered
-        assert "SYS-REQ-001-VM-02" in uncovered
+        assert "SYS-REQ-001-VC-01" in covered
+        assert "SYS-REQ-001-VC-02" in uncovered
 
 
 # ---------------------------------------------------------------------------
@@ -632,8 +632,8 @@ class TestEdgeCases:
                 "priority": "High",
                 "status": "Approved",
                 "parentRequirementId": None,
-                "verificationMethods": [{
-                    "verificationMethodId": "SYS-REQ-XSS-VM-01",
+                "verificationCriteria": [{
+                    "verificationCriteriaId": "SYS-REQ-XSS-VC-01",
                     "method": "Test",
                     "criteria": "criteria",
                 }],
@@ -662,8 +662,8 @@ class TestEdgeCases:
     def test_empty_behave_results(self, tmp_path):
         """Report should handle empty Behave results gracefully."""
         report = self._build(tmp_path, [], _traceability_all_pass())
-        # All VMs should still exist, just without test results
-        assert report["summary"]["total_vms"] == 4
+        # All VCs should still exist, just without test results
+        assert report["summary"]["total_vcs"] == 4
         assert report["summary"]["passed"] >= 0  # No crash
 
     def test_null_gate_values(self, tmp_path):
@@ -674,33 +674,33 @@ class TestEdgeCases:
             "gate_c": None,
         }
         report = self._build(tmp_path, _behave_all_covered(), trace)
-        # Should produce a valid report (all VMs covered since no gates report issues)
-        assert report["summary"]["total_vms"] == 4
+        # Should produce a valid report (all VCs covered since no gates report issues)
+        assert report["summary"]["total_vcs"] == 4
 
     def test_missing_gate_keys(self, tmp_path):
         """Traceability report with no gate keys should not crash."""
         trace = {"timestamp": "2026-01-01"}
         report = self._build(tmp_path, _behave_all_covered(), trace)
-        assert report["summary"]["total_vms"] == 4
+        assert report["summary"]["total_vcs"] == 4
 
-    def test_empty_verification_methods_array(self, tmp_path):
-        """A requirement with empty verificationMethods [] should get a fallback row."""
+    def test_empty_verification_criteria_array(self, tmp_path):
+        """A requirement with empty verificationCriteria [] should get a fallback row."""
         req_data = {
             "exportMetadata": REQUIREMENTS_DATA["exportMetadata"],
             "requirements": [{
                 "requirementId": "SYS-REQ-EMPTY",
-                "title": "Empty VMs",
+                "title": "Empty VCs",
                 "description": "",
                 "priority": "Low",
                 "status": "Draft",
                 "parentRequirementId": None,
-                "verificationMethods": [],
+                "verificationCriteria": [],
                 "satisfiedBy": [],
                 "tracesTo": [],
             }],
         }
         report = self._build(tmp_path, [], {"covered": [], "uncovered": [], "drifted": [], "orphaned": []}, req_data)
-        assert report["summary"]["total_vms"] == 1  # Fallback row created
+        assert report["summary"]["total_vcs"] == 1  # Fallback row created
 
     def test_optional_file_not_found(self, tmp_path):
         """_load_optional_json should return None for non-existent file."""

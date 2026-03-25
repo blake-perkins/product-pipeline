@@ -4,7 +4,7 @@ This guide covers all breaking changes introduced in the v0.2.0 release and the 
 
 ## What Changed
 
-### 1. Data Model: 1-to-Many Verification Methods (Breaking)
+### 1. Data Model: 1-to-Many Verification Criteria (Breaking)
 
 **Before (v0.1.x):** Each requirement had a single `verificationMethod` and `verificationCriteria` field.
 
@@ -16,19 +16,19 @@ This guide covers all breaking changes introduced in the v0.2.0 release and the 
 }
 ```
 
-**After (v0.2.0):** Each requirement has a `verificationMethods` array. Each entry has a unique scoped ID.
+**After (v0.2.0):** Each requirement has a `verificationCriteria` array. Each entry has a unique scoped ID.
 
 ```json
 {
   "requirementId": "SYS-REQ-001",
-  "verificationMethods": [
+  "verificationCriteria": [
     {
-      "verificationMethodId": "SYS-REQ-001-VM-01",
+      "verificationCriteriaId": "SYS-REQ-001-VC-01",
       "method": "Test",
       "criteria": "Verify that..."
     },
     {
-      "verificationMethodId": "SYS-REQ-001-VM-02",
+      "verificationCriteriaId": "SYS-REQ-001-VC-02",
       "method": "Demonstration",
       "criteria": "Demonstrate that..."
     }
@@ -36,21 +36,21 @@ This guide covers all breaking changes introduced in the v0.2.0 release and the 
 }
 ```
 
-### 2. Gherkin Tags: `@VM:` Required at Scenario Level
+### 2. Gherkin Tags: `@VC:` Required at Scenario Level
 
-**Before:** Features used `@REQ:SYS-REQ-001` at the feature level. No VM-level tags.
+**Before:** Features used `@REQ:SYS-REQ-001` at the feature level. No VC-level tags.
 
-**After:** `@REQ:` stays at the feature level, but each scenario now needs a `@VM:` tag linking it to a specific verification criteria.
+**After:** `@REQ:` stays at the feature level, but each scenario now needs a `@VC:` tag linking it to a specific verification criteria.
 
 ```gherkin
 @REQ:SYS-REQ-001
 Feature: Basic ICD Communications
 
-  @VM:SYS-REQ-001-VM-01 @VER:Test
+  @VC:SYS-REQ-001-VC-01 @VER:Test
   Scenario: Valid ICD request produces correct response
     ...
 
-  @VM:SYS-REQ-001-VM-02 @VER:Demonstration
+  @VC:SYS-REQ-001-VC-02 @VER:Demonstration
   Scenario: Demonstrate round-trip exchange
     ...
 ```
@@ -59,7 +59,7 @@ Feature: Basic ICD Communications
 
 **Before:** Baseline keyed by requirement ID.
 
-**After:** Baseline keyed by VM ID (`SYS-REQ-001-VM-01`) and includes criteria text alongside hashes.
+**After:** Baseline keyed by VC ID (`SYS-REQ-001-VC-01`) and includes criteria text alongside hashes.
 
 ### 4. New Files
 
@@ -104,7 +104,7 @@ git pull origin master
 
 Your existing `requirements_export.json` needs to be re-exported from Cameo with the new schema.
 
-**If using the Groovy macro:** The updated `ExportRequirements.groovy` automatically wraps the single verification method/criteria into the new `verificationMethods` array format. Re-run the macro in Cameo and commit.
+**If using the Groovy macro:** The updated `ExportRequirements.groovy` automatically wraps the single verification method/criteria into the new `verificationCriteria` array format. Re-run the macro in Cameo and commit.
 
 **If manually maintaining the JSON:** Convert each requirement:
 
@@ -114,20 +114,20 @@ Your existing `requirements_export.json` needs to be re-exported from Cameo with
 #   "verificationCriteria": "Verify that..."
 #
 # To:
-#   "verificationMethods": [
+#   "verificationCriteria": [
 #     {
-#       "verificationMethodId": "SYS-REQ-001-VM-01",
+#       "verificationCriteriaId": "SYS-REQ-001-VC-01",
 #       "method": "Test",
 #       "criteria": "Verify that..."
 #     }
 #   ]
 ```
 
-**VM ID format:** `{requirementId}-VM-{zero-padded index}` (e.g., `SYS-REQ-001-VM-01`).
+**VC ID format:** `{requirementId}-VC-{zero-padded index}` (e.g., `SYS-REQ-001-VC-01`).
 
-### Step 3: Add `@VM:` Tags to Your Feature Files
+### Step 3: Add `@VC:` Tags to Your Feature Files
 
-Every scenario that has an `@REQ:` tag now also needs a `@VM:` tag at the **scenario level** (not feature level).
+Every scenario that has an `@REQ:` tag now also needs a `@VC:` tag at the **scenario level** (not feature level).
 
 **Before:**
 ```gherkin
@@ -143,12 +143,12 @@ Feature: Basic ICD Communications
 @REQ:SYS-REQ-001
 Feature: Basic ICD Communications
 
-  @VM:SYS-REQ-001-VM-01 @VER:Test
+  @VC:SYS-REQ-001-VC-01 @VER:Test
   Scenario: Valid ICD request produces correct response
     ...
 ```
 
-If your requirement previously had one verification method, you'll have one VM (e.g., `-VM-01`). Put `@REQ:` at feature level and `@VM:` at scenario level.
+If your requirement previously had one verification criteria, you'll have one VC (e.g., `-VC-01`). Put `@REQ:` at feature level and `@VC:` at scenario level.
 
 ### Step 4: Reset the Traceability Baseline
 
@@ -221,7 +221,7 @@ Update `VERSION` to `0.2.0` in the cameo-model-pipeline repo if you haven't alre
 
 The tools have **limited backward compatibility** for the old flat format:
 
-- `traceability_checker.py` will fall back to legacy `verificationMethod`/`verificationCriteria` fields if `verificationMethods` is missing, wrapping them into a single-element array.
+- `traceability_checker.py` will fall back to legacy `verificationMethod`/`verificationCriteria` fields if `verificationCriteria` is missing, wrapping them into a single-element array.
 - `report_generator.py` handles both formats in `build_report()`.
 
 However, this fallback is for transition only. **You should migrate fully** — the old format will not receive new features and may be removed in a future version.

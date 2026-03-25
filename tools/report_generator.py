@@ -74,10 +74,10 @@ _INLINE_HTML_TEMPLATE = textwrap.dedent(
     <p>Generated: {generated_at}</p>
     <div class="summary">
       <p><strong>Requirements:</strong> {total} &nbsp;
-         <strong>VCs:</strong> {total_vms} &nbsp;
-         <strong>Covered VCs:</strong> {covered_vms} &nbsp;
-         <strong>Uncovered VCs:</strong> {uncovered_vms} &nbsp;
-         <strong>Drifted VCs:</strong> {drifted_vms} &nbsp;
+         <strong>VCs:</strong> {total_vcs} &nbsp;
+         <strong>Covered VCs:</strong> {covered_vcs} &nbsp;
+         <strong>Uncovered VCs:</strong> {uncovered_vcs} &nbsp;
+         <strong>Drifted VCs:</strong> {drifted_vcs} &nbsp;
          <strong>Orphaned Tests:</strong> {orphaned} &nbsp;
          <strong>Passed:</strong> {passed} &nbsp;
          <strong>Failed:</strong> {failed} &nbsp;
@@ -85,7 +85,7 @@ _INLINE_HTML_TEMPLATE = textwrap.dedent(
     </div>
     <table>
     <thead><tr>
-      <th>Requirement ID</th><th>VM ID</th><th>Title</th><th>Method</th>
+      <th>Requirement ID</th><th>VC ID</th><th>Title</th><th>Method</th>
       <th>Priority</th><th>Status</th><th>Test Result</th><th>Feature File</th>
     </tr></thead>
     <tbody>
@@ -116,41 +116,41 @@ def _index_requirements(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 def _index_behave_results(
     data: Any,
 ) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
-    """Build lookups from requirement ID and VM ID to Behave scenario result.
+    """Build lookups from requirement ID and VC ID to Behave scenario result.
 
     The Behave JSON report is a list of feature objects.  We look for tags
-    matching known requirement ID patterns (e.g. ``SYS-REQ-001``) and VM ID
-    patterns (e.g. ``SYS-REQ-001-VM-01``) and map them to their scenario
+    matching known requirement ID patterns (e.g. ``SYS-REQ-001``) and VC ID
+    patterns (e.g. ``SYS-REQ-001-VC-01``) and map them to their scenario
     result.
 
-    Returns a tuple ``(req_result_map, vm_result_map)`` where each dict is
+    Returns a tuple ``(req_result_map, vc_result_map)`` where each dict is
     keyed by the respective ID with values containing keys:
     ``status`` (passed / failed), ``feature_file``, ``name``.
     """
     req_result_map: Dict[str, Dict[str, Any]] = {}
-    vm_result_map: Dict[str, Dict[str, Any]] = {}
+    vc_result_map: Dict[str, Dict[str, Any]] = {}
 
     if isinstance(data, list):
         features = data
     elif isinstance(data, dict):
         features = data.get("features", data.get("results", []))
     else:
-        return req_result_map, vm_result_map
+        return req_result_map, vc_result_map
 
     for feature in features:
         feature_file = feature.get("location", feature.get("filename", ""))
 
         # Collect feature-level tags (inherited by all scenarios)
         feature_req_tags = _extract_req_ids_from_tags(feature.get("tags", []))
-        feature_vm_tags = _extract_vm_ids_from_tags(feature.get("tags", []))
+        feature_vc_tags = _extract_vc_ids_from_tags(feature.get("tags", []))
 
         for element in feature.get("elements", []):
             # Collect scenario-level tags
             scenario_req_tags = _extract_req_ids_from_tags(element.get("tags", []))
-            scenario_vm_tags = _extract_vm_ids_from_tags(element.get("tags", []))
+            scenario_vc_tags = _extract_vc_ids_from_tags(element.get("tags", []))
             # Merge: scenario tags + inherited feature tags
             all_req_tags = scenario_req_tags | feature_req_tags
-            all_vm_tags = scenario_vm_tags | feature_vm_tags
+            all_vc_tags = scenario_vc_tags | feature_vc_tags
 
             # Determine overall scenario status
             steps = element.get("steps", [])
@@ -172,15 +172,15 @@ def _index_behave_results(
             for req_id in all_req_tags:
                 req_result_map[req_id] = result_entry
 
-            for vm_id in all_vm_tags:
-                vm_result_map[vm_id] = result_entry
+            for vc_id in all_vc_tags:
+                vc_result_map[vc_id] = result_entry
 
-    return req_result_map, vm_result_map
+    return req_result_map, vc_result_map
 
 
 def _parse_traceability_data(
     trace_data: Dict[str, Any],
-    all_vm_ids: set[str],
+    all_vc_ids: set[str],
 ) -> tuple[set[str], set[str], set[str], List[Dict[str, Any]], set[str], Dict[str, str]]:
     """Extract coverage and deferral data from the traceability report.
 
@@ -188,8 +188,9 @@ def _parse_traceability_data(
 
     1. **Gate-based** (from ``traceability_checker.py``): uses ``gate_a``,
        ``gate_b``, ``gate_c`` sub-objects.  Gate items may contain
-       ``verificationMethodId`` / ``vm_id`` keys for VM-level granularity,
-       falling back to ``requirementId`` for backwards compatibility.
+       ``verificationCriteriaId`` / ``vc_id`` keys for VC-level granularity,
+       falling back to ``verificationMethodId`` / ``vm_id`` for backwards
+       compatibility, then to ``requirementId``.
     2. **Flat** (simpler): uses top-level ``covered``, ``uncovered``,
        ``drifted``, ``orphaned`` lists.
 
@@ -197,10 +198,10 @@ def _parse_traceability_data(
     -------
     tuple
         ``(covered_ids, uncovered_ids, drifted_ids, orphaned_tests, deferred_ids, deferred_releases)``
-        where the ID sets contain VM IDs when available, otherwise
-        requirement IDs.  *deferred_ids* is the set of VM IDs whose
+        where the ID sets contain VC IDs when available, otherwise
+        requirement IDs.  *deferred_ids* is the set of VC IDs whose
         verification is deferred to a future release, and
-        *deferred_releases* maps each deferred VM ID to its target
+        *deferred_releases* maps each deferred VC ID to its target
         release label.
     """
     # --- Flat format ---
@@ -213,10 +214,10 @@ def _parse_traceability_data(
 
     # --- Gate-based format ---
     def _extract_id(item: Dict[str, Any]) -> str:
-        """Extract the best available ID from a gate item (prefer VM ID)."""
-        vm_id = item.get("verificationMethodId", item.get("vm_id", ""))
-        if vm_id:
-            return vm_id
+        """Extract the best available ID from a gate item (prefer VC ID)."""
+        vc_id = item.get("verificationCriteriaId", item.get("verificationMethodId", item.get("vc_id", item.get("vm_id", ""))))
+        if vc_id:
+            return vc_id
         return item.get("requirementId", item.get("requirement_id", ""))
 
     def _as_dict(val: Any) -> Dict[str, Any]:
@@ -251,7 +252,7 @@ def _parse_traceability_data(
             "orphaned_req_ids": item.get("orphanedReqIds", item.get("orphaned_req_ids", [])),
         })
 
-    covered_ids_gate = all_vm_ids - uncovered_ids_gate - deferred_ids_gate
+    covered_ids_gate = all_vc_ids - uncovered_ids_gate - deferred_ids_gate
     return covered_ids_gate, uncovered_ids_gate, drifted_ids_gate, orphaned_tests_gate, deferred_ids_gate, deferred_releases
 
 
@@ -277,26 +278,26 @@ def _is_requirement_id(tag: str) -> bool:
     return bool(re.match(r"^[A-Z]+-[A-Z]+-\d{3,}$", tag))
 
 
-def _extract_vm_ids_from_tags(tags: list) -> set[str]:
-    """Extract verification-method IDs from a list of Behave JSON tags.
+def _extract_vc_ids_from_tags(tags: list) -> set[str]:
+    """Extract verification-criteria IDs from a list of Behave JSON tags.
 
     Tags may be strings or dicts with a 'name' key.  Handles formats like:
-    ``@VM:SYS-REQ-001-VM-01``, ``VM:SYS-REQ-001-VM-01``, or plain
-    ``SYS-REQ-001-VM-01``.
+    ``@VC:SYS-REQ-001-VC-01``, ``VC:SYS-REQ-001-VC-01``, or plain
+    ``SYS-REQ-001-VC-01``.
     """
-    vm_ids: set[str] = set()
+    vc_ids: set[str] = set()
     for t in tags:
         tag_str = t if isinstance(t, str) else t.get("name", "")
         tag_str = tag_str.lstrip("@")
-        stripped = re.sub(r"^VM[:\-_]", "", tag_str, flags=re.IGNORECASE)
-        if _is_vm_id(stripped):
-            vm_ids.add(stripped)
-    return vm_ids
+        stripped = re.sub(r"^VC[:\-_]", "", tag_str, flags=re.IGNORECASE)
+        if _is_vc_id(stripped):
+            vc_ids.add(stripped)
+    return vc_ids
 
 
-def _is_vm_id(tag: str) -> bool:
-    """Return *True* if *tag* looks like a VM ID (e.g. SYS-REQ-001-VM-01)."""
-    return bool(re.match(r"^[A-Z]+-[A-Z]+-\d{3,}-VM-\d{2,}$", tag))
+def _is_vc_id(tag: str) -> bool:
+    """Return *True* if *tag* looks like a VC ID (e.g. SYS-REQ-001-VC-01)."""
+    return bool(re.match(r"^[A-Z]+-[A-Z]+-\d{3,}-VC-\d{2,}$", tag))
 
 
 # ---------------------------------------------------------------------------
@@ -331,31 +332,31 @@ def build_report(
     req_index = _index_requirements(req_data)
 
     behave_data = _load_json(behave_results_path)
-    req_behave_index, vm_behave_index = _index_behave_results(behave_data)
+    req_behave_index, vc_behave_index = _index_behave_results(behave_data)
 
     trace_data = _load_json(traceability_input_path)
 
-    # Build the set of all VM IDs across all requirements
-    all_vm_ids: set[str] = set()
+    # Build the set of all VC IDs across all requirements
+    all_vc_ids: set[str] = set()
     for req in req_index.values():
-        for vm in req.get("verificationMethods", []):
-            vm_id = vm.get("verificationMethodId", "")
-            if vm_id:
-                all_vm_ids.add(vm_id)
+        for vc in req.get("verificationCriteria", req.get("verificationMethods", [])):
+            vc_id = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
+            if vc_id:
+                all_vc_ids.add(vc_id)
 
     # Extract traceability data.  The traceability_checker.py emits a
     # gate-based format (gate_a, gate_b, gate_c) while a simpler format
     # with flat "covered"/"uncovered"/"drifted"/"orphaned" keys is also
     # supported for flexibility.
     covered_ids, uncovered_ids, drifted_ids, orphaned_tests, deferred_ids, deferred_releases = _parse_traceability_data(
-        trace_data, all_vm_ids
+        trace_data, all_vc_ids
     )
 
     # Manual verification methods don't have automated test results
     manual_methods = {"Analysis", "Inspection"}
 
     total_requirements = len(req_index)
-    total_vms = 0
+    total_vcs = 0
     passed = 0
     failed = 0
     manual_count = 0
@@ -363,30 +364,30 @@ def build_report(
     rows: List[Dict[str, Any]] = []
 
     for req_id, req in req_index.items():
-        verification_methods = req.get("verificationMethods", [])
+        verification_criteria = req.get("verificationCriteria", req.get("verificationMethods", []))
 
-        # If no verificationMethods array, produce a single row using
+        # If no verificationCriteria array, produce a single row using
         # legacy fields for backwards compatibility
-        if not verification_methods:
-            verification_methods = [{
-                "verificationMethodId": "",
+        if not verification_criteria:
+            verification_criteria = [{
+                "verificationCriteriaId": "",
                 "method": req.get("verificationMethod", "Test"),
                 "criteria": req.get("verificationCriteria", ""),
             }]
 
-        for vm in verification_methods:
-            total_vms += 1
-            vm_id: str = vm.get("verificationMethodId", "")
-            method: str = vm.get("method", "Test")
-            criteria: str = vm.get("criteria", "")
+        for vc in verification_criteria:
+            total_vcs += 1
+            vc_id: str = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
+            method: str = vc.get("method", "Test")
+            criteria: str = vc.get("criteria", "")
             is_manual = method in manual_methods
 
-            # The lookup key for traceability is the VM ID when available
-            lookup_id = vm_id or req_id
+            # The lookup key for traceability is the VC ID when available
+            lookup_id = vc_id or req_id
 
             # Determine row status FIRST — this controls whether we
-            # look up Behave results (uncovered/drifted VMs should NOT
-            # inherit test results from sibling VMs via req-level fallback)
+            # look up Behave results (uncovered/drifted VCs should NOT
+            # inherit test results from sibling VCs via req-level fallback)
             if lookup_id in deferred_ids:
                 status = "deferred"
                 deferred_count += 1
@@ -398,8 +399,8 @@ def build_report(
                 status = "manual"
                 manual_count += 1
             else:
-                # Only look up Behave results for covered, non-manual VMs
-                behave_result = vm_behave_index.get(vm_id) if vm_id else None
+                # Only look up Behave results for covered, non-manual VCs
+                behave_result = vc_behave_index.get(vc_id) if vc_id else None
                 if behave_result is None:
                     behave_result = req_behave_index.get(req_id)
 
@@ -413,16 +414,16 @@ def build_report(
                     # Covered according to traceability but no Behave result found
                     status = "uncovered"
 
-            # Only attach Behave data for VMs that actually have test results
+            # Only attach Behave data for VCs that actually have test results
             behave_result_for_row = None
             if status in ("pass", "fail"):
-                behave_result_for_row = vm_behave_index.get(vm_id) if vm_id else None
+                behave_result_for_row = vc_behave_index.get(vc_id) if vc_id else None
                 if behave_result_for_row is None:
                     behave_result_for_row = req_behave_index.get(req_id)
 
             row: Dict[str, Any] = {
                 "requirement_id": req_id,
-                "vm_id": vm_id,
+                "vc_id": vc_id,
                 "title": req.get("title", ""),
                 "method": method,
                 "criteria": criteria,
@@ -431,25 +432,25 @@ def build_report(
                 "test_result": behave_result_for_row["status"] if behave_result_for_row else None,
                 "feature_file": behave_result_for_row["feature_file"] if behave_result_for_row else None,
                 "scenario_name": behave_result_for_row["name"] if behave_result_for_row else None,
-                "target_release": deferred_releases.get(vm_id, "") if status == "deferred" else None,
+                "target_release": deferred_releases.get(vc_id, "") if status == "deferred" else None,
             }
             rows.append(row)
 
     covered_count = len(covered_ids)
     uncovered_count = len(uncovered_ids)
     drifted_count = len(drifted_ids)
-    # Coverage % is calculated against in-scope VMs only (total minus deferred)
-    in_scope_vms = total_vms - deferred_count
-    coverage_percent = (covered_count / in_scope_vms * 100) if in_scope_vms > 0 else 0.0
+    # Coverage % is calculated against in-scope VCs only (total minus deferred)
+    in_scope_vcs = total_vcs - deferred_count
+    coverage_percent = (covered_count / in_scope_vcs * 100) if in_scope_vcs > 0 else 0.0
 
     summary: Dict[str, Any] = {
         "total_requirements": total_requirements,
-        "total_vms": total_vms,
-        "in_scope_vms": in_scope_vms,
-        "covered_vms": covered_count,
-        "uncovered_vms": uncovered_count,
-        "drifted_vms": drifted_count,
-        "deferred_vms": deferred_count,
+        "total_vcs": total_vcs,
+        "in_scope_vcs": in_scope_vcs,
+        "covered_vcs": covered_count,
+        "uncovered_vcs": uncovered_count,
+        "drifted_vcs": drifted_count,
+        "deferred_vcs": deferred_count,
         "orphaned_tests": len(orphaned_tests),
         "passed": passed,
         "failed": failed,
@@ -552,7 +553,7 @@ def write_html_report(
     grype_data:
         Optional Grype vulnerability scan results JSON.
     release_plan_data:
-        Optional release-plan JSON used to annotate deferred VMs and
+        Optional release-plan JSON used to annotate deferred VCs and
         their target releases in the HTML dashboard.
     """
     jinja_template = _try_load_jinja2_template(template_dir)
@@ -603,7 +604,7 @@ def _render_inline_html(report: Dict[str, Any]) -> str:
         row_lines.append(
             f'<tr class="{css_class}">'
             f'<td>{row["requirement_id"]}</td>'
-            f'<td>{row.get("vm_id") or "—"}</td>'
+            f'<td>{row.get("vc_id") or "—"}</td>'
             f'<td>{row["title"]}</td>'
             f'<td>{row.get("method") or "—"}</td>'
             f'<td>{row.get("priority") or "—"}</td>'
@@ -633,10 +634,10 @@ def _render_inline_html(report: Dict[str, Any]) -> str:
     return _INLINE_HTML_TEMPLATE.format(
         generated_at=report["generated_at"],
         total=summary["total_requirements"],
-        total_vms=summary["total_vms"],
-        covered_vms=summary["covered_vms"],
-        uncovered_vms=summary["uncovered_vms"],
-        drifted_vms=summary["drifted_vms"],
+        total_vcs=summary["total_vcs"],
+        covered_vcs=summary["covered_vcs"],
+        uncovered_vcs=summary["uncovered_vcs"],
+        drifted_vcs=summary["drifted_vcs"],
         orphaned=summary["orphaned_tests"],
         passed=summary["passed"],
         failed=summary["failed"],
@@ -774,7 +775,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     logger.info(
         "Report complete: %d requirements, %d VCs, %.1f%% coverage, %d passed, %d failed.",
         summary["total_requirements"],
-        summary["total_vms"],
+        summary["total_vcs"],
         summary["coverage_percent"],
         summary["passed"],
         summary["failed"],

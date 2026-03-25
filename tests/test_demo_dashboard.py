@@ -75,20 +75,20 @@ class TestDemoDashboard:
         cls.js_grype = _extract_js_json(cls.html, "GRYPE")
         cls.js_release_plan = _extract_js_json(cls.html, "RELEASE_PLAN")
 
-        cls.rows = {r["vm_id"]: r for r in cls.report["requirements"]}
+        cls.rows = {r["vc_id"]: r for r in cls.report["requirements"]}
         cls.summary = cls.report["summary"]
 
     # ---- HERO HEADER ----
 
     def test_hero_coverage_percent(self):
-        # Coverage is against in-scope VMs only (7 in-scope, all covered = 100%)
+        # Coverage is against in-scope VCs only (7 in-scope, all covered = 100%)
         assert self.summary["coverage_percent"] == 100.0
 
-    def test_hero_total_vms(self):
-        assert self.summary["total_vms"] == 8
+    def test_hero_total_vcs(self):
+        assert self.summary["total_vcs"] == 8
 
-    def test_hero_covered_vms(self):
-        assert self.summary["covered_vms"] == 7
+    def test_hero_covered_vcs(self):
+        assert self.summary["covered_vcs"] == 7
 
     def test_hero_passed(self):
         assert self.summary["passed"] == 3
@@ -97,14 +97,14 @@ class TestDemoDashboard:
         assert self.summary["failed"] == 1
 
     def test_hero_uncovered(self):
-        # SYS-REQ-003-VM-02 is now deferred, not uncovered
-        assert self.summary["uncovered_vms"] == 0
+        # SYS-REQ-003-VC-02 is now deferred, not uncovered
+        assert self.summary["uncovered_vcs"] == 0
 
     def test_hero_deferred(self):
-        assert self.summary["deferred_vms"] == 1
+        assert self.summary["deferred_vcs"] == 1
 
     def test_hero_drifted(self):
-        assert self.summary["drifted_vms"] == 1
+        assert self.summary["drifted_vcs"] == 1
 
     def test_hero_manual(self):
         assert self.summary["manual"] == 2
@@ -113,10 +113,10 @@ class TestDemoDashboard:
         assert self.summary["orphaned_tests"] == 1
 
     def test_hero_math_adds_up(self):
-        """pass + fail + manual + uncovered + drifted + deferred must equal total VMs."""
+        """pass + fail + manual + uncovered + drifted + deferred must equal total VCs."""
         s = self.summary
-        total = s["passed"] + s["failed"] + s["manual"] + s["uncovered_vms"] + s["drifted_vms"] + s["deferred_vms"]
-        assert total == s["total_vms"], f"{total} != {s['total_vms']}"
+        total = s["passed"] + s["failed"] + s["manual"] + s["uncovered_vcs"] + s["drifted_vcs"] + s["deferred_vcs"]
+        assert total == s["total_vcs"], f"{total} != {s['total_vcs']}"
 
     def test_hero_pipeline_badge_shows_attention(self):
         """Pipeline has failures, so badge should say Attention Required."""
@@ -124,50 +124,50 @@ class TestDemoDashboard:
 
     # ---- TAB 1: TRACEABILITY - STATUS ASSIGNMENT ----
 
-    def test_vm01_pass(self):
-        r = self.rows["SYS-REQ-001-VM-01"]
+    def test_vc01_pass(self):
+        r = self.rows["SYS-REQ-001-VC-01"]
         assert r["status"] == "pass"
         assert r["test_result"] == "passed"
         assert r["scenario_name"] is not None
 
-    def test_vm02_fail(self):
-        r = self.rows["SYS-REQ-001-VM-02"]
+    def test_vc02_fail(self):
+        r = self.rows["SYS-REQ-001-VC-02"]
         assert r["status"] == "fail"
         assert r["test_result"] == "failed"
         assert r["scenario_name"] == "System handles 100 concurrent ICD requests"
 
     def test_req002_pass(self):
-        r = self.rows["SYS-REQ-002-VM-01"]
+        r = self.rows["SYS-REQ-002-VC-01"]
         assert r["status"] == "pass"
         assert r["test_result"] == "passed"
 
-    def test_req003_vm01_pass(self):
-        r = self.rows["SYS-REQ-003-VM-01"]
+    def test_req003_vc01_pass(self):
+        r = self.rows["SYS-REQ-003-VC-01"]
         assert r["status"] == "pass"
         assert r["method"] == "Demonstration"
 
-    def test_req003_vm02_deferred(self):
-        r = self.rows["SYS-REQ-003-VM-02"]
+    def test_req003_vc02_deferred(self):
+        r = self.rows["SYS-REQ-003-VC-02"]
         assert r["status"] == "deferred"
         assert r["test_result"] is None
         assert r["scenario_name"] is None
         assert r["target_release"] == "1.1.0"
 
     def test_req004_manual_analysis(self):
-        r = self.rows["SYS-REQ-004-VM-01"]
+        r = self.rows["SYS-REQ-004-VC-01"]
         assert r["status"] == "manual"
         assert r["method"] == "Analysis"
         assert r["test_result"] is None
         assert r["scenario_name"] is None
 
     def test_req005_drifted(self):
-        r = self.rows["SYS-REQ-005-VM-01"]
+        r = self.rows["SYS-REQ-005-VC-01"]
         assert r["status"] == "drifted"
         assert r["test_result"] is None
         assert r["scenario_name"] is None
 
     def test_req006_manual_inspection(self):
-        r = self.rows["SYS-REQ-006-VM-01"]
+        r = self.rows["SYS-REQ-006-VC-01"]
         assert r["status"] == "manual"
         assert r["method"] == "Inspection"
         assert r["test_result"] is None
@@ -179,22 +179,22 @@ class TestDemoDashboard:
 
     # ---- TAB 1: NO CROSS-CONTAMINATION ----
 
-    def test_deferred_vm_not_inheriting_sibling_results(self):
-        """REQ-003 has 2 VMs. VM-01 passes. VM-02 (deferred) must NOT inherit VM-01's result."""
-        vm02 = self.rows["SYS-REQ-003-VM-02"]
+    def test_deferred_vc_not_inheriting_sibling_results(self):
+        """REQ-003 has 2 VCs. VC-01 passes. VC-02 (deferred) must NOT inherit VC-01's result."""
+        vm02 = self.rows["SYS-REQ-003-VC-02"]
         assert vm02["test_result"] is None
         assert vm02["scenario_name"] is None
 
-    def test_drifted_vm_not_inheriting_results(self):
-        """REQ-005's VM is drifted. It must NOT show a test result."""
-        vm = self.rows["SYS-REQ-005-VM-01"]
-        assert vm["test_result"] is None
+    def test_drifted_vc_not_inheriting_results(self):
+        """REQ-005's VC is drifted. It must NOT show a test result."""
+        vc = self.rows["SYS-REQ-005-VC-01"]
+        assert vc["test_result"] is None
 
-    def test_fail_vm_gets_correct_scenario_not_sibling(self):
-        """REQ-001 VM-02 (fail) must get the load test scenario, not VM-01's scenario."""
-        vm02 = self.rows["SYS-REQ-001-VM-02"]
+    def test_fail_vc_gets_correct_scenario_not_sibling(self):
+        """REQ-001 VC-02 (fail) must get the load test scenario, not VC-01's scenario."""
+        vm02 = self.rows["SYS-REQ-001-VC-02"]
         assert vm02["scenario_name"] == "System handles 100 concurrent ICD requests"
-        # Must NOT be any of VM-01's scenarios
+        # Must NOT be any of VC-01's scenarios
         assert vm02["scenario_name"] != "Valid ICD request produces correct response"
         assert vm02["scenario_name"] != "All ICD responses are within latency threshold"
 
@@ -212,11 +212,11 @@ class TestDemoDashboard:
     # ---- TAB 3: QUALITY GATES ----
 
     def test_gate_a_passes_with_deferred(self):
-        """Gate A passes because the only uncovered VM is deferred."""
+        """Gate A passes because the only uncovered VC is deferred."""
         ga = self.js_trace["gate_a"]
         assert ga["passed"] is True
         assert len(ga["items"]) == 1
-        assert ga["items"][0]["verificationMethodId"] == "SYS-REQ-003-VM-02"
+        assert ga["items"][0]["verificationCriteriaId"] == "SYS-REQ-003-VC-02"
 
     def test_gate_a_item_is_deferred(self):
         item = self.js_trace["gate_a"]["items"][0]
@@ -227,7 +227,7 @@ class TestDemoDashboard:
         gb = self.js_trace["gate_b"]
         assert gb["passed"] is False
         assert len(gb["items"]) == 1
-        assert gb["items"][0]["verificationMethodId"] == "SYS-REQ-005-VM-01"
+        assert gb["items"][0]["verificationCriteriaId"] == "SYS-REQ-005-VC-01"
 
     def test_gate_b_has_hash_diff(self):
         item = self.js_trace["gate_b"]["items"][0]
@@ -240,10 +240,10 @@ class TestDemoDashboard:
         assert len(gc["items"]) == 1
         assert gc["items"][0]["orphanedReqIds"] == ["SYS-REQ-099"]
 
-    def test_gate_c_has_vm_ids(self):
+    def test_gate_c_has_vc_ids(self):
         item = self.js_trace["gate_c"]["items"][0]
-        assert "orphanedVmIds" in item
-        assert "SYS-REQ-099-VM-01" in item["orphanedVmIds"]
+        assert "orphanedVcIds" in item
+        assert "SYS-REQ-099-VC-01" in item["orphanedVcIds"]
 
     def test_overall_pipeline_fails(self):
         assert self.js_trace["overall_pass"] is False
@@ -291,16 +291,16 @@ class TestDemoDashboard:
         skipped = [s for s in scenario["steps"] if s.get("result", {}).get("status") == "skipped"]
         assert len(skipped) == 1
 
-    def test_behave_scenarios_have_vm_tags(self):
-        """Every automated scenario should have a @VM: tag."""
+    def test_behave_scenarios_have_vc_tags(self):
+        """Every automated scenario should have a @VC: tag."""
         for feat in self.js_behave:
             for el in feat.get("elements", []):
                 if el.get("keyword") == "Background":
                     continue
                 tags = [(t if isinstance(t, str) else t.get("name", "")).replace("@", "")
                         for t in el.get("tags", [])]
-                vm_tags = [t for t in tags if t.startswith("VM:")]
-                assert vm_tags, f"Scenario '{el['name']}' missing @VM: tag"
+                vc_tags = [t for t in tags if t.startswith("VC:")]
+                assert vc_tags, f"Scenario '{el['name']}' missing @VC: tag"
 
     # ---- TAB 5: EXPORT & METADATA ----
 
@@ -352,15 +352,15 @@ class TestDemoDashboard:
     def test_all_requirements_have_matching_report_rows(self):
         for req in self.js_reqs["requirements"]:
             rid = req["requirementId"]
-            vm_ids_in_req = {vm["verificationMethodId"] for vm in req["verificationMethods"]}
-            vm_ids_in_report = {r["vm_id"] for r in self.report["requirements"] if r["requirement_id"] == rid}
-            assert vm_ids_in_req == vm_ids_in_report, f"VM mismatch for {rid}: {vm_ids_in_req} vs {vm_ids_in_report}"
+            vc_ids_in_req = {vc["verificationCriteriaId"] for vc in req["verificationCriteria"]}
+            vc_ids_in_report = {r["vc_id"] for r in self.report["requirements"] if r["requirement_id"] == rid}
+            assert vc_ids_in_req == vc_ids_in_report, f"VC mismatch for {rid}: {vc_ids_in_req} vs {vc_ids_in_report}"
 
-    def test_req001_has_2_vms(self):
+    def test_req001_has_2_vcs(self):
         vms = [r for r in self.report["requirements"] if r["requirement_id"] == "SYS-REQ-001"]
         assert len(vms) == 2
 
-    def test_req003_has_2_vms(self):
+    def test_req003_has_2_vcs(self):
         vms = [r for r in self.report["requirements"] if r["requirement_id"] == "SYS-REQ-003"]
         assert len(vms) == 2
 
@@ -396,12 +396,12 @@ class TestDemoDashboard:
 
     def test_release_110_scope(self):
         rel = self.js_release_plan["releases"][1]
-        assert "SYS-REQ-001-VM-02" in rel["scope"]
+        assert "SYS-REQ-001-VC-02" in rel["scope"]
         assert "SYS-REQ-003" in rel["scope"]
 
-    def test_deferred_vm_has_target_release(self):
-        vm = self.rows["SYS-REQ-003-VM-02"]
-        assert vm["target_release"] == "1.1.0"
+    def test_deferred_vc_has_target_release(self):
+        vc = self.rows["SYS-REQ-003-VC-02"]
+        assert vc["target_release"] == "1.1.0"
 
 
 if __name__ == "__main__":

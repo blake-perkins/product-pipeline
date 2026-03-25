@@ -15,7 +15,7 @@
       "targetDate": "2026-09-01",
       "description": "Degradation handling and ICD demonstration verification",
       "scope": [
-        "SYS-REQ-001-VM-02",
+        "SYS-REQ-001-VC-02",
         "SYS-REQ-003"
       ]
     },

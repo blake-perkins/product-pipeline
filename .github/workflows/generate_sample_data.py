@@ -22,14 +22,14 @@ data = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
+            "verificationCriteria": [
                 {
-                    "verificationMethodId": "SYS-REQ-001-VM-01",
+                    "verificationCriteriaId": "SYS-REQ-001-VC-01",
                     "method": "Test",
                     "criteria": "Verify that a valid IcdRequest message produces a valid IcdResponse within 500ms under nominal load conditions.",
                 },
                 {
-                    "verificationMethodId": "SYS-REQ-001-VM-02",
+                    "verificationCriteriaId": "SYS-REQ-001-VC-02",
                     "method": "Demonstration",
                     "criteria": "Demonstrate correct round-trip ICD message exchange with the simulator under nominal conditions.",
                 },
@@ -45,9 +45,9 @@ data = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
+            "verificationCriteria": [
                 {
-                    "verificationMethodId": "SYS-REQ-002-VM-01",
+                    "verificationCriteriaId": "SYS-REQ-002-VC-01",
                     "method": "Test",
                     "criteria": "Verify that health status messages are emitted at the configured interval with less than 10% jitter.",
                 },
@@ -63,14 +63,14 @@ data = {
             "priority": "Medium",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
+            "verificationCriteria": [
                 {
-                    "verificationMethodId": "SYS-REQ-003-VM-01",
+                    "verificationCriteriaId": "SYS-REQ-003-VC-01",
                     "method": "Demonstration",
                     "criteria": "Demonstrate that the system continues to process critical messages when the logging subsystem is unavailable.",
                 },
                 {
-                    "verificationMethodId": "SYS-REQ-003-VM-02",
+                    "verificationCriteriaId": "SYS-REQ-003-VC-02",
                     "method": "Test",
                     "criteria": "Verify via log analysis that critical messages continue to be processed when the logging subsystem is disabled.",
                 },
@@ -86,9 +86,9 @@ data = {
             "priority": "Critical",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
+            "verificationCriteria": [
                 {
-                    "verificationMethodId": "SYS-REQ-004-VM-01",
+                    "verificationCriteriaId": "SYS-REQ-004-VC-01",
                     "method": "Analysis",
                     "criteria": "Thermal analysis report confirms all components remain within operating temperature range under worst-case power dissipation.",
                 },
@@ -104,9 +104,9 @@ data = {
             "priority": "High",
             "status": "Approved",
             "parentRequirementId": "SYS-REQ-001",
-            "verificationMethods": [
+            "verificationCriteria": [
                 {
-                    "verificationMethodId": "SYS-REQ-005-VM-01",
+                    "verificationCriteriaId": "SYS-REQ-005-VC-01",
                     "method": "Test",
                     "criteria": "Verify that sending a malformed IcdRequest results in a WARN log and an IcdResponse with status INVALID_REQUEST.",
                 },
@@ -122,9 +122,9 @@ data = {
             "priority": "Medium",
             "status": "Approved",
             "parentRequirementId": None,
-            "verificationMethods": [
+            "verificationCriteria": [
                 {
-                    "verificationMethodId": "SYS-REQ-006-VM-01",
+                    "verificationCriteriaId": "SYS-REQ-006-VC-01",
                     "method": "Inspection",
                     "criteria": "Visual and dimensional inspection of all connectors against MIL-DTL-38999 Series III drawings.",
                 },
@@ -138,5 +138,5 @@ data = {
 with open("build/cameo/requirements/requirements.json", "w") as f:
     json.dump(data, f, indent=2)
 
-vm_count = sum(len(r["verificationMethods"]) for r in data["requirements"])
-print(f"Generated {len(data['requirements'])} sample requirements with {vm_count} verification methods")
+vm_count = sum(len(r["verificationCriteria"]) for r in data["requirements"])
+print(f"Generated {len(data['requirements'])} sample requirements with {vm_count} verification criteria")
