@@ -576,7 +576,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2024-5535",
                     "severity": "Critical",
-                    "description": "OpenSSL SSL_select_next_proto buffer overread allows remote attackers to cause denial of service via crafted ALPN protocol list.",
+                    "description": "OpenSSL SSL_select_next_proto has an out-of-bounds read when processing a crafted ALPN protocol list.",
                     "fix": {"versions": ["3.0.15"]},
                 },
                 "artifact": {"name": "openssl", "version": "3.0.13"},
@@ -585,7 +585,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2024-2236",
                     "severity": "High",
-                    "description": "libcurl SOCKS5 heap buffer overflow when hostname exceeds 255 bytes in non-blocking mode.",
+                    "description": "libcurl SOCKS5 proxy handshake may write beyond allocated memory when hostname exceeds 255 bytes.",
                     "fix": {"versions": ["7.88.2"]},
                 },
                 "artifact": {"name": "libcurl", "version": "7.88.1"},
@@ -594,7 +594,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2023-45853",
                     "severity": "Medium",
-                    "description": "MiniZip in zlib through 1.3 has an integer overflow and resultant heap-based buffer overflow in zipOpenNewFileInZip4_64.",
+                    "description": "MiniZip in zlib through 1.3 has an arithmetic wraparound in zipOpenNewFileInZip4_64 leading to incorrect memory allocation.",
                     "fix": {"versions": ["1.3.1"]},
                 },
                 "artifact": {"name": "zlib", "version": "1.2.13"},
@@ -603,7 +603,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2024-34156",
                     "severity": "Medium",
-                    "description": "Stack exhaustion in encoding/gob Decoder.Decode allows a malicious message to crash the server.",
+                    "description": "Deeply nested encoding/gob messages in Decoder.Decode may cause excessive resource consumption.",
                     "fix": {"versions": []},
                 },
                 "artifact": {"name": "grpcio", "version": "1.60.0"},
@@ -612,7 +612,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2023-50782",
                     "severity": "Low",
-                    "description": "Bleichenbacher-style side channel in glibc RSA PKCS#1 v1.5 decryption allows plaintext recovery under specific conditions.",
+                    "description": "Timing side channel in glibc RSA PKCS#1 v1.5 decryption may allow message recovery under specific conditions.",
                     "fix": {"versions": ["2.35-0ubuntu3.8"]},
                 },
                 "artifact": {"name": "glibc", "version": "2.35-0ubuntu3.6"},
@@ -621,7 +621,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2024-0727",
                     "severity": "Low",
-                    "description": "Processing maliciously crafted PKCS12 files may cause OpenSSL to crash leading to denial of service.",
+                    "description": "Processing certain invalid PKCS12 files may cause OpenSSL to terminate unexpectedly.",
                     "fix": {"versions": ["3.0.14"]},
                 },
                 "artifact": {"name": "openssl", "version": "3.0.13"},
@@ -630,7 +630,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2023-52425",
                     "severity": "Negligible",
-                    "description": "libexpat through 2.5.0 allows XML Entity Expansion in specific multi-threading configurations.",
+                    "description": "libexpat through 2.5.0 may consume excessive resources during XML parsing in specific multi-threading configurations.",
                     "fix": {"versions": []},
                 },
                 "artifact": {"name": "glibc", "version": "2.35-0ubuntu3.6"},
