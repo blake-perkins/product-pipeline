@@ -672,6 +672,10 @@ VCs that are **not in scope** for the current release appear as **deferred** in 
 - Are excluded from coverage percentage calculations
 - Appear in the Release Progress dashboard tab
 
+### Release Filtering in the Dashboard
+
+The dashboard includes a **global release filter** (dropdown in the hero header). Selecting a specific release filters every tab through a centralized `buildSnapshot()` architecture. Scope is cumulative -- selecting release 1.1.0 shows all VCs from 1.0.0 and 1.1.0 combined. "All Releases" shows everything regardless of release boundaries. Released versions display all gates as passed, no orphans, no vulnerabilities, and a shipped confirmation in the Executive Summary.
+
 ### CLI Flags
 
 ```bash
@@ -699,18 +703,50 @@ python tools/report_generator.py \
 
 ## 10. Traceability Dashboard
 
-The pipeline produces a **self-contained HTML dashboard** (`traceability_matrix.html`) that opens directly in any browser — no server, no installation, no network required.
+The pipeline produces a **self-contained HTML dashboard** (`traceability_matrix.html`) that opens directly in any browser -- no server, no installation, no network required. The HTML file is fully air-gapped with zero external dependencies, includes cache-busting meta tags, and applies XSS protection via `<\/script>` escaping. Print support is built in via `@media print` styles.
+
+### Hero Header
+
+A persistent header appears above all tabs with at-a-glance project health:
+
+- **Release Scope** card -- shows the current release name, description, target date, and VC count. Clicking navigates to the Release Progress tab.
+- **Test Results** card -- pass/fail counts with a pass-rate bar and a list of failed VCs. Clicking navigates to the Test Execution tab.
+- **Blockers** card -- total blocker count with a breakdown by category. Clicking navigates to the Quality Gates tab.
+- **Full breakdown bar** -- proportional status bar showing all VC statuses with a color legend.
+- **Pipeline badge** -- "Pipeline Pass" or "Attention Required" indicator.
+
+A **global release filter** dropdown sits in the hero header. Selecting a specific release filters every tab through a centralized `buildSnapshot()` architecture. Scope is cumulative -- selecting 1.1.0 includes VCs from 1.0.0 and 1.1.0 combined. "All Releases" shows everything.
 
 ### Dashboard Tabs
 
-| Tab | Content |
-|-----|---------|
-| **Traceability Matrix** | Drill-down from requirements to VCs to Gherkin scenarios with step-level detail. Filters by status, criteria type, and search. |
-| **Release Progress** | Release timeline with per-release progress bars and completion metrics. Shows which VCs are in each release and their current status. |
-| **Quality Gates** | Gate A/B/C pass/fail cards with detailed item lists. Click any item to navigate to it in the Traceability tab. |
-| **Test Execution** | Behave test runner view with features, scenarios, and step-level timing. Failed steps show error messages. |
-| **Cyber** | SBOM component inventory (Syft) and vulnerability scan results (Grype) with severity breakdown, fix availability, policy compliance, and CSV export. |
-| **Export & Info** | Print, JSON download, pipeline metadata, report legend, and MBSE glossary. |
+The dashboard has seven tabs, listed here in display order.
+
+**1. Executive Summary.** High-level readiness view. Shows an SVG progress ring indicating the percentage of passed VCs, a compact release-progress view, a list of top issues (clickable -- navigates to Traceability), and a cyber-risk summary. For released versions the readiness ring is replaced by a shipped confirmation with a checkmark.
+
+**2. Traceability Matrix.** Accordion drill-down: Requirement -> VCs -> Scenarios with full step text. Filter by status, criteria type, or free-text search. Each requirement row includes a mini coverage bar. Drifted verification criteria display a word-level diff highlighting what changed. Each status includes an action hint explaining what to do next.
+
+**3. Quality Gates.** Three gate cards:
+- Gate A -- Coverage (are all in-scope VCs tested?)
+- Gate B -- Drift Detection (has any verification criteria text changed since the baseline?)
+- Gate C -- Orphan Detection (are there test scenarios referencing requirements or VCs that no longer exist?)
+
+Each card shows pass/fail status and a list of affected items. Items are clickable and navigate to the Traceability tab.
+
+**4. Release Progress.** One card per release showing a progress bar and a VC list. VCs are clickable and navigate to Traceability. Releases display RELEASED or CURRENT badges. Scope is cumulative -- later releases include all VCs from earlier ones.
+
+**5. Test Execution.** Behave test results organized by feature, then scenario, then step. Steps display Given/When/Then keyword highlighting, duration, and error messages for failures. Filter by pass/fail or free-text search.
+
+**6. Cyber.** SBOM component inventory from Syft and a vulnerability table from Grype. Includes severity breakdown, policy compliance banner, fix availability indicators, CVE filtering, and CSV export. Shows a graceful empty state when no SBOM or Grype data is available.
+
+**7. Export and Info.** Print the dashboard, download the backing JSON, view pipeline metadata, consult the report legend, or browse the MBSE glossary.
+
+### Cross-Tab Navigation
+
+Clicking issues in the Quality Gates, Executive Summary, or Release Progress tabs navigates to the Traceability Matrix tab and highlights the relevant item with a yellow flash. This keeps the Traceability tab as the single source of detail while letting summary tabs serve as entry points.
+
+### Floating Legend
+
+A floating "?" button is available on every tab. It opens a legend overlay with status badge definitions and a glossary of pipeline terms.
 
 ### VC Status Reference
 
@@ -721,7 +757,7 @@ The pipeline produces a **self-contained HTML dashboard** (`traceability_matrix.
 | Uncovered | Orange | No scenario exists for this VC (in-scope) |
 | Drifted | Yellow | Verification criteria text changed since baseline |
 | Deferred | Gray | VC planned for a future release (out of scope) |
-| Manual | Dark gray | Analysis or Inspection method — requires manual review |
+| Manual | Dark gray | Analysis or Inspection method -- requires manual review |
 | Orphaned | Teal | Scenario references a requirement/VC that no longer exists |
 
 ### Demo Data Generator

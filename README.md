@@ -164,7 +164,7 @@ LOG_DIR=../build/logs python3 -m behave \
     --format pretty --no-capture features/
 ```
 
-### 5. Generate the final traceability report
+### 5. Generate the interactive dashboard
 
 ```bash
 python3 tools/report_generator.py \
@@ -174,6 +174,20 @@ python3 tools/report_generator.py \
     --output-json build/reports/traceability/traceability_report.json \
     --output-html build/reports/traceability/traceability_report.html
 ```
+
+The HTML output is a self-contained 7-tab interactive dashboard with zero external dependencies (air-gapped compatible):
+
+| Tab | Content |
+|-----|---------|
+| **Executive Summary** | Release readiness ring, top-level KPIs |
+| **Traceability Matrix** | Requirements-to-test coverage with drill-down accordion |
+| **Quality Gates** | Gate A/B/C status with word-level drift diffs |
+| **Release Progress** | Per-release scope tracking with deferred VC handling |
+| **Test Execution** | Behave scenario results and pass/fail breakdown |
+| **Cyber** | SBOM and Grype vulnerability summary |
+| **Export & Info** | Data export and pipeline metadata |
+
+A global release filter dropdown scopes the entire dashboard to a specific release version. The hero header displays three clickable KPI cards (Release Scope, Test Results, Blockers) with cross-tab navigation and flash highlighting.
 
 ### 6. Run the full pipeline via Gradle
 
@@ -374,7 +388,7 @@ product-release-<version>/
 │   ├── user-guide/                         # User documentation
 │   ├── release-notes/                      # Version release notes
 │   ├── requirements-document.html          # Auto-generated from Cameo model
-│   └── traceability-matrix.html            # Requirements-to-test coverage
+│   └── traceability-matrix.html            # Interactive 7-tab dashboard (see below)
 ├── security/
 │   ├── sbom.json                           # Software Bill of Materials
 │   └── grype-results.json                  # Vulnerability scan results
@@ -426,7 +440,7 @@ Defined in `.github/workflows/product-pipeline.yml`. Runs on pushes and pull req
 1. `fetch-model` — Checkout, setup Java 17 + Gradle, fetch and unpack Cameo model from Nexus. Falls back to sample data if Nexus is unavailable (prototype mode).
 2. `traceability-check` — Install Python tools, run all three quality gates.
 3. `bdd-tests` — Install Behave dependencies, run BDD log analysis. Uses pre-recorded sample logs in prototype/CI mode.
-4. `traceability-report` — Merge requirements, BDD results, and gate output into final HTML/JSON traceability matrix.
+4. `traceability-report` — Merge requirements, BDD results, and gate output into the interactive HTML dashboard and JSON report.
 
 Artifacts are uploaded between jobs via `actions/upload-artifact` / `actions/download-artifact`.
 
