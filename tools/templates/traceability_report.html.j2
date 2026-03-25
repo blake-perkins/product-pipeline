@@ -836,9 +836,26 @@ function navigateToVC(reqId, vcId, isOrphan) {
     return;
   }
 
-  /* If no card found (orphaned — req doesn't exist), scroll to orphaned section */
-  const orphanSection = document.querySelector('h3');
-  if (orphanSection) {
+  /* If no card found (orphaned — req doesn't exist), find the orphaned card and highlight it */
+  const orphanCards = document.querySelectorAll('#trace-accordion .req-card');
+  let orphanTarget = null;
+  orphanCards.forEach(card => {
+    /* Orphaned cards don't have data-req matching a real requirement — find by text content */
+    if (!card.getAttribute('data-req') && card.textContent.includes('ORPHAN')) {
+      orphanTarget = card;
+    }
+    /* Also match if the card body contains the specific req ID we're looking for */
+    if (card.textContent.includes(reqId) && card.querySelector('.badge.b-orphaned')) {
+      orphanTarget = card;
+    }
+  });
+  if (orphanTarget) {
+    orphanTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    orphanTarget.style.transition = 'background 0.3s';
+    orphanTarget.style.background = '#FFF3CD';
+    setTimeout(() => { orphanTarget.style.background = ''; }, 2000);
+  } else {
+    /* Fallback: scroll to Orphaned Tests heading */
     const headers = document.querySelectorAll('#trace-accordion h3');
     headers.forEach(h => {
       if (h.textContent.includes('Orphaned')) {
