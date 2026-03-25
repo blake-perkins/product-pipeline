@@ -802,6 +802,12 @@ function navigateToVC(reqId, vcId, isOrphan, orphanKey) {
   });
   applyFilters();
 
+  /* Collapse all previously open cards so only the target is expanded */
+  document.querySelectorAll('.req-body.open').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.req-header .arrow.open').forEach(a => a.classList.remove('open'));
+  /* Also clear any previous glow highlights */
+  document.querySelectorAll('.req-card, .vc-row').forEach(el => { el.style.boxShadow = ''; });
+
   function flashHighlight(el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.style.transition = 'box-shadow 0.3s';
