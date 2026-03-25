@@ -321,7 +321,8 @@ class TestDemoDashboard:
 
     # ---- HTML STRUCTURE ----
 
-    def test_all_6_tabs_present(self):
+    def test_all_7_tabs_present(self):
+        assert 'id="panel-summary"' in self.html
         assert 'id="panel-traceability"' in self.html
         assert 'id="panel-releases"' in self.html
         assert 'id="panel-security"' in self.html
@@ -402,6 +403,27 @@ class TestDemoDashboard:
     def test_deferred_vc_has_target_release(self):
         vc = self.rows["SYS-REQ-003-VC-02"]
         assert vc["target_release"] == "1.1.0"
+
+    # ---- EXECUTIVE SUMMARY ----
+
+    def test_executive_summary_has_verdict(self):
+        """Demo has failures, so verdict should be NO-GO."""
+        assert "NO-GO" in self.html
+
+    def test_executive_summary_has_action_items(self):
+        assert "Systems Engineers" in self.html
+        assert "Developers" in self.html
+        assert "DevSecOps" in self.html
+
+    def test_executive_summary_has_cyber_risk(self):
+        assert "Cyber Risk" in self.html
+
+    def test_executive_summary_has_release_progress(self):
+        """Release progress section exists — content is JS-rendered from RELEASE_PLAN."""
+        assert "Release Progress" in self.html
+
+    def test_executive_summary_has_top_issues(self):
+        assert "Top Issues" in self.html
 
 
 if __name__ == "__main__":

@@ -200,6 +200,27 @@
     .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
     .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
 
+    /* ---- Executive Summary ---- */
+    .verdict { text-align: center; padding: 24px; border-radius: 10px; margin-bottom: 24px; }
+    .verdict-go { background: #f0fdf4; border: 2px solid #bbf7d0; }
+    .verdict-nogo { background: #fef2f2; border: 2px solid #fecaca; }
+    .verdict-conditional { background: #fffbeb; border: 2px solid #fde68a; }
+    .verdict h2 { font-size: 2rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px; }
+    .verdict-go h2 { color: var(--pass); }
+    .verdict-nogo h2 { color: var(--fail); }
+    .verdict-conditional h2 { color: #D97706; }
+    .verdict p { font-size: 0.95rem; color: var(--text-muted); }
+    .exec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .exec-section { background: #f9fafb; border-radius: 8px; padding: 16px 20px; border: 1px solid #e9ecef; }
+    .exec-section h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px; }
+    .exec-issue { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; }
+    .exec-issue:last-child { border-bottom: none; }
+    .exec-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .exec-role { background: #f9fafb; border-radius: 8px; padding: 14px 16px; border: 1px solid #e9ecef; }
+    .exec-role h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--navy-1); margin-bottom: 8px; }
+    .exec-role li { font-size: 0.85rem; margin-bottom: 4px; color: var(--text); }
+    .exec-role .no-action { color: var(--pass); font-style: italic; }
+
     /* ---- Floating Legend ---- */
     .legend-fab { position: fixed; bottom: 24px; right: 24px; width: 44px; height: 44px; border-radius: 50%; background: var(--navy-1); color: #fff; border: none; font-size: 1.2rem; cursor: pointer; box-shadow: 0 3px 12px rgba(0,0,0,0.25); z-index: 100; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
     .legend-fab:hover { transform: scale(1.1); }
@@ -330,7 +351,8 @@
 
   <!-- ======== TABS ======== -->
   <nav class="tab-bar">
-    <button class="tab-btn active" data-tab="traceability" id="tab-traceability">Traceability Matrix</button>
+    <button class="tab-btn active" data-tab="summary" id="tab-summary">Executive Summary</button>
+    <button class="tab-btn" data-tab="traceability" id="tab-traceability">Traceability Matrix</button>
     <button class="tab-btn" data-tab="gates" id="tab-gates">Quality Gates</button>
     <button class="tab-btn" data-tab="releases" id="tab-releases">Release Progress</button>
     <button class="tab-btn" data-tab="tests" id="tab-tests">Test Execution</button>
@@ -338,8 +360,13 @@
     <button class="tab-btn" data-tab="export">Export &amp; Info</button>
   </nav>
 
+  <!-- ======== TAB 0: EXECUTIVE SUMMARY ======== -->
+  <div id="panel-summary" class="tab-panel active">
+    <div id="summary-content"></div>
+  </div>
+
   <!-- ======== TAB 1: TRACEABILITY ======== -->
-  <div id="panel-traceability" class="tab-panel active">
+  <div id="panel-traceability" class="tab-panel">
     <div class="filter-row">
       <label>Status:</label>
       <select id="f-status"><option value="all">All</option><option value="pass">Passed</option><option value="fail">Failed</option><option value="uncovered">Uncovered</option><option value="drifted">Drifted</option><option value="deferred">Deferred</option><option value="manual">Manual</option></select>
@@ -1363,6 +1390,197 @@ function downloadJSON() {
 }
 
 /* ================================================================
+   TAB: EXECUTIVE SUMMARY
+   ================================================================ */
+function renderExecutiveSummary() {
+  const container = document.getElementById('summary-content');
+  if (!REPORT || !REPORT.summary) { container.innerHTML = '<div class="empty-state"><h3>No data available</h3></div>'; return; }
+  const s = REPORT.summary;
+  const rows = REPORT.requirements || [];
+
+  /* Determine verdict */
+  const hasCriticalCVE = GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical');
+  const gatesFailed = TRACEABILITY && TRACEABILITY.overall_pass === false;
+  const hasFailures = s.failed > 0;
+  const hasUncovered = s.uncovered_vcs > 0;
+  const hasDrift = s.drifted_vcs > 0;
+
+  let verdict, verdictClass, verdictReason;
+  if (hasFailures || hasCriticalCVE || (gatesFailed && (hasUncovered || hasDrift))) {
+    verdict = 'NO-GO';
+    verdictClass = 'verdict-nogo';
+    const reasons = [];
+    if (hasFailures) reasons.push(s.failed + ' test failure' + (s.failed > 1 ? 's' : ''));
+    if (hasDrift) reasons.push(s.drifted_vcs + ' drifted criteria');
+    if (hasUncovered) reasons.push(s.uncovered_vcs + ' uncovered VC' + (s.uncovered_vcs > 1 ? 's' : ''));
+    if (hasCriticalCVE) reasons.push('critical vulnerability detected');
+    verdictReason = 'Blocked by: ' + reasons.join(', ') + '.';
+  } else if (s.deferred_vcs > 0 || s.manual > 0 || (GRYPE && GRYPE.matches && GRYPE.matches.length > 0)) {
+    verdict = 'CONDITIONAL';
+    verdictClass = 'verdict-conditional';
+    const notes = [];
+    if (s.deferred_vcs > 0) notes.push(s.deferred_vcs + ' VC' + (s.deferred_vcs > 1 ? 's' : '') + ' deferred');
+    if (s.manual > 0) notes.push(s.manual + ' pending manual review');
+    if (GRYPE && GRYPE.matches) { const nonCrit = GRYPE.matches.filter(m => (m.vulnerability||{}).severity !== 'Critical').length; if (nonCrit > 0) notes.push(nonCrit + ' non-critical CVE' + (nonCrit > 1 ? 's' : '')); }
+    verdictReason = 'All automated gates pass. Advisory: ' + notes.join(', ') + '.';
+  } else {
+    verdict = 'GO';
+    verdictClass = 'verdict-go';
+    verdictReason = 'All quality gates passed. All in-scope verification criteria have passing tests.';
+  }
+
+  let html = '';
+
+  /* Section 1: Verdict */
+  html += '<div class="verdict ' + verdictClass + '">';
+  html += '<h2>' + verdict + '</h2>';
+  html += '<p>' + esc(verdictReason) + '</p>';
+  html += '</div>';
+
+  html += '<div class="exec-grid">';
+
+  /* Section 2: Release Progress (left column) */
+  html += '<div class="exec-section">';
+  html += '<h3>Release Progress</h3>';
+  if (RELEASE_PLAN && RELEASE_PLAN.releases && RELEASE_PLAN.releases.length) {
+    const reqToVCs = {};
+    if (REQUIREMENTS && REQUIREMENTS.requirements) {
+      REQUIREMENTS.requirements.forEach(req => {
+        reqToVCs[req.requirementId] = (req.verificationCriteria || req.verificationMethods || []).map(vc => vc.verificationCriteriaId || vc.verificationMethodId);
+      });
+    }
+    const vcStatus = {};
+    rows.forEach(r => { if (r.vc_id) vcStatus[r.vc_id] = r.status; });
+
+    RELEASE_PLAN.releases.forEach(rel => {
+      const scopeVCs = [];
+      (rel.scope || []).forEach(id => {
+        if (id.match(/-VC-\d+$/)) scopeVCs.push(id);
+        else if (reqToVCs[id]) reqToVCs[id].forEach(v => scopeVCs.push(v));
+      });
+      const total = scopeVCs.length;
+      const complete = scopeVCs.filter(id => { const st = vcStatus[id]; return st === 'pass' || st === 'manual'; }).length;
+      const pct = total ? Math.round(complete / total * 100) : 0;
+      html += '<div style="margin-bottom:12px">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+      html += '<span style="font-weight:600;font-size:0.9rem">Release ' + esc(rel.version) + '</span>';
+      html += '<span style="font-size:0.85rem;color:' + (pct === 100 ? 'var(--pass)' : 'var(--text-muted)') + ';font-weight:600">' + pct + '% (' + complete + '/' + total + ')</span>';
+      html += '</div>';
+      html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e9ecef">';
+      if (complete > 0) html += '<div style="width:' + (complete/total*100) + '%;background:var(--pass)"></div>';
+      if (total - complete > 0) html += '<div style="width:' + ((total-complete)/total*100) + '%;background:#e9ecef"></div>';
+      html += '</div>';
+      if (rel.targetDate) html += '<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px">Target: ' + fmtDate(rel.targetDate + 'T00:00:00Z') + '</div>';
+      html += '</div>';
+    });
+  } else {
+    html += '<div style="color:var(--text-muted);font-size:0.85rem;font-style:italic">No release plan defined.</div>';
+  }
+  html += '</div>';
+
+  /* Section 3: Top Issues (right column) */
+  html += '<div class="exec-section">';
+  html += '<h3>Top Issues</h3>';
+  const issues = [];
+  rows.filter(r => r.status === 'fail').forEach(r => {
+    issues.push({sev: 0, icon: '&#10007;', color: 'var(--fail)', text: '<strong>' + esc(r.vc_id) + '</strong> — test failed: ' + esc(r.title), vcId: r.vc_id, reqId: r.requirement_id});
+  });
+  rows.filter(r => r.status === 'drifted').forEach(r => {
+    issues.push({sev: 1, icon: '&#8635;', color: 'var(--drifted)', text: '<strong>' + esc(r.vc_id) + '</strong> — criteria drifted: ' + esc(r.title), vcId: r.vc_id, reqId: r.requirement_id});
+  });
+  rows.filter(r => r.status === 'uncovered').forEach(r => {
+    issues.push({sev: 2, icon: '&#8212;', color: 'var(--uncovered)', text: '<strong>' + esc(r.vc_id) + '</strong> — uncovered (' + esc(r.method) + '): ' + esc(r.title), vcId: r.vc_id, reqId: r.requirement_id});
+  });
+  if (REPORT.orphaned_tests) REPORT.orphaned_tests.forEach(o => {
+    issues.push({sev: 3, icon: '?', color: 'var(--orphaned)', text: 'Orphaned: ' + esc(o.name || o.feature_file), vcId: '', reqId: ''});
+  });
+  issues.sort((a, b) => a.sev - b.sev);
+  if (issues.length === 0) {
+    html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; No issues found</div>';
+  }
+  issues.slice(0, 8).forEach(iss => {
+    const clickAttr = iss.reqId ? ' style="cursor:pointer" onclick="navigateToVC(\'' + esc(iss.reqId) + '\',\'' + esc(iss.vcId) + '\',false,\'\')"' : '';
+    html += '<div class="exec-issue"' + clickAttr + '>';
+    html += '<span style="color:' + iss.color + ';font-size:1rem;min-width:16px">' + iss.icon + '</span>';
+    html += '<span>' + iss.text + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '</div>'; /* close exec-grid */
+
+  /* Section 4: Cyber Risk Summary */
+  html += '<div class="exec-section" style="margin-bottom:20px">';
+  html += '<h3>Cyber Risk</h3>';
+  if (!GRYPE || !GRYPE.matches) {
+    html += '<div style="color:var(--text-muted);font-size:0.85rem;font-style:italic">Cyber scan data not included in this build.</div>';
+  } else if (GRYPE.matches.length === 0) {
+    html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; No vulnerabilities detected</div>';
+  } else {
+    const sevCounts = {Critical:0, High:0, Medium:0, Low:0, Negligible:0};
+    GRYPE.matches.forEach(m => { const sv = (m.vulnerability||{}).severity||'Unknown'; if (sevCounts[sv] !== undefined) sevCounts[sv]++; });
+    const policyStatus = sevCounts.Critical > 0 ? 'FAIL' : sevCounts.High > 0 ? 'WARNING' : 'PASS';
+    const policyColor = policyStatus === 'FAIL' ? 'var(--fail)' : policyStatus === 'WARNING' ? 'var(--drifted)' : 'var(--pass)';
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">';
+    html += '<span style="font-weight:700;color:' + policyColor + '">Policy: ' + policyStatus + '</span>';
+    html += '<span style="font-size:0.85rem;color:var(--text-muted)">' + GRYPE.matches.length + ' total vulnerabilities</span>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:16px;font-size:0.85rem">';
+    ['Critical','High','Medium','Low','Negligible'].forEach(sv => {
+      if (sevCounts[sv] > 0) {
+        html += '<span style="color:var(--sev-' + sv.toLowerCase() + ');font-weight:600">' + sevCounts[sv] + ' ' + sv + '</span>';
+      }
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  /* Section 5: Action Items by Role */
+  html += '<h3 style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px">Action Items</h3>';
+  html += '<div class="exec-actions">';
+
+  /* SE actions */
+  html += '<div class="exec-role">';
+  html += '<h4>Systems Engineers</h4>';
+  const seActions = [];
+  if (s.drifted_vcs > 0) seActions.push('Review ' + s.drifted_vcs + ' drifted criteria and confirm with developers');
+  if (s.uncovered_vcs > 0) seActions.push('Collaborate on Gherkin scenarios for ' + s.uncovered_vcs + ' uncovered VC' + (s.uncovered_vcs > 1 ? 's' : ''));
+  if (seActions.length === 0) html += '<div class="no-action">&#10003; No actions required</div>';
+  else html += '<ul style="padding-left:16px;margin:0">' + seActions.map(a => '<li>' + a + '</li>').join('') + '</ul>';
+  html += '</div>';
+
+  /* Developer actions */
+  html += '<div class="exec-role">';
+  html += '<h4>Developers</h4>';
+  const devActions = [];
+  if (s.failed > 0) devActions.push('Fix ' + s.failed + ' failing test' + (s.failed > 1 ? 's' : ''));
+  if (s.drifted_vcs > 0) devActions.push('Update scenarios for ' + s.drifted_vcs + ' drifted criteria, remove @REVIEW_REQUIRED, run --update-baseline');
+  if (s.uncovered_vcs > 0) devActions.push('Write Gherkin scenarios for ' + s.uncovered_vcs + ' uncovered VC' + (s.uncovered_vcs > 1 ? 's' : ''));
+  if (s.orphaned_tests > 0) devActions.push('Remove or reassign ' + s.orphaned_tests + ' orphaned test' + (s.orphaned_tests > 1 ? 's' : ''));
+  if (devActions.length === 0) html += '<div class="no-action">&#10003; No actions required</div>';
+  else html += '<ul style="padding-left:16px;margin:0">' + devActions.map(a => '<li>' + a + '</li>').join('') + '</ul>';
+  html += '</div>';
+
+  /* DevSecOps actions */
+  html += '<div class="exec-role">';
+  html += '<h4>DevSecOps</h4>';
+  const secActions = [];
+  if (GRYPE && GRYPE.matches) {
+    const crit = GRYPE.matches.filter(m => (m.vulnerability||{}).severity === 'Critical').length;
+    const high = GRYPE.matches.filter(m => (m.vulnerability||{}).severity === 'High').length;
+    if (crit > 0) secActions.push('Address ' + crit + ' critical CVE' + (crit > 1 ? 's' : '') + ' (deployment blocked)');
+    if (high > 0) secActions.push('Review ' + high + ' high severity CVE' + (high > 1 ? 's' : ''));
+  }
+  if (secActions.length === 0) html += '<div class="no-action">&#10003; No actions required</div>';
+  else html += '<ul style="padding-left:16px;margin:0">' + secActions.map(a => '<li>' + a + '</li>').join('') + '</ul>';
+  html += '</div>';
+
+  html += '</div>'; /* close exec-actions */
+
+  container.innerHTML = html;
+}
+
+/* ================================================================
    TAB: RELEASE PROGRESS
    ================================================================ */
 function renderReleases() {
@@ -1502,6 +1720,7 @@ renderGates();
 renderTests();
 renderMetadata();
 renderReleases();
+renderExecutiveSummary();
 
 /* Hero: populate release info, blockers, failed list, bar legend */
 (function() {
@@ -1587,6 +1806,8 @@ renderReleases();
       tab.appendChild(dot);
     }
   }
+  /* Summary tab: red if no-go */
+  if (s.failed > 0 || s.uncovered_vcs > 0 || s.drifted_vcs > 0) addDot('tab-summary', 'dot-fail');
   /* Gates tab: red if any gate failed */
   if (TRACEABILITY && !TRACEABILITY.overall_pass) addDot('tab-gates', 'dot-fail');
   /* Traceability tab: red if failures, orange if uncovered */

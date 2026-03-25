@@ -379,8 +379,9 @@ class TestHTMLDashboard:
         return out_html.read_text(encoding="utf-8")
 
     def test_html_contains_all_tabs(self, tmp_path):
-        """Dashboard should have all 6 tab panels."""
+        """Dashboard should have all 7 tab panels."""
         html = self._generate_html(tmp_path)
+        assert 'id="panel-summary"' in html
         assert 'id="panel-traceability"' in html
         assert 'id="panel-releases"' in html
         assert 'id="panel-security"' in html
