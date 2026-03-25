@@ -329,21 +329,16 @@
 
   <!-- ======== TABS ======== -->
   <nav class="tab-bar">
-    <button class="tab-btn active" data-tab="gates" id="tab-gates">Quality Gates</button>
-    <button class="tab-btn" data-tab="traceability" id="tab-traceability">Traceability Matrix</button>
+    <button class="tab-btn active" data-tab="traceability" id="tab-traceability">Traceability Matrix</button>
+    <button class="tab-btn" data-tab="gates" id="tab-gates">Quality Gates</button>
     <button class="tab-btn" data-tab="releases" id="tab-releases">Release Progress</button>
     <button class="tab-btn" data-tab="tests" id="tab-tests">Test Execution</button>
     <button class="tab-btn" data-tab="security" id="tab-security">Cyber</button>
     <button class="tab-btn" data-tab="export">Export &amp; Info</button>
   </nav>
 
-  <!-- ======== TAB 1: QUALITY GATES ======== -->
-  <div id="panel-gates" class="tab-panel active">
-    <div id="gates-content"></div>
-  </div>
-
-  <!-- ======== TAB 2: TRACEABILITY ======== -->
-  <div id="panel-traceability" class="tab-panel">
+  <!-- ======== TAB 1: TRACEABILITY ======== -->
+  <div id="panel-traceability" class="tab-panel active">
     <div class="filter-row">
       <label>Status:</label>
       <select id="f-status"><option value="all">All</option><option value="pass">Passed</option><option value="fail">Failed</option><option value="uncovered">Uncovered</option><option value="drifted">Drifted</option><option value="deferred">Deferred</option><option value="manual">Manual</option></select>
@@ -361,6 +356,11 @@
       <button onclick="toggleAllReqs()" class="btn btn-secondary" style="padding:4px 12px;font-size:0.75rem;margin-left:8px" id="btn-expand-all">Expand All</button>
     </div>
     <div id="trace-accordion"></div>
+  </div>
+
+  <!-- ======== TAB 2: QUALITY GATES ======== -->
+  <div id="panel-gates" class="tab-panel">
+    <div id="gates-content"></div>
   </div>
 
   <!-- ======== TAB 3: RELEASE PROGRESS ======== -->
