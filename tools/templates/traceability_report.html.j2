@@ -791,7 +791,7 @@ function toggleAllReqs() {
 }
 
 /* Navigate from Gate item to Traceability Matrix */
-function navigateToVC(reqId, vcId, isOrphan) {
+function navigateToVC(reqId, vcId, isOrphan, orphanKey) {
   /* Switch to Traceability tab */
   switchTab('traceability');
 
@@ -801,6 +801,36 @@ function navigateToVC(reqId, vcId, isOrphan) {
     if (el) { el.tagName === 'SELECT' ? el.value = 'all' : (el.value = ''); }
   });
   applyFilters();
+
+  function flashHighlight(el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.transition = 'box-shadow 0.3s';
+    el.style.boxShadow = '0 0 0 3px #FFC107';
+    setTimeout(() => { el.style.boxShadow = ''; }, 2500);
+  }
+
+  /* For orphaned items, find the orphaned card directly */
+  if (isOrphan) {
+    const searchKey = orphanKey || reqId || vcId;
+    const allCards = document.querySelectorAll('#trace-accordion .req-card');
+    let found = null;
+    allCards.forEach(card => {
+      if (card.querySelector('.badge.b-orphaned') && (
+        !searchKey || card.textContent.includes(searchKey)
+      )) {
+        found = card;
+      }
+    });
+    if (found) {
+      flashHighlight(found);
+    } else {
+      /* Fallback: scroll to Orphaned Tests heading */
+      document.querySelectorAll('#trace-accordion h3').forEach(h => {
+        if (h.textContent.includes('Orphaned')) h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+    return;
+  }
 
   /* Find and expand the requirement card */
   const cards = document.querySelectorAll('.req-card');
@@ -825,43 +855,7 @@ function navigateToVC(reqId, vcId, isOrphan) {
       if (vcHeader && vcHeader.textContent.trim() === vcId) targetVC = vr;
     });
 
-    /* Scroll to target */
-    const scrollTarget = targetVC || targetCard;
-    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    /* Flash highlight */
-    scrollTarget.style.transition = 'background 0.3s';
-    scrollTarget.style.background = '#FFF3CD';
-    setTimeout(() => { scrollTarget.style.background = ''; }, 2000);
-    return;
-  }
-
-  /* If no card found (orphaned — req doesn't exist), find the orphaned card and highlight it */
-  const orphanCards = document.querySelectorAll('#trace-accordion .req-card');
-  let orphanTarget = null;
-  orphanCards.forEach(card => {
-    /* Orphaned cards don't have data-req matching a real requirement — find by text content */
-    if (!card.getAttribute('data-req') && card.textContent.includes('ORPHAN')) {
-      orphanTarget = card;
-    }
-    /* Also match if the card body contains the specific req ID we're looking for */
-    if (card.textContent.includes(reqId) && card.querySelector('.badge.b-orphaned')) {
-      orphanTarget = card;
-    }
-  });
-  if (orphanTarget) {
-    orphanTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    orphanTarget.style.transition = 'background 0.3s';
-    orphanTarget.style.background = '#FFF3CD';
-    setTimeout(() => { orphanTarget.style.background = ''; }, 2000);
-  } else {
-    /* Fallback: scroll to Orphaned Tests heading */
-    const headers = document.querySelectorAll('#trace-accordion h3');
-    headers.forEach(h => {
-      if (h.textContent.includes('Orphaned')) {
-        h.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    });
+    flashHighlight(targetVC || targetCard);
   }
 }
 
@@ -1188,7 +1182,9 @@ function renderGates() {
       const id = item.verificationCriteriaId || item.vc_id || item.requirementId || '';
       const reqId = item.requirementId || (id.match(/^(.*)-VC-\d+$/) || [])[1] || '';
       const isOrphan = g.key === 'gate_c';
-      html += '<div class="gate-item" style="cursor:pointer" onclick="navigateToVC(\'' + esc(reqId) + '\',\'' + esc(id) + '\',' + isOrphan + ')" title="Click to view in Traceability Matrix">';
+      /* For orphans, pass the orphaned req/vc IDs so we can find the right card */
+      const orphanKey = isOrphan ? ((item.orphanedReqIds || [])[0] || (item.orphanedVcIds || [])[0] || item.scenarioName || item.featureFile || '') : '';
+      html += '<div class="gate-item" style="cursor:pointer" onclick="navigateToVC(\'' + esc(reqId) + '\',\'' + esc(id) + '\',' + isOrphan + ',\'' + esc(orphanKey) + '\')" title="Click to view in Traceability Matrix">';
       html += '<span class="gi-id" style="color:var(--blue-ng)">' + esc(id) + '</span> <span style="font-size:0.75rem;color:var(--text-muted)">&#x2197;</span>';
       if (item.method) html += ' <span style="font-size:0.8rem;color:var(--text-muted)">(' + esc(item.method) + ')</span>';
       if (item.title) html += '<div class="gi-detail">' + esc(item.title) + '</div>';
