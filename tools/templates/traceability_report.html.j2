@@ -40,7 +40,7 @@
     .metrics { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
     .metric { flex: 1; min-width: 110px; background: var(--navy-1); border-radius: 8px; padding: 14px 12px; text-align: center; color: #fff; }
     .metric .val { font-size: 1.6rem; font-weight: 700; color: #fff; }
-    .metric .lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #D0E8F8; }
+    .metric .lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; opacity: 0.85; }
     .metric.m-pass { background: var(--blue-ng); }
     .metric.m-fail { background: var(--navy-1); }
     .metric.m-fail .val { color: #EF9A9A; }
@@ -58,6 +58,9 @@
     .tab-btn { flex: none; padding: 12px 24px; border: none; background: none; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
     .tab-btn:hover { color: var(--text); background: #E8F4FB; }
     .tab-btn.active { color: var(--blue-ng); border-bottom-color: var(--blue-ng); }
+    .tab-btn .tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
+    .tab-dot.dot-fail { background: var(--fail); }
+    .tab-dot.dot-warn { background: var(--drifted); }
     .tab-panel { display: none; background: var(--card); border-radius: 0 0 10px 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .tab-panel.active { display: block; }
 
@@ -95,7 +98,7 @@
     .req-card.rc-deferred { border-left-color: var(--deferred); }
     .req-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.15s; background: #fff; }
     .req-header:hover { background: #f7f8fa; }
-    .req-header .arrow { transition: transform 0.2s; font-size: 0.7rem; color: var(--text-muted); }
+    .req-header .arrow { transition: transform 0.2s; font-size: 0.9rem; color: var(--text-muted); }
     .req-header .arrow.open { transform: rotate(90deg); }
     .req-id { font-weight: 700; font-family: monospace; font-size: 0.9rem; min-width: 120px; }
     .req-title { flex: 1; font-size: 0.9rem; }
@@ -109,7 +112,7 @@
     .vc-row:last-child { margin-bottom: 8px; }
     .vc-header { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; font-size: 0.85rem; }
     .vc-header:hover { background: #f7f8fa; border-radius: 6px; }
-    .vc-header .arrow { font-size: 0.6rem; color: var(--text-muted); transition: transform 0.2s; }
+    .vc-header .arrow { font-size: 0.8rem; color: var(--text-muted); transition: transform 0.2s; }
     .vc-header .arrow.open { transform: rotate(90deg); }
     .vc-id { font-family: monospace; font-weight: 600; min-width: 180px; }
     .vc-method { min-width: 100px; color: var(--text-muted); }
@@ -161,16 +164,17 @@
     .gate-card[data-gate="C"] .gate-title { background: var(--navy-1); }
     .gate-card .gate-name { font-size: 1.1rem; font-weight: 700; }
     .gate-card .gate-desc { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; }
-    .gate-item { padding: 8px 12px; border: 1px solid #D0E8F8; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; background: #EBF5FB; }
+    .gate-item { padding: 8px 12px; border: 1px solid #D0E8F8; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; background: #EBF5FB; cursor: pointer; transition: all 0.15s; position: relative; }
     .gate-item .gi-id { font-family: monospace; font-weight: 600; }
-    .gate-item:hover { background: #E8F4FB; border-color: var(--blue-ng); }
+    .gate-item:hover { background: #dbeefa; border-color: var(--blue-ng); }
+    .gate-item:hover .gi-id { text-decoration: underline; }
     .gate-item .gi-detail { color: var(--text-muted); font-size: 0.8rem; }
 
     /* ---- Tab 4: Test Execution ---- */
     .test-feature { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
     .test-feature-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
     .test-feature-header:hover { background: #E8F4FB; }
-    .test-feature-header .arrow { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+    .test-feature-header .arrow { font-size: 0.9rem; color: var(--text-muted); transition: transform 0.2s; }
     .test-feature-header .arrow.open { transform: rotate(90deg); }
     .test-feature-header .feat-status { margin-left: auto; }
     .test-feature-header .feat-dur { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
@@ -300,16 +304,21 @@
 
   <!-- ======== TABS ======== -->
   <nav class="tab-bar">
-    <button class="tab-btn active" data-tab="traceability">Traceability Matrix</button>
-    <button class="tab-btn" data-tab="releases">Release Progress</button>
-    <button class="tab-btn" data-tab="gates">Quality Gates</button>
-    <button class="tab-btn" data-tab="tests">Test Execution</button>
-    <button class="tab-btn" data-tab="security">Cyber</button>
+    <button class="tab-btn active" data-tab="gates" id="tab-gates">Quality Gates</button>
+    <button class="tab-btn" data-tab="traceability" id="tab-traceability">Traceability Matrix</button>
+    <button class="tab-btn" data-tab="releases" id="tab-releases">Release Progress</button>
+    <button class="tab-btn" data-tab="tests" id="tab-tests">Test Execution</button>
+    <button class="tab-btn" data-tab="security" id="tab-security">Cyber</button>
     <button class="tab-btn" data-tab="export">Export &amp; Info</button>
   </nav>
 
-  <!-- ======== TAB 1: TRACEABILITY ======== -->
-  <div id="panel-traceability" class="tab-panel active">
+  <!-- ======== TAB 1: QUALITY GATES ======== -->
+  <div id="panel-gates" class="tab-panel active">
+    <div id="gates-content"></div>
+  </div>
+
+  <!-- ======== TAB 2: TRACEABILITY ======== -->
+  <div id="panel-traceability" class="tab-panel">
     <div class="filter-row">
       <label>Status:</label>
       <select id="f-status"><option value="all">All</option><option value="pass">Passed</option><option value="fail">Failed</option><option value="uncovered">Uncovered</option><option value="drifted">Drifted</option><option value="deferred">Deferred</option><option value="manual">Manual</option></select>
@@ -329,14 +338,9 @@
     <div id="trace-accordion"></div>
   </div>
 
-  <!-- ======== TAB 2: RELEASE PROGRESS ======== -->
+  <!-- ======== TAB 3: RELEASE PROGRESS ======== -->
   <div id="panel-releases" class="tab-panel">
     <div id="releases-content"></div>
-  </div>
-
-  <!-- ======== TAB 3: QUALITY GATES ======== -->
-  <div id="panel-gates" class="tab-panel">
-    <div id="gates-content"></div>
   </div>
 
   <!-- ======== TAB 3: TEST EXECUTION ======== -->
@@ -386,7 +390,7 @@
 
   <!-- Floating Legend -->
   <button class="legend-fab" onclick="document.getElementById('legend-popup').classList.toggle('open')" title="Status Legend">?</button>
-  <div class="legend-popup" id="legend-popup">
+  <div class="legend-popup" id="legend-popup" style="max-height:80vh;overflow-y:auto">
     <h4>Status Legend</h4>
     <div class="legend-item"><span class="badge b-pass">&#10003; pass</span> VC covered, test passed</div>
     <div class="legend-item"><span class="badge b-fail">&#10007; fail</span> VC covered, test failed</div>
@@ -394,7 +398,13 @@
     <div class="legend-item"><span class="badge b-drifted">&#8635; drifted</span> Criteria changed since baseline</div>
     <div class="legend-item"><span class="badge b-manual">&#9995; manual</span> Analysis or Inspection method</div>
     <div class="legend-item"><span class="badge b-deferred">&#9201; deferred</span> Planned for a future release</div>
-      <div class="legend-item"><span class="badge b-orphaned">? orphaned</span> References a deleted requirement</div>
+    <div class="legend-item"><span class="badge b-orphaned">? orphaned</span> References a deleted requirement</div>
+    <h4 style="margin-top:12px">Glossary</h4>
+    <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:2px"><strong>Verification Criteria (VC)</strong><span style="font-size:0.8rem;color:var(--text-muted)">A specific way to verify a requirement: Test, Demonstration, Analysis, or Inspection.</span></div>
+    <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:2px"><strong>Gate A &mdash; Coverage</strong><span style="font-size:0.8rem;color:var(--text-muted)">Every VC must have at least one Gherkin scenario.</span></div>
+    <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:2px"><strong>Gate B &mdash; Drift</strong><span style="font-size:0.8rem;color:var(--text-muted)">Detects when criteria text changes between model versions.</span></div>
+    <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:2px"><strong>Gate C &mdash; Orphans</strong><span style="font-size:0.8rem;color:var(--text-muted)">Finds tests referencing requirements that no longer exist.</span></div>
+    <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:2px"><strong>SBOM</strong><span style="font-size:0.8rem;color:var(--text-muted)">Software Bill of Materials &mdash; inventory of all software components.</span></div>
   </div>
 </div>
 
@@ -850,9 +860,27 @@ function applyFilters() {
     });
     card.style.display = anyVisible ? '' : 'none';
   });
+  /* Show count of visible results */
+  const allCards = document.querySelectorAll('.req-card[data-req]');
+  const visibleCards = document.querySelectorAll('.req-card[data-req]:not([style*="none"])');
+  let countEl = document.getElementById('filter-count');
+  if (!countEl) {
+    countEl = document.createElement('div');
+    countEl.id = 'filter-count';
+    countEl.style.cssText = 'font-size:0.82rem;color:var(--text-muted);margin-bottom:8px';
+    const accordion = document.getElementById('trace-accordion');
+    if (accordion) accordion.parentNode.insertBefore(countEl, accordion);
+  }
+  if (status !== 'all' || method !== 'all' || search) {
+    countEl.textContent = 'Showing ' + visibleCards.length + ' of ' + allCards.length + ' requirements';
+    countEl.style.display = '';
+  } else {
+    countEl.style.display = 'none';
+  }
+
   /* Show empty state if all cards are hidden */
   let noResults = document.getElementById('filter-empty-state');
-  const anyCards = document.querySelector('.req-card[style=""],.req-card:not([style])');
+  const anyCards = visibleCards.length > 0;
   if (!anyCards && (status !== 'all' || method !== 'all' || search)) {
     if (!noResults) {
       noResults = document.createElement('div');
@@ -1456,6 +1484,30 @@ renderReleases();
 (function() {
   const el = document.getElementById('hero-timestamp');
   if (el && REPORT && REPORT.generated_at) el.textContent = 'Generated: ' + fmtDate(REPORT.generated_at);
+})();
+
+/* Tab failure indicator dots */
+(function() {
+  if (!REPORT || !REPORT.summary) return;
+  const s = REPORT.summary;
+  function addDot(tabId, cls) {
+    const tab = document.getElementById(tabId);
+    if (tab && !tab.querySelector('.tab-dot')) {
+      const dot = document.createElement('span');
+      dot.className = 'tab-dot ' + cls;
+      tab.appendChild(dot);
+    }
+  }
+  /* Gates tab: red if any gate failed */
+  if (TRACEABILITY && !TRACEABILITY.overall_pass) addDot('tab-gates', 'dot-fail');
+  /* Traceability tab: red if failures, orange if uncovered */
+  if (s.failed > 0) addDot('tab-traceability', 'dot-fail');
+  else if (s.uncovered_vcs > 0 || s.drifted_vcs > 0) addDot('tab-traceability', 'dot-warn');
+  /* Tests tab: red if any failed */
+  if (s.failed > 0) addDot('tab-tests', 'dot-fail');
+  /* Cyber tab: red if critical vulns */
+  if (GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical')) addDot('tab-security', 'dot-fail');
+  else if (GRYPE && GRYPE.matches && GRYPE.matches.length > 0) addDot('tab-security', 'dot-warn');
 })();
 </script>
 </body>
