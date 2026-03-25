@@ -712,8 +712,13 @@ function renderTraceability() {
       const scenarios = findScenariosForVC(vcId, reqId, row);
 
       html += '<div class="vc-row" data-status="' + row.status + '" data-method="' + esc(row.method) + '">';
-      html += '<div class="vc-header" onclick="toggleVC(this)">';
-      html += '<span class="arrow">&#9654;</span>';
+      var hasExpandable = scenarios.length > 0;
+      html += '<div class="vc-header"' + (hasExpandable ? ' onclick="toggleVC(this)" style="cursor:pointer"' : '') + '>';
+      if (hasExpandable) {
+        html += '<span class="arrow">&#9654;</span>';
+      } else {
+        html += '<span style="display:inline-block;width:1rem"></span>';
+      }
       html += '<span class="vc-id">' + esc(vcId || reqId) + '</span>';
       html += '<span class="vc-method">' + esc(row.method) + '</span>';
       html += badgeFor(row.status);
