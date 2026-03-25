@@ -79,10 +79,10 @@ product-pipeline/
 │       └── steps/
 │           └── log_analysis_steps.py   # Step defs: pure log assertions
 ├── docs/
-│   ├── installation-guide/         # Manually authored installation docs
-│   ├── user-guide/                 # Manually authored user guide
-│   ├── release-notes/              # Release notes per version
-│   └── templates/                  # Document templates
+│   ├── guides/                     # Pipeline, release management, installation, user guides
+│   ├── migration/                  # Version migration guides (v0.2.0, v0.3.0)
+│   ├── presentations/              # Executive briefs and slide decks
+│   └── release-notes.md            # Release notes per version
 ├── helm/
 │   ├── product-chart/              # Multi-container product deployment
 │   ├── simulator-chart/            # Simulator for ICD stimulus

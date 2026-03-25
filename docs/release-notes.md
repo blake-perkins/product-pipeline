@@ -17,7 +17,7 @@
 - Gherkin tags changed from `@VM:` to `@VC:` -- no backward compatibility at the tag level
 
 ### Migration
-- See `docs/MIGRATION-v0.3.0.md` for detailed migration instructions.
+- See `docs/migration/v0.3.0.md` for detailed migration instructions.
 
 ---
 
