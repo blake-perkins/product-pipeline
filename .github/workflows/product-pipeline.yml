@@ -34,12 +34,14 @@ jobs:
       - name: Install tools
         run: pip install -r tools/requirements.txt
 
-      # For prototype: create sample requirements inline
-      # In production, Gradle fetches the Cameo zip from Nexus
-      - name: Setup sample Cameo model data
+      # For prototype: generate demo data that exercises all dashboard states
+      # In production, Gradle fetches the Cameo zip from Nexus and Behave
+      # produces real test results against collected simulation logs
+      - name: Generate demo model and test data
         run: |
-          mkdir -p build/cameo/requirements build/cameo/proto
-          python3 .github/workflows/generate_sample_data.py
+          python tools/generate_demo_data.py --output-dir build/demo
+          mkdir -p build/cameo/requirements
+          cp build/demo/requirements.json build/cameo/requirements/requirements.json
 
       # Create baseline from current requirements if none exists
       # (prevents false drift detection on first run)
@@ -57,6 +59,10 @@ jobs:
 
       - name: Run Traceability Check
         run: |
+          RELEASE_PLAN_ARG=""
+          if [ -f release-plan.json ]; then
+            RELEASE_PLAN_ARG="--release-plan release-plan.json"
+          fi
           python tools/traceability_checker.py \
             --requirements build/cameo/requirements/requirements.json \
             --features-dir bdd/features \
@@ -64,7 +70,8 @@ jobs:
             --non-test-output-dir bdd/features/non_test \
             --report-output build/reports/traceability/traceability_report.json \
             --html-report-output build/reports/traceability/traceability_report.html \
-            --fail-on-orphaned
+            --fail-on-orphaned \
+            $RELEASE_PLAN_ARG
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -77,6 +84,12 @@ jobs:
         with:
           name: cameo-model
           path: build/cameo/
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: demo-data
+          path: build/demo/
 
   bdd-tests:
     needs: traceability-check
@@ -147,7 +160,7 @@ jobs:
           name: test-reports
           path: build/reports/
 
-  traceability-report:
+  traceability-dashboard:
     needs: bdd-tests
     if: always()
     runs-on: ubuntu-latest
@@ -165,6 +178,10 @@ jobs:
         with:
           name: traceability-report
           path: build/reports/traceability
+      - uses: actions/download-artifact@v4
+        with:
+          name: demo-data
+          path: build/demo
 
       - uses: actions/setup-python@v5
         with:
@@ -173,19 +190,35 @@ jobs:
       - name: Install tools
         run: pip install -r tools/requirements.txt
 
-      - name: Generate Final Traceability Report
+      - name: Generate MBSE Traceability Dashboard
         run: |
+          # Build CLI args conditionally based on available data
           RELEASE_PLAN_ARG=""
+          SBOM_ARG=""
+          GRYPE_ARG=""
+
           if [ -f release-plan.json ]; then
             RELEASE_PLAN_ARG="--release-plan release-plan.json"
           fi
+
+          # Use demo SBOM/Grype data for prototype
+          # In production, Syft/Grype run against real container images
+          if [ -f build/demo/sbom.json ]; then
+            SBOM_ARG="--sbom-path build/demo/sbom.json"
+          fi
+          if [ -f build/demo/grype-results.json ]; then
+            GRYPE_ARG="--grype-path build/demo/grype-results.json"
+          fi
+
           python tools/report_generator.py \
             --requirements build/cameo/requirements/requirements.json \
             --behave-results build/reports/bdd/behave-results.json \
             --traceability-input build/reports/traceability/traceability_report.json \
             --output-json build/reports/traceability/final_traceability_report.json \
-            --output-html build/reports/traceability/traceability_matrix.html \
-            $RELEASE_PLAN_ARG
+            --output-html build/reports/traceability/MBSE_Traceability_Dashboard.html \
+            $RELEASE_PLAN_ARG \
+            $SBOM_ARG \
+            $GRYPE_ARG
 
       - name: Generate Requirements Document
         run: |
@@ -195,5 +228,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: final-reports
+          name: dashboard
+          path: |
+            build/reports/traceability/MBSE_Traceability_Dashboard.html
+            build/reports/traceability/final_traceability_report.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: all-reports
           path: build/reports/
