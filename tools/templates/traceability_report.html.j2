@@ -238,57 +238,71 @@
         <h1>MBSE Traceability Dashboard</h1>
         <div class="meta" id="hero-timestamp">Generated: {{ generated_at }}</div>
       </div>
-      <span class="pipeline-badge {% if summary.failed == 0 and summary.coverage_percent >= 100 %}pass-badge{% else %}fail-badge{% endif %}">
-        Pipeline {% if summary.failed == 0 and summary.coverage_percent >= 100 %}Pass{% else %}Attention Required{% endif %}
+      <span class="pipeline-badge {% if summary.failed == 0 and summary.uncovered_vcs == 0 and summary.drifted_vcs == 0 %}pass-badge{% else %}fail-badge{% endif %}">
+        Pipeline {% if summary.failed == 0 and summary.uncovered_vcs == 0 and summary.drifted_vcs == 0 %}Pass{% else %}Attention Required{% endif %}
       </span>
     </div>
-    <div id="hero-summary-sentence" style="font-size:0.95rem;color:var(--text);margin-bottom:16px;line-height:1.7;padding:12px 16px;background:#EBF5FB;border-radius:8px;border-left:4px solid var(--blue-ng)"></div>
-    <div class="metrics">
-      <div class="metric m-cov">
-        <div class="val">{{ "%.0f" | format(summary.coverage_percent) }}%</div>
-        <div class="lbl">VC Coverage</div>
+
+    <!-- Three-story hero: Release Scope → Test Results → Blockers -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:8px">
+
+      <!-- Story 1: Release Scope -->
+      <div style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e9ecef">
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px">Release Scope</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">
+          <span style="font-size:2rem;font-weight:700;color:var(--navy-1)">{{ summary.in_scope_vcs | default(summary.total_vcs) }}</span>
+          <span style="font-size:0.9rem;color:var(--text-muted)">of {{ summary.total_vcs }} VCs in scope</span>
+        </div>
+        {% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}
+        <div style="font-size:0.85rem;color:var(--deferred)">{{ summary.deferred_vcs }} deferred to future releases</div>
+        {% endif %}
+        <div style="font-size:0.85rem;color:var(--text-muted)">{{ summary.manual }} require manual review</div>
       </div>
-      <div class="metric">
-        <div class="val">{{ summary.total_vcs }}</div>
-        <div class="lbl">Total VCs</div>
+
+      <!-- Story 2: Test Results -->
+      <div style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e9ecef">
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px">Test Results</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">
+          <span style="font-size:2rem;font-weight:700;color:{% if summary.failed > 0 %}var(--fail){% else %}var(--pass){% endif %}">{{ summary.passed }}</span>
+          <span style="font-size:0.9rem;color:var(--text-muted)">passed</span>
+          {% if summary.failed > 0 %}
+          <span style="font-size:2rem;font-weight:700;color:var(--fail);margin-left:8px">{{ summary.failed }}</span>
+          <span style="font-size:0.9rem;color:var(--text-muted)">failed</span>
+          {% endif %}
+        </div>
+        <!-- Mini bar showing pass/fail ratio of tested VCs only -->
+        {% set tested = summary.passed + summary.failed %}
+        {% if tested > 0 %}
+        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e9ecef">
+          <div style="width:{{ (summary.passed/tested*100)|round(1) }}%;background:var(--pass)"></div>
+          {% if summary.failed > 0 %}<div style="width:{{ (summary.failed/tested*100)|round(1) }}%;background:var(--fail)"></div>{% endif %}
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">{{ ((summary.passed/tested)*100)|round(0)|int }}% pass rate</div>
+        {% endif %}
       </div>
-      <div class="metric">
-        <div class="val">{{ summary.covered_vcs }}</div>
-        <div class="lbl">Covered</div>
+
+      <!-- Story 3: Blockers -->
+      <div style="background:{% if summary.failed > 0 or summary.uncovered_vcs > 0 or summary.drifted_vcs > 0 %}#fef2f2{% else %}#f0fdf4{% endif %};border-radius:8px;padding:16px;border:1px solid {% if summary.failed > 0 or summary.uncovered_vcs > 0 or summary.drifted_vcs > 0 %}#fecaca{% else %}#bbf7d0{% endif %}">
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px">Blockers</div>
+        {% set blocker_count = summary.failed + summary.uncovered_vcs + summary.drifted_vcs + summary.orphaned_tests %}
+        {% if blocker_count == 0 %}
+        <div style="font-size:1.4rem;font-weight:700;color:var(--pass)">&#10003; None</div>
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">All quality gates passed</div>
+        {% else %}
+        <div style="font-size:2rem;font-weight:700;color:var(--fail)">{{ blocker_count }}</div>
+        <div style="font-size:0.85rem;line-height:1.6;margin-top:4px" id="hero-blockers"></div>
+        {% endif %}
       </div>
-      <div class="metric m-pass">
-        <div class="val">{{ summary.passed }}</div>
-        <div class="lbl">Passed</div>
-      </div>
-      <div class="metric m-fail">
-        <div class="val">{{ summary.failed }}</div>
-        <div class="lbl">Failed</div>
-      </div>
-      <div class="metric m-uncov">
-        <div class="val">{{ summary.uncovered_vcs }}</div>
-        <div class="lbl">Uncovered</div>
-      </div>
-      <div class="metric m-drift">
-        <div class="val">{{ summary.drifted_vcs }}</div>
-        <div class="lbl">Drifted</div>
-      </div>
-      <div class="metric">
-        <div class="val">{{ summary.manual }}</div>
-        <div class="lbl">Manual</div>
-      </div>
-      {% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}
-      <div class="metric" style="background:var(--deferred)">
-        <div class="val">{{ summary.deferred_vcs }}</div>
-        <div class="lbl">Deferred</div>
-      </div>
-      {% endif %}
+
     </div>
-    <div>
+
+    <!-- Full breakdown bar -->
+    <div style="margin-top:16px">
       <div class="cov-label">
-        <span>Verification Criteria Breakdown ({{ summary.in_scope_vcs | default(summary.total_vcs) }} in-scope{% if summary.deferred_vcs is defined and summary.deferred_vcs > 0 %}, {{ summary.deferred_vcs }} deferred{% endif %})</span>
-        <span>{{ summary.covered_vcs }} / {{ summary.in_scope_vcs | default(summary.total_vcs) }} VCs covered</span>
+        <span>All {{ summary.total_vcs }} Verification Criteria</span>
+        <span id="hero-bar-legend" style="font-size:0.75rem"></span>
       </div>
-      <div class="cov-bar" style="display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--border);background:#E8F4FB">
+      <div class="cov-bar" style="display:flex;height:10px;border-radius:5px;overflow:hidden;border:1px solid var(--border);background:#E8F4FB">
         {% if summary.total_vcs > 0 %}
         {% set tw = summary.total_vcs %}
         {% if summary.passed > 0 %}<div style="width:{{ (summary.passed/tw*100)|round(1) }}%;background:var(--pass)" title="Passed: {{ summary.passed }}"></div>{% endif %}
@@ -1457,28 +1471,42 @@ renderTests();
 renderMetadata();
 renderReleases();
 
-/* Item 1: Summary sentence — keep it short */
+/* Hero: populate blockers list and bar legend */
 (function() {
-  const el = document.getElementById('hero-summary-sentence');
-  if (!el || !REPORT || !REPORT.summary) return;
+  if (!REPORT || !REPORT.summary) return;
   const s = REPORT.summary;
-  const gatesFailed = [
-    TRACEABILITY && TRACEABILITY.gate_a && !TRACEABILITY.gate_a.passed,
-    TRACEABILITY && TRACEABILITY.gate_b && !TRACEABILITY.gate_b.passed,
-    TRACEABILITY && TRACEABILITY.gate_c && !TRACEABILITY.gate_c.passed,
-  ].filter(Boolean).length;
 
-  if (s.failed === 0 && s.uncovered_vcs === 0 && s.drifted_vcs === 0 && gatesFailed === 0) {
-    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vcs + '</strong> verification criteria passed. All quality gates passed.';
-    el.style.borderLeftColor = 'var(--pass)';
-  } else {
-    const issues = [];
-    if (s.failed > 0) issues.push(s.failed + ' failed');
-    if (s.uncovered_vcs > 0) issues.push(s.uncovered_vcs + ' uncovered');
-    if (s.drifted_vcs > 0) issues.push(s.drifted_vcs + ' drifted');
-    el.innerHTML = '<strong>' + s.passed + ' of ' + s.total_vcs + '</strong> verification criteria passed. ' +
-      '<strong>' + issues.join(', ') + '</strong> — see Quality Gates for details.';
-    el.style.borderLeftColor = s.failed > 0 ? 'var(--fail)' : 'var(--uncovered)';
+  /* Blockers list */
+  const bl = document.getElementById('hero-blockers');
+  if (bl) {
+    const lines = [];
+    if (s.failed > 0) {
+      const ids = (REPORT.requirements || []).filter(r => r.status === 'fail').map(r => r.vc_id).join(', ');
+      lines.push('<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + (ids ? ' (' + esc(ids) + ')' : '') + '</span>');
+    }
+    if (s.drifted_vcs > 0) {
+      lines.push('<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria drifted — review needed</span>');
+    }
+    if (s.uncovered_vcs > 0) {
+      lines.push('<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' uncovered — no scenario written</span>');
+    }
+    if (s.orphaned_tests > 0) {
+      lines.push('<span style="color:var(--orphaned)">? ' + s.orphaned_tests + ' orphaned test' + (s.orphaned_tests > 1 ? 's' : '') + '</span>');
+    }
+    bl.innerHTML = lines.join('<br>');
+  }
+
+  /* Bar legend */
+  const legend = document.getElementById('hero-bar-legend');
+  if (legend) {
+    const parts = [];
+    if (s.passed) parts.push('<span style="color:var(--pass)">&#9632;</span> ' + s.passed + ' passed');
+    if (s.failed) parts.push('<span style="color:var(--fail)">&#9632;</span> ' + s.failed + ' failed');
+    if (s.drifted_vcs) parts.push('<span style="color:var(--drifted)">&#9632;</span> ' + s.drifted_vcs + ' drifted');
+    if (s.uncovered_vcs) parts.push('<span style="color:var(--uncovered)">&#9632;</span> ' + s.uncovered_vcs + ' uncovered');
+    if (s.manual) parts.push('<span style="color:var(--manual)">&#9632;</span> ' + s.manual + ' manual');
+    if (s.deferred_vcs) parts.push('<span style="color:var(--deferred)">&#9632;</span> ' + s.deferred_vcs + ' deferred');
+    legend.innerHTML = parts.join(' &nbsp; ');
   }
 })();
 

@@ -470,9 +470,10 @@ class TestHTMLDashboard:
             assert "https://" not in head, "External HTTPS resource in <head>"
 
     def test_html_uncovered_dashboard(self, tmp_path):
-        """Dashboard with uncovered VCs should show lower coverage."""
+        """Dashboard with uncovered VCs should show blocker info."""
         html = self._generate_html(tmp_path, _behave_without_vc02(), _traceability_with_uncovered())
-        assert "75%" in html  # 3/4 VCs covered
+        assert "uncovered" in html.lower()
+        assert "Attention Required" in html
 
     def test_html_model_metadata(self, tmp_path):
         """Export tab should contain model metadata from requirements."""
