@@ -255,9 +255,14 @@
         <h1>MBSE Traceability Dashboard</h1>
         <div class="meta" id="hero-timestamp">Generated: {{ generated_at }}</div>
       </div>
-      <span class="pipeline-badge {% if summary.failed == 0 and summary.uncovered_vcs == 0 and summary.drifted_vcs == 0 %}pass-badge{% else %}fail-badge{% endif %}">
-        Pipeline {% if summary.failed == 0 and summary.uncovered_vcs == 0 and summary.drifted_vcs == 0 %}Pass{% else %}Attention Required{% endif %}
-      </span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <select id="release-filter" onchange="onReleaseFilterChange()" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;font-weight:600;color:var(--navy-1);background:#fff;cursor:pointer">
+          <option value="all">All Releases</option>
+        </select>
+        <span class="pipeline-badge {% if summary.failed == 0 and summary.uncovered_vcs == 0 and summary.drifted_vcs == 0 %}pass-badge{% else %}fail-badge{% endif %}">
+          Pipeline {% if summary.failed == 0 and summary.uncovered_vcs == 0 and summary.drifted_vcs == 0 %}Pass{% else %}Attention Required{% endif %}
+        </span>
+      </div>
     </div>
 
     <!-- Three-story hero: Release Scope → Test Results → Blockers -->
@@ -645,6 +650,75 @@ function findScenariosForVC(vcId, reqId, reportRow) {
 }
 
 /* ================================================================
+   GLOBAL RELEASE FILTER
+   ================================================================ */
+var selectedRelease = 'all';
+
+/* Build reqId -> VC IDs lookup (reuse across functions) */
+const globalReqToVCs = {};
+if (REQUIREMENTS && REQUIREMENTS.requirements) {
+  REQUIREMENTS.requirements.forEach(req => {
+    globalReqToVCs[req.requirementId] = (req.verificationCriteria || req.verificationMethods || []).map(vc => vc.verificationCriteriaId || vc.verificationMethodId);
+  });
+}
+
+function expandScopeGlobal(scopeIds) {
+  const vcs = [];
+  (scopeIds || []).forEach(id => {
+    if (id.match(/-VC-\d+$/)) vcs.push(id);
+    else if (globalReqToVCs[id]) globalReqToVCs[id].forEach(v => vcs.push(v));
+  });
+  return vcs;
+}
+
+/* Returns the set of VC IDs for the selected release (cumulative), or null for 'all' */
+function getFilteredVCIds() {
+  if (selectedRelease === 'all' || !RELEASE_PLAN || !RELEASE_PLAN.releases) return null;
+  const releases = RELEASE_PLAN.releases;
+  const cumulative = new Set();
+  for (let i = 0; i < releases.length; i++) {
+    expandScopeGlobal(releases[i].scope).forEach(id => cumulative.add(id));
+    if (releases[i].version === selectedRelease) break;
+  }
+  return cumulative;
+}
+
+/* Returns filtered requirement IDs for the selected release, or null for 'all' */
+function getFilteredReqIds() {
+  const vcSet = getFilteredVCIds();
+  if (!vcSet) return null;
+  const reqIds = new Set();
+  Object.entries(globalReqToVCs).forEach(([reqId, vcs]) => {
+    if (vcs.some(v => vcSet.has(v))) reqIds.add(reqId);
+  });
+  return reqIds;
+}
+
+/* Populate the release filter dropdown */
+(function() {
+  const select = document.getElementById('release-filter');
+  if (!select || !RELEASE_PLAN || !RELEASE_PLAN.releases) return;
+  RELEASE_PLAN.releases.forEach(rel => {
+    const opt = document.createElement('option');
+    opt.value = rel.version;
+    let label = 'Release ' + rel.version;
+    if (isReleasedVersion(rel.version)) label += ' (Released)';
+    else if (isCurrentVersion(rel.version)) label += ' (Current)';
+    opt.textContent = label;
+    select.appendChild(opt);
+  });
+})();
+
+function onReleaseFilterChange() {
+  selectedRelease = document.getElementById('release-filter').value;
+  renderTraceability();
+  renderGates();
+  renderTests();
+  renderExecutiveSummary();
+  applyFilters();
+}
+
+/* ================================================================
    TAB 1: TRACEABILITY MATRIX
    ================================================================ */
 function renderTraceability() {
@@ -653,10 +727,13 @@ function renderTraceability() {
     container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><h3>No Requirements Data</h3><p>No traceability data is available for this report.</p></div>';
     return;
   }
-  /* Group report rows by requirement_id */
+  /* Group report rows by requirement_id, filtered by release */
+  const vcFilter = getFilteredVCIds();
   const grouped = {};
   const reqOrder = [];
   REPORT.requirements.forEach(row => {
+    /* If a release filter is active, skip VCs not in scope */
+    if (vcFilter && row.vc_id && !vcFilter.has(row.vc_id)) return;
     if (!grouped[row.requirement_id]) { grouped[row.requirement_id] = []; reqOrder.push(row.requirement_id); }
     grouped[row.requirement_id].push(row);
   });
@@ -1228,11 +1305,18 @@ function renderGates() {
     { key: 'gate_c', name: 'Gate C — Orphan Detection', desc: 'Finds test scenarios referencing requirements or VCs that no longer exist in the model.' },
   ];
 
+  const vcFilter = getFilteredVCIds();
   let html = '<div class="gate-cards">';
   gates.forEach(g => {
     const data = TRACEABILITY[g.key] || {};
-    const passed = data.passed !== false;
-    const items = data.items || [];
+    const allItems = data.items || [];
+    /* Filter gate items by release scope */
+    const items = vcFilter ? allItems.filter(item => {
+      const id = item.verificationCriteriaId || item.vc_id || '';
+      if (g.key === 'gate_c') return true; /* orphans always shown */
+      return !id || vcFilter.has(id);
+    }) : allItems;
+    const passed = vcFilter ? items.length === 0 : data.passed !== false;
     const gateLabel = g.key === 'gate_a' ? 'A' : g.key === 'gate_b' ? 'B' : 'C';
     html += '<div class="gate-card ' + (passed ? 'gate-pass' : 'gate-fail') + '" data-gate="' + gateLabel + '">';
     html += '<div class="gate-title"><span class="gate-name">' + g.name + '</span>' + badgeFor(passed ? 'pass' : 'fail') + '</div>';
@@ -1283,7 +1367,22 @@ function renderTests() {
     const tags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase());
     return tags.includes('manual') || tags.includes('stub') || tags.includes('auto_generated');
   }
-  const automatedFeatures = behaveFeatures.filter(f => !isManualFeature(f));
+  const vcFilter = getFilteredVCIds();
+  let automatedFeatures = behaveFeatures.filter(f => !isManualFeature(f));
+  /* If release filter is active, only show features with VCs in scope */
+  if (vcFilter) {
+    automatedFeatures = automatedFeatures.filter(feat => {
+      const fTags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, ''));
+      const allTags = [...fTags];
+      (feat.elements || []).forEach(el => {
+        (el.tags || []).forEach(t => allTags.push((typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '')));
+      });
+      return allTags.some(tag => {
+        const vcMatch = tag.replace(/^VC[:\-_]/i, '');
+        return vcMatch !== tag && vcFilter.has(vcMatch);
+      });
+    });
+  }
 
   if (!automatedFeatures.length) {
     container.innerHTML = '<div class="empty-state"><h3>No Behave test results available</h3></div>';
@@ -1423,8 +1522,26 @@ function downloadJSON() {
 function renderExecutiveSummary() {
   const container = document.getElementById('summary-content');
   if (!REPORT || !REPORT.summary) { container.innerHTML = '<div class="empty-state"><h3>No data available</h3></div>'; return; }
-  const s = REPORT.summary;
-  const rows = REPORT.requirements || [];
+  const vcFilter = getFilteredVCIds();
+  const allRows = REPORT.requirements || [];
+  const rows = vcFilter ? allRows.filter(r => r.vc_id && vcFilter.has(r.vc_id)) : allRows;
+
+  /* Calculate summary from filtered rows */
+  var s;
+  if (vcFilter) {
+    s = { passed: 0, failed: 0, drifted_vcs: 0, uncovered_vcs: 0, manual: 0, deferred_vcs: 0, orphaned_tests: 0, total_vcs: rows.length, in_scope_vcs: rows.length };
+    rows.forEach(r => {
+      if (r.status === 'pass') s.passed++;
+      else if (r.status === 'fail') s.failed++;
+      else if (r.status === 'drifted') s.drifted_vcs++;
+      else if (r.status === 'uncovered') s.uncovered_vcs++;
+      else if (r.status === 'manual') s.manual++;
+      else if (r.status === 'deferred') { s.deferred_vcs++; s.in_scope_vcs--; }
+    });
+    s.orphaned_tests = REPORT.orphaned_tests ? REPORT.orphaned_tests.length : 0;
+  } else {
+    s = REPORT.summary;
+  }
 
   /* Calculate readiness percentage */
   const inScope = s.in_scope_vcs || s.total_vcs;
