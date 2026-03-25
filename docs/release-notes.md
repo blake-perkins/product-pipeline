@@ -1,6 +1,32 @@
 # Release Notes
 
-## v0.3.0 (Verification Criteria Rename + Release Filter)
+## v0.4.0 (Interactive Dashboard + Release Management)
+
+### New Features
+- 7-tab interactive MBSE Traceability Dashboard replacing the flat HTML report
+- Executive Summary tab with readiness ring, top issues, cyber risk summary
+- Global release filter dropdown scoping the entire dashboard to a specific release
+- Centralized filter architecture (`buildSnapshot`) powering all dashboard tabs
+- Release planning system with `release-plan.json` and deferred VCs
+- SBOM/vulnerability integration in the Cyber tab (Syft + Grype)
+- Hero header with three clickable KPI cards (Release Scope, Test Results, Blockers)
+- Cross-tab navigation with yellow flash highlighting
+- Shipped confirmation state for released versions
+- Demo data generator exercising all dashboard states
+- 232 pytest tests (unit + demo + SBOM integration)
+- Dedicated release management guide (`docs/guides/release-management.md`)
+
+### Breaking Changes
+- Dashboard HTML output is a completely new format (7-tab SPA replaces flat table)
+- Pipeline job renamed from `traceability-report` to `traceability-dashboard`
+- Documentation reorganized into `docs/guides/`, `docs/migration/`, `docs/presentations/`
+
+### Migration
+- See `docs/migration/v0.4.0.md` for detailed migration instructions.
+
+---
+
+## v0.3.0 (Verification Criteria Rename)
 
 ### New Features
 - Executive Summary tab added to the interactive dashboard with release readiness ring
