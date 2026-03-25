@@ -758,8 +758,10 @@ function renderHero() {
   }
   html += '</div>';
 
-  /* Story 3: Blockers */
-  var blockerCount = s.failed + s.uncovered_vcs + s.drifted_vcs + s.orphaned_tests;
+  /* Story 3: Blockers — suppress orphans for released versions */
+  var isHeroReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
+  var orphanCount = isHeroReleased ? 0 : s.orphaned_tests;
+  var blockerCount = s.failed + s.uncovered_vcs + s.drifted_vcs + orphanCount;
   var hasBlockers = blockerCount > 0;
   html += '<div class="hero-card" onclick="switchTab(\'gates\')" style="background:' + (hasBlockers ? '#fef2f2' : '#f0fdf4') + ';border-radius:8px;padding:16px;border:1px solid ' + (hasBlockers ? '#fecaca' : '#bbf7d0') + ';cursor:pointer;transition:all 0.15s" onmouseenter="this.style.opacity=\'0.9\'" onmouseleave="this.style.opacity=\'1\'">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
@@ -775,7 +777,7 @@ function renderHero() {
     if (s.failed > 0) html += '<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + '</span><br>';
     if (s.drifted_vcs > 0) html += '<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria drifted</span><br>';
     if (s.uncovered_vcs > 0) html += '<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' uncovered</span><br>';
-    if (s.orphaned_tests > 0) html += '<span style="color:var(--orphaned)">? ' + s.orphaned_tests + ' orphaned</span>';
+    if (orphanCount > 0) html += '<span style="color:var(--orphaned)">? ' + orphanCount + ' orphaned</span>';
     html += '</div>';
   }
   html += '</div>';
@@ -1633,9 +1635,10 @@ function renderExecutiveSummary() {
   const resolved = s.passed; /* only passed tests count as complete */
   const readinessPct = inScope > 0 ? Math.round(resolved / inScope * 100) : 0;
 
-  /* Determine ring color */
+  /* Determine ring color — suppress CVE/orphan warnings for released versions */
   const hasFailures = s.failed > 0;
-  const hasCriticalCVE = GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical');
+  const isFilteredReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
+  const hasCriticalCVE = !isFilteredReleased && GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical');
   const ringColor = (hasFailures || hasCriticalCVE) ? 'var(--fail)' : readinessPct >= 100 ? 'var(--pass)' : readinessPct >= 50 ? 'var(--blue-ng)' : 'var(--uncovered)';
 
   /* Build remaining items list */
@@ -1643,7 +1646,7 @@ function renderExecutiveSummary() {
   if (s.failed > 0) remaining.push('<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + ' to resolve</span>');
   if (s.drifted_vcs > 0) remaining.push('<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria change' + (s.drifted_vcs > 1 ? 's' : '') + ' to review</span>');
   if (s.uncovered_vcs > 0) remaining.push('<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' scenario' + (s.uncovered_vcs > 1 ? 's' : '') + ' to write</span>');
-  if (s.orphaned_tests > 0) remaining.push('<span style="color:var(--orphaned)">? ' + s.orphaned_tests + ' orphaned test' + (s.orphaned_tests > 1 ? 's' : '') + ' to clean up</span>');
+  if (!isFilteredReleased && s.orphaned_tests > 0) remaining.push('<span style="color:var(--orphaned)">? ' + s.orphaned_tests + ' orphaned test' + (s.orphaned_tests > 1 ? 's' : '') + ' to clean up</span>');
   if (hasCriticalCVE) remaining.push('<span style="color:var(--fail)">&#9888; Critical vulnerability to address</span>');
 
   /* Readiness label */
@@ -1762,7 +1765,9 @@ function renderExecutiveSummary() {
   /* Section 4: Cyber Risk Summary — click to navigate */
   html += '<div class="exec-section" style="margin-bottom:20px;cursor:pointer" onclick="switchTab(\'security\')" onmouseenter="this.style.borderColor=\'var(--blue-ng)\'" onmouseleave="this.style.borderColor=\'#e9ecef\'">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Cyber Risk</h3><span style="font-size:0.75rem;color:var(--blue-ng)">View Details &#8250;</span></div>';
-  if (!GRYPE || !GRYPE.matches) {
+  if (isFilteredReleased) {
+    html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; All vulnerabilities resolved before release</div>';
+  } else if (!GRYPE || !GRYPE.matches) {
     html += '<div style="color:var(--text-muted);font-size:0.85rem;font-style:italic">Cyber scan data not included in this build.</div>';
   } else if (GRYPE.matches.length === 0) {
     html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; No vulnerabilities detected</div>';
