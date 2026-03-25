@@ -468,6 +468,59 @@ def generate(output_dir: Path):
     }
 
     # ------------------------------------------------------------------
+    # 6. Release plan
+    # ------------------------------------------------------------------
+    release_plan = {
+        "releases": [
+            {
+                "version": "1.0.0",
+                "targetDate": "2026-06-01",
+                "description": "Initial deployment \u2014 core ICD communications, health monitoring, and error handling",
+                "scope": [
+                    "SYS-REQ-001",
+                    "SYS-REQ-002",
+                    "SYS-REQ-005",
+                ],
+            },
+            {
+                "version": "1.1.0",
+                "targetDate": "2026-09-01",
+                "description": "Degradation handling and ICD demonstration verification",
+                "scope": [
+                    "SYS-REQ-001-VM-02",
+                    "SYS-REQ-003",
+                ],
+            },
+            {
+                "version": "2.0.0",
+                "targetDate": "2027-01-01",
+                "description": "Full compliance \u2014 thermal analysis and physical inspection",
+                "scope": [
+                    "SYS-REQ-004",
+                    "SYS-REQ-006",
+                ],
+            },
+        ],
+    }
+
+    # Update traceability to mark out-of-scope VMs as deferred
+    # For demo, current release is 1.0.0 so REQ-003-VM-02, REQ-004, REQ-006 are deferred
+    # REQ-001-VM-02 is in 1.0.0 scope (via SYS-REQ-001) so it stays uncovered
+    # But SYS-REQ-003-VM-02 is in 1.1.0 so it should be deferred
+    traceability_report["gate_a"]["items"] = [
+        {
+            "requirementId": "SYS-REQ-003",
+            "verificationMethodId": "SYS-REQ-003-VM-02",
+            "method": "Test",
+            "title": "Graceful Degradation",
+            "deferred": True,
+            "targetRelease": "1.1.0",
+        },
+    ]
+    traceability_report["gate_a"]["passed"] = True
+    traceability_report["gate_a"]["message"] = "All in-scope verification methods covered; 1 deferred to future releases."
+
+    # ------------------------------------------------------------------
     # Write files
     # ------------------------------------------------------------------
     def write(name, data):
@@ -480,6 +533,7 @@ def generate(output_dir: Path):
     write("traceability_report.json", traceability_report)
     write("sbom.json", sbom)
     write("grype-results.json", grype)
+    write("release-plan.json", release_plan)
 
     print()
     print("Demo data states:")
@@ -499,6 +553,7 @@ def generate(output_dir: Path):
     print(f"    --traceability-input {output_dir}/traceability_report.json \\")
     print(f"    --sbom-path {output_dir}/sbom.json \\")
     print(f"    --grype-path {output_dir}/grype-results.json \\")
+    print(f"    --release-plan {output_dir}/release-plan.json \\")
     print(f"    --output-json {output_dir}/final_report.json \\")
     print(f"    --output-html {output_dir}/dashboard.html")
 

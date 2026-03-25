@@ -16,6 +16,7 @@
       --drifted: #F9A825; --drifted-bg: #FFFDE7;
       --manual: #546E7A; --manual-bg: #ECEFF1;
       --orphaned: #0099D6; --orphaned-bg: #E8F4FB;
+      --deferred: #78909C; --deferred-bg: #ECEFF1;
       --stub: #E65100;
       /* Security severities */
       --sev-critical: #C62828; --sev-high: #E65100; --sev-medium: #F9A825;
@@ -68,6 +69,7 @@
     .b-drifted { background: var(--drifted); color: #333; }
     .b-manual { background: var(--manual); color: #fff; }
     .b-orphaned { background: var(--orphaned); color: #fff; }
+    .b-deferred { background: var(--deferred); color: #fff; }
     .b-stub { background: var(--stub); color: #fff; }
     .filter-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
     .filter-row label { font-weight: 600; font-size: 0.82rem; }
@@ -90,6 +92,7 @@
     .req-card.rc-uncovered { border-left-color: var(--uncovered); }
     .req-card.rc-drifted { border-left-color: var(--drifted); }
     .req-card.rc-manual { border-left-color: var(--manual); }
+    .req-card.rc-deferred { border-left-color: var(--deferred); }
     .req-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.15s; background: #fff; }
     .req-header:hover { background: #f7f8fa; }
     .req-header .arrow { transition: transform 0.2s; font-size: 0.7rem; color: var(--text-muted); }
@@ -269,11 +272,17 @@
         <div class="val">{{ summary.manual }}</div>
         <div class="lbl">Manual</div>
       </div>
+      {% if summary.deferred_vms is defined and summary.deferred_vms > 0 %}
+      <div class="metric" style="background:var(--deferred)">
+        <div class="val">{{ summary.deferred_vms }}</div>
+        <div class="lbl">Deferred</div>
+      </div>
+      {% endif %}
     </div>
     <div>
       <div class="cov-label">
-        <span>Verification Criteria Breakdown</span>
-        <span>{{ summary.covered_vms }} / {{ summary.total_vms }} VCs covered</span>
+        <span>Verification Criteria Breakdown ({{ summary.in_scope_vms | default(summary.total_vms) }} in-scope{% if summary.deferred_vms is defined and summary.deferred_vms > 0 %}, {{ summary.deferred_vms }} deferred{% endif %})</span>
+        <span>{{ summary.covered_vms }} / {{ summary.in_scope_vms | default(summary.total_vms) }} VCs covered</span>
       </div>
       <div class="cov-bar" style="display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--border);background:#E8F4FB">
         {% if summary.total_vms > 0 %}
@@ -283,6 +292,7 @@
         {% if summary.drifted_vms > 0 %}<div style="width:{{ (summary.drifted_vms/tw*100)|round(1) }}%;background:var(--drifted)" title="Drifted: {{ summary.drifted_vms }}"></div>{% endif %}
         {% if summary.uncovered_vms > 0 %}<div style="width:{{ (summary.uncovered_vms/tw*100)|round(1) }}%;background:var(--uncovered)" title="Uncovered: {{ summary.uncovered_vms }}"></div>{% endif %}
         {% if summary.manual > 0 %}<div style="width:{{ (summary.manual/tw*100)|round(1) }}%;background:var(--manual)" title="Manual: {{ summary.manual }}"></div>{% endif %}
+        {% if summary.deferred_vms is defined and summary.deferred_vms > 0 %}<div style="width:{{ (summary.deferred_vms/tw*100)|round(1) }}%;background:var(--deferred)" title="Deferred: {{ summary.deferred_vms }}"></div>{% endif %}
         {% endif %}
       </div>
     </div>
@@ -291,6 +301,7 @@
   <!-- ======== TABS ======== -->
   <nav class="tab-bar">
     <button class="tab-btn active" data-tab="traceability">Traceability Matrix</button>
+    <button class="tab-btn" data-tab="releases">Release Progress</button>
     <button class="tab-btn" data-tab="gates">Quality Gates</button>
     <button class="tab-btn" data-tab="tests">Test Execution</button>
     <button class="tab-btn" data-tab="security">Cyber</button>
@@ -301,7 +312,7 @@
   <div id="panel-traceability" class="tab-panel active">
     <div class="filter-row">
       <label>Status:</label>
-      <select id="f-status"><option value="all">All</option><option value="pass">Passed</option><option value="fail">Failed</option><option value="uncovered">Uncovered</option><option value="drifted">Drifted</option><option value="manual">Manual</option></select>
+      <select id="f-status"><option value="all">All</option><option value="pass">Passed</option><option value="fail">Failed</option><option value="uncovered">Uncovered</option><option value="drifted">Drifted</option><option value="deferred">Deferred</option><option value="manual">Manual</option></select>
       <label>Criteria Type:</label>
       <select id="f-method"><option value="all">All</option><option value="Test">Test</option><option value="Demonstration">Demonstration</option><option value="Analysis">Analysis</option><option value="Inspection">Inspection</option></select>
       <label>Search:</label>
@@ -318,7 +329,12 @@
     <div id="trace-accordion"></div>
   </div>
 
-  <!-- ======== TAB 2: QUALITY GATES ======== -->
+  <!-- ======== TAB 2: RELEASE PROGRESS ======== -->
+  <div id="panel-releases" class="tab-panel">
+    <div id="releases-content"></div>
+  </div>
+
+  <!-- ======== TAB 3: QUALITY GATES ======== -->
   <div id="panel-gates" class="tab-panel">
     <div id="gates-content"></div>
   </div>
@@ -351,6 +367,7 @@
       <div class="legend-item"><span class="badge b-uncovered">&#8212; uncovered</span> No scenario written yet</div>
       <div class="legend-item"><span class="badge b-drifted">&#8635; drifted</span> Criteria changed since baseline</div>
       <div class="legend-item"><span class="badge b-manual">&#9995; manual</span> Analysis or Inspection method</div>
+      <div class="legend-item"><span class="badge b-deferred">&#9201; deferred</span> Planned for a future release</div>
       <div class="legend-item"><span class="badge b-orphaned">? orphaned</span> References a deleted requirement</div>
     </div>
 
@@ -376,7 +393,8 @@
     <div class="legend-item"><span class="badge b-uncovered">&#8212; uncovered</span> No scenario written yet</div>
     <div class="legend-item"><span class="badge b-drifted">&#8635; drifted</span> Criteria changed since baseline</div>
     <div class="legend-item"><span class="badge b-manual">&#9995; manual</span> Analysis or Inspection method</div>
-    <div class="legend-item"><span class="badge b-orphaned">? orphaned</span> References a deleted requirement</div>
+    <div class="legend-item"><span class="badge b-deferred">&#9201; deferred</span> Planned for a future release</div>
+      <div class="legend-item"><span class="badge b-orphaned">? orphaned</span> References a deleted requirement</div>
   </div>
 </div>
 
@@ -388,6 +406,7 @@ const BEHAVE = {{ behave_json }};
 const TRACEABILITY = {{ traceability_json }};
 const SBOM = {{ sbom_json }};
 const GRYPE = {{ grype_json }};
+const RELEASE_PLAN = {{ release_plan_json }};
 </script>
 
 <script>
@@ -407,8 +426,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
    HELPERS
    ================================================================ */
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-const VALID_STATUSES = ['pass','fail','uncovered','drifted','manual','orphaned','stub'];
-const STATUS_ICONS = {pass:'\u2713',fail:'\u2717',uncovered:'\u2014',drifted:'\u21BB',manual:'\u270B',orphaned:'?',stub:'\u2014'};
+const VALID_STATUSES = ['pass','fail','uncovered','drifted','manual','orphaned','stub','deferred'];
+const STATUS_ICONS = {pass:'\u2713',fail:'\u2717',uncovered:'\u2014',drifted:'\u21BB',manual:'\u270B',orphaned:'?',stub:'\u2014',deferred:'\u23F1'};
 function badgeFor(status) {
   const cls = VALID_STATUSES.includes(status) ? status : 'manual';
   const icon = STATUS_ICONS[cls] || '';
@@ -575,7 +594,7 @@ function renderTraceability() {
     const vmSummary = rows.length + ' VC' + (rows.length > 1 ? 's' : '');
 
     /* Worst-status determines the card's left-border color */
-    const STATUS_PRIORITY = ['fail','drifted','uncovered','manual','pass'];
+    const STATUS_PRIORITY = ['fail','drifted','uncovered','deferred','manual','pass'];
     let worstStatus = 'pass';
     rows.forEach(r => {
       if (STATUS_PRIORITY.indexOf(r.status) < STATUS_PRIORITY.indexOf(worstStatus)) worstStatus = r.status;
@@ -632,7 +651,10 @@ function renderTraceability() {
         drifted: 'Action: Review the changes above, update the scenario if needed, remove @REVIEW_REQUIRED, and run --update-baseline.',
         fail: 'Action: Investigate the test failure below. Fix the product code or update the scenario.',
       };
-      if (ACTION_HINTS[row.status]) {
+      if (row.status === 'deferred') {
+        const targetRel = row.target_release || '';
+        html += '<div style="padding:8px 14px;font-size:0.82rem;color:var(--deferred);border-top:1px solid #f0f0f0">Deferred to release <strong>' + esc(targetRel) + '</strong>. No action needed for the current release.</div>';
+      } else if (ACTION_HINTS[row.status]) {
         html += '<div style="padding:8px 14px;font-size:0.82rem;color:var(--' + row.status + ');border-top:1px solid #f0f0f0">' + ACTION_HINTS[row.status] + '</div>';
       }
 
@@ -1265,6 +1287,137 @@ function downloadJSON() {
 }
 
 /* ================================================================
+   TAB: RELEASE PROGRESS
+   ================================================================ */
+function renderReleases() {
+  const container = document.getElementById('releases-content');
+  if (!RELEASE_PLAN || !RELEASE_PLAN.releases || !RELEASE_PLAN.releases.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">&#128197;</div><h3>No Release Plan</h3><p>Create a <code>release-plan.json</code> to track requirement delivery across releases.</p></div>';
+    return;
+  }
+
+  const releases = RELEASE_PLAN.releases;
+  const rows = REPORT && REPORT.requirements ? REPORT.requirements : [];
+
+  /* Build a lookup: vmId -> status from report */
+  const vmStatus = {};
+  rows.forEach(r => { if (r.vm_id) vmStatus[r.vm_id] = r; });
+
+  /* Build a lookup: reqId -> all VM IDs */
+  const reqToVMs = {};
+  if (REQUIREMENTS && REQUIREMENTS.requirements) {
+    REQUIREMENTS.requirements.forEach(req => {
+      reqToVMs[req.requirementId] = (req.verificationMethods || []).map(vm => vm.verificationMethodId);
+    });
+  }
+
+  /* Expand scope IDs to VM IDs */
+  function expandScope(scopeIds) {
+    const vms = [];
+    (scopeIds || []).forEach(id => {
+      if (id.match(/-VM-\d+$/)) {
+        vms.push(id);
+      } else if (reqToVMs[id]) {
+        reqToVMs[id].forEach(vmId => vms.push(vmId));
+      }
+    });
+    return vms;
+  }
+
+  /* Compute cumulative scope up to each release */
+  const cumulativeScopes = [];
+  let cumulative = new Set();
+  releases.forEach(rel => {
+    expandScope(rel.scope).forEach(id => cumulative.add(id));
+    cumulativeScopes.push(new Set(cumulative));
+  });
+
+  /* Overall program progress */
+  const allPlannedVMs = cumulativeScopes.length > 0 ? cumulativeScopes[cumulativeScopes.length - 1] : new Set();
+  const allComplete = Array.from(allPlannedVMs).filter(id => {
+    const st = vmStatus[id];
+    return st && (st.status === 'pass' || st.status === 'manual');
+  });
+
+  let html = '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px">';
+  html += '<div class="info-item"><div class="info-label">Total Releases</div><div class="info-value">' + releases.length + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Total Planned VCs</div><div class="info-value">' + allPlannedVMs.size + '</div></div>';
+  html += '<div class="info-item"><div class="info-label">Program Completion</div><div class="info-value" style="color:' + (allComplete.length === allPlannedVMs.size ? 'var(--pass)' : 'var(--text)') + '">' + (allPlannedVMs.size ? Math.round(allComplete.length / allPlannedVMs.size * 100) : 0) + '%</div></div>';
+  html += '</div>';
+
+  releases.forEach((rel, ri) => {
+    const scopeVMs = expandScope(rel.scope);
+    const counts = { pass: 0, fail: 0, uncovered: 0, drifted: 0, manual: 0, deferred: 0 };
+    const vmDetails = [];
+
+    scopeVMs.forEach(vmId => {
+      const row = vmStatus[vmId];
+      const st = row ? row.status : 'uncovered';
+      counts[st] = (counts[st] || 0) + 1;
+      vmDetails.push({ vmId, status: st, title: row ? row.title : '', method: row ? row.method : '' });
+    });
+
+    const total = scopeVMs.length;
+    const complete = counts.pass + counts.manual;
+    const pct = total ? Math.round(complete / total * 100) : 0;
+
+    /* Is this the current release? */
+    const currentVersion = (REPORT && REPORT.summary && REPORT.summary.in_scope_vms !== REPORT.summary.total_vms) ? '' : '';
+
+    /* Target date formatting */
+    const targetDate = rel.targetDate ? fmtDate(rel.targetDate + 'T00:00:00Z') : '';
+
+    html += '<div style="border:1px solid #e9ecef;border-radius:10px;margin-bottom:16px;overflow:hidden;border-left:4px solid ' + (pct === 100 ? 'var(--pass)' : pct > 0 ? 'var(--blue-ng)' : 'var(--border)') + '">';
+
+    /* Release header */
+    html += '<div style="padding:16px 20px;display:flex;align-items:center;gap:16px;cursor:pointer" onclick="this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.arrow\').classList.toggle(\'open\')">';
+    html += '<span class="arrow" style="font-size:0.7rem;color:var(--text-muted);transition:transform 0.2s">&#9654;</span>';
+    html += '<div style="flex:1">';
+    html += '<div style="font-weight:700;font-size:1.1rem;color:var(--navy-1)">Release ' + esc(rel.version) + '</div>';
+    html += '<div style="font-size:0.85rem;color:var(--text-muted)">' + esc(rel.description || '') + '</div>';
+    if (targetDate) html += '<div style="font-size:0.8rem;color:var(--text-muted)">Target: ' + targetDate + '</div>';
+    html += '</div>';
+    html += '<div style="text-align:right;min-width:120px">';
+    html += '<div style="font-size:1.4rem;font-weight:700;color:' + (pct === 100 ? 'var(--pass)' : 'var(--text)') + '">' + pct + '%</div>';
+    html += '<div style="font-size:0.75rem;color:var(--text-muted)">' + complete + ' of ' + total + ' VCs</div>';
+    html += '</div>';
+    html += '</div>';
+
+    /* Release body (expandable) */
+    html += '<div class="req-body" style="border-top:1px solid #e9ecef">';
+
+    /* Progress bar */
+    html += '<div style="padding:12px 20px">';
+    html += '<div class="cov-bar" style="display:flex;height:10px;border-radius:5px;overflow:hidden;border:1px solid #e9ecef;background:#f4f7fa">';
+    ['pass','fail','drifted','uncovered','manual','deferred'].forEach(s => {
+      if (counts[s]) html += '<div style="width:' + (counts[s]/total*100) + '%;background:var(--' + s + ')" title="' + s + ': ' + counts[s] + '"></div>';
+    });
+    html += '</div>';
+    html += '<div style="display:flex;gap:12px;margin-top:6px;font-size:0.8rem;color:var(--text-muted)">';
+    ['pass','fail','uncovered','drifted','manual','deferred'].forEach(s => {
+      if (counts[s]) html += '<span>' + badgeFor(s) + ' ' + counts[s] + '</span>';
+    });
+    html += '</div></div>';
+
+    /* VC list */
+    html += '<div style="padding:0 20px 12px">';
+    vmDetails.forEach(vm => {
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:0.85rem;border-bottom:1px solid #f4f7fa">';
+      html += '<span style="font-family:monospace;font-weight:600;min-width:180px">' + esc(vm.vmId) + '</span>';
+      html += '<span style="min-width:100px;color:var(--text-muted)">' + esc(vm.method) + '</span>';
+      html += badgeFor(vm.status);
+      html += '<span style="flex:1;color:var(--text-muted);font-size:0.8rem">' + esc(vm.title) + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    html += '</div></div>';
+  });
+
+  container.innerHTML = html;
+}
+
+/* ================================================================
    INIT
    ================================================================ */
 renderTraceability();
@@ -1272,6 +1425,7 @@ renderSecurity();
 renderGates();
 renderTests();
 renderMetadata();
+renderReleases();
 
 /* Item 1: Summary sentence — keep it short */
 (function() {

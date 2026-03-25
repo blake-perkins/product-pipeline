@@ -406,6 +406,106 @@ def load_baseline(path: Path) -> tuple[dict[str, str], dict[str, str]]:
     return data.get("hashes", {}), data.get("criteria", {})
 
 
+def load_release_plan(
+    path: Path | None,
+    requirements: dict[str, Requirement],
+    current_version: str | None = None,
+) -> tuple[set[str], dict[str, str], list[dict[str, Any]]]:
+    """Load release plan and resolve in-scope VM IDs for the current version.
+
+    Returns
+    -------
+    tuple
+        ``(in_scope_vm_ids, vm_to_release, releases)`` where
+        ``in_scope_vm_ids`` is the cumulative set of VM IDs in scope for
+        the current version and all prior releases, ``vm_to_release`` maps
+        every VM ID to its first-planned release version, and ``releases``
+        is the raw release list for dashboard rendering.
+    """
+    if path is None or not path.is_file():
+        # No release plan — all VMs are in scope
+        all_vms: set[str] = set()
+        for req in requirements.values():
+            all_vms.update(req.all_vm_ids)
+        return all_vms, {}, []
+
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+
+    releases = data.get("releases", [])
+    if not releases:
+        all_vms = set()
+        for req in requirements.values():
+            all_vms.update(req.all_vm_ids)
+        return all_vms, {}, releases
+
+    # Build vm_to_release: first release a VM appears in
+    vm_to_release: dict[str, str] = {}
+    for rel in releases:
+        version = rel.get("version", "")
+        for scope_id in rel.get("scope", []):
+            # Check if it's a VM ID or a requirement ID
+            if _is_vm_id_pattern(scope_id):
+                vm_to_release.setdefault(scope_id, version)
+            else:
+                # Requirement ID — expand to all its VMs
+                req = requirements.get(scope_id)
+                if req:
+                    for vm in req.verification_methods:
+                        vm_to_release.setdefault(vm.vm_id, version)
+
+    # Compute cumulative in-scope VMs (current release + all prior)
+    in_scope: set[str] = set()
+    if current_version:
+        found_current = False
+        for rel in releases:
+            for scope_id in rel.get("scope", []):
+                if _is_vm_id_pattern(scope_id):
+                    in_scope.add(scope_id)
+                else:
+                    req = requirements.get(scope_id)
+                    if req:
+                        for vm in req.verification_methods:
+                            in_scope.add(vm.vm_id)
+            if rel.get("version") == current_version:
+                found_current = True
+                break
+        if not found_current:
+            LOG.warning(
+                "Release version '%s' not found in release plan. "
+                "All VMs treated as in-scope.",
+                current_version,
+            )
+            for req in requirements.values():
+                in_scope.update(req.all_vm_ids)
+    else:
+        # No version specified — all VMs in scope
+        for req in requirements.values():
+            in_scope.update(req.all_vm_ids)
+
+    LOG.info(
+        "Release plan loaded: %d releases, %d VMs in scope for %s",
+        len(releases),
+        len(in_scope),
+        current_version or "(all)",
+    )
+    return in_scope, vm_to_release, releases
+
+
+def _is_vm_id_pattern(s: str) -> bool:
+    """Check if string looks like a VM ID (has -VM- suffix)."""
+    return bool(re.match(r"^[A-Z]+-[A-Z]+-\d{3,}-VM-\d{2,}$", s))
+
+
+def load_current_version(version_file: Path | None, cli_override: str | None) -> str | None:
+    """Resolve the current release version from CLI override or VERSION file."""
+    if cli_override:
+        return cli_override
+    if version_file and version_file.is_file():
+        return version_file.read_text(encoding="utf-8").strip()
+    return None
+
+
 def save_baseline(
     path: Path, requirements: dict[str, Requirement]
 ) -> None:
@@ -500,24 +600,34 @@ def run_gate_a(
     non_test_output_dir: Path | None,
     template_path: Path | None,
     fail_on_uncovered: bool,
+    in_scope_vm_ids: set[str] | None = None,
+    vm_to_release: dict[str, str] | None = None,
 ) -> GateResult:
     """Gate A — Uncovered Verification Methods."""
+    vm_to_release = vm_to_release or {}
+
     uncovered_vms: list[tuple[Requirement, VerificationMethod]] = []
+    deferred_vms: list[tuple[Requirement, VerificationMethod]] = []
+
     for _rid, req in sorted(requirements.items()):
         for vm in req.verification_methods:
             if vm.vm_id not in covered_vm_ids:
-                uncovered_vms.append((req, vm))
+                if in_scope_vm_ids is not None and vm.vm_id not in in_scope_vm_ids:
+                    deferred_vms.append((req, vm))
+                else:
+                    uncovered_vms.append((req, vm))
 
-    if not uncovered_vms:
+    if not uncovered_vms and not deferred_vms:
         return GateResult(
             gate="A",
             passed=True,
             message="All verification methods are covered by at least one scenario.",
         )
 
+    # Generate stubs only for truly uncovered VMs (not deferred)
     stubs = generate_stubs(
         uncovered_vms, stubs_output_dir, non_test_output_dir, template_path
-    )
+    ) if uncovered_vms else []
 
     items = [
         {
@@ -526,16 +636,40 @@ def run_gate_a(
             "method": vm.method,
             "title": req.title,
             "stubGenerated": str(stub),
+            "deferred": False,
         }
         for (req, vm), stub in zip(uncovered_vms, stubs)
     ]
 
-    passed = not fail_on_uncovered
-    msg = (
-        f"{len(uncovered_vms)} uncovered verification method(s) found; "
-        f"{len(stubs)} stub(s) generated."
-    )
-    LOG.warning("Gate A: %s", msg)
+    # Add deferred items (not counted toward failure)
+    for req, vm in deferred_vms:
+        items.append({
+            "requirementId": req.requirement_id,
+            "verificationMethodId": vm.vm_id,
+            "method": vm.method,
+            "title": req.title,
+            "deferred": True,
+            "targetRelease": vm_to_release.get(vm.vm_id, ""),
+        })
+
+    # Only truly uncovered VMs (in-scope) count toward failure
+    passed = not fail_on_uncovered or len(uncovered_vms) == 0
+
+    parts = []
+    if uncovered_vms:
+        parts.append(f"{len(uncovered_vms)} uncovered (in-scope)")
+    if deferred_vms:
+        parts.append(f"{len(deferred_vms)} deferred to future releases")
+    if stubs:
+        parts.append(f"{len(stubs)} stub(s) generated")
+    if not uncovered_vms and deferred_vms:
+        parts.insert(0, "All in-scope verification methods covered")
+
+    msg = "; ".join(parts) + "."
+    if uncovered_vms:
+        LOG.warning("Gate A: %s", msg)
+    else:
+        LOG.info("Gate A: %s", msg)
 
     return GateResult(gate="A", passed=passed, items=items, message=msg)
 
@@ -830,6 +964,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Exit with code 1 if orphaned scenarios are found.",
     )
+    p.add_argument(
+        "--release-plan",
+        type=Path,
+        default=None,
+        help="Path to release-plan.json (maps requirements/VCs to release versions).",
+    )
+    p.add_argument(
+        "--release",
+        type=str,
+        default=None,
+        help="Override the current release version (default: read from VERSION file).",
+    )
 
     args = p.parse_args(argv)
 
@@ -872,6 +1018,24 @@ def main(argv: list[str] | None = None) -> int:
     # --- Load baseline --------------------------------------------------------
     baseline, baseline_criteria = load_baseline(args.baseline_path)
 
+    # --- Load release plan ----------------------------------------------------
+    release_plan_path = args.release_plan
+    if release_plan_path is None:
+        # Try default location in repo root
+        default_plan = Path(args.requirements).resolve().parent.parent.parent / "release-plan.json"
+        if default_plan.is_file():
+            release_plan_path = default_plan
+
+    version_file = Path(args.requirements).resolve().parent.parent.parent / "VERSION"
+    current_version = load_current_version(
+        version_file if version_file.is_file() else None,
+        args.release,
+    )
+
+    in_scope_vm_ids, vm_to_release, releases = load_release_plan(
+        release_plan_path, requirements, current_version
+    )
+
     # --- Resolve Jinja2 template path -----------------------------------------
     template_path = Path(__file__).resolve().parent / "templates" / "stub_scenario.feature.j2"
 
@@ -883,6 +1047,8 @@ def main(argv: list[str] | None = None) -> int:
         non_test_output_dir=args.non_test_output_dir,
         template_path=template_path,
         fail_on_uncovered=args.fail_on_uncovered,
+        in_scope_vm_ids=in_scope_vm_ids,
+        vm_to_release=vm_to_release,
     )
 
     gate_b = run_gate_b(

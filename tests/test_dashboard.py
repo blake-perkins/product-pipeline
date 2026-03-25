@@ -374,13 +374,15 @@ class TestHTMLDashboard:
             traceability_raw=trace_data,
             sbom_data=None,
             grype_data=None,
+            release_plan_data=None,
         )
         return out_html.read_text(encoding="utf-8")
 
     def test_html_contains_all_tabs(self, tmp_path):
-        """Dashboard should have all 5 tab panels."""
+        """Dashboard should have all 6 tab panels."""
         html = self._generate_html(tmp_path)
         assert 'id="panel-traceability"' in html
+        assert 'id="panel-releases"' in html
         assert 'id="panel-security"' in html
         assert 'id="panel-gates"' in html
         assert 'id="panel-tests"' in html
@@ -438,6 +440,7 @@ class TestHTMLDashboard:
             traceability_raw=_traceability_all_pass(),
             sbom_data=sbom,
             grype_data=None,
+            release_plan_data=None,
         )
         html = out_html.read_text(encoding="utf-8")
         assert "const SBOM = {" in html
@@ -580,13 +583,14 @@ class TestTraceabilityParsing:
         trace = _traceability_with_uncovered()
         all_vms = {"SYS-REQ-001-VM-01", "SYS-REQ-001-VM-02",
                     "SYS-REQ-002-VM-01", "SYS-REQ-004-VM-01"}
-        covered, uncovered, drifted, orphaned = report_generator._parse_traceability_data(
+        covered, uncovered, drifted, orphaned, deferred, deferred_releases = report_generator._parse_traceability_data(
             trace, all_vms
         )
         assert "SYS-REQ-001-VM-02" in uncovered
         assert "SYS-REQ-001-VM-02" not in covered
         assert len(drifted) == 0
         assert len(orphaned) == 0
+        assert len(deferred) == 0
 
     def test_flat_format(self):
         trace = {
@@ -595,7 +599,7 @@ class TestTraceabilityParsing:
             "drifted": [],
             "orphaned": [],
         }
-        covered, uncovered, drifted, orphaned = report_generator._parse_traceability_data(
+        covered, uncovered, drifted, orphaned, deferred, deferred_releases = report_generator._parse_traceability_data(
             trace, set()
         )
         assert "SYS-REQ-001-VM-01" in covered

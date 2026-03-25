@@ -203,7 +203,7 @@ def _parse_traceability_data(
         uncovered_ids: set[str] = set(trace_data.get("uncovered", []))
         drifted_ids: set[str] = set(trace_data.get("drifted", []))
         orphaned_tests: List[Dict[str, Any]] = trace_data.get("orphaned", [])
-        return covered_ids, uncovered_ids, drifted_ids, orphaned_tests
+        return covered_ids, uncovered_ids, drifted_ids, orphaned_tests, set(), {}
 
     # --- Gate-based format ---
     def _extract_id(item: Dict[str, Any]) -> str:
@@ -217,11 +217,17 @@ def _parse_traceability_data(
         return val if isinstance(val, dict) else {}
 
     uncovered_ids_gate: set[str] = set()
+    deferred_ids_gate: set[str] = set()
+    deferred_releases: Dict[str, str] = {}
     gate_a = _as_dict(trace_data.get("gate_a"))
     for item in gate_a.get("items", []):
         extracted = _extract_id(item)
         if extracted:
-            uncovered_ids_gate.add(extracted)
+            if item.get("deferred"):
+                deferred_ids_gate.add(extracted)
+                deferred_releases[extracted] = item.get("targetRelease", "")
+            else:
+                uncovered_ids_gate.add(extracted)
 
     drifted_ids_gate: set[str] = set()
     gate_b = _as_dict(trace_data.get("gate_b"))
@@ -239,8 +245,8 @@ def _parse_traceability_data(
             "orphaned_req_ids": item.get("orphanedReqIds", item.get("orphaned_req_ids", [])),
         })
 
-    covered_ids_gate = all_vm_ids - uncovered_ids_gate
-    return covered_ids_gate, uncovered_ids_gate, drifted_ids_gate, orphaned_tests_gate
+    covered_ids_gate = all_vm_ids - uncovered_ids_gate - deferred_ids_gate
+    return covered_ids_gate, uncovered_ids_gate, drifted_ids_gate, orphaned_tests_gate, deferred_ids_gate, deferred_releases
 
 
 def _extract_req_ids_from_tags(tags: list) -> set[str]:
@@ -335,7 +341,7 @@ def build_report(
     # gate-based format (gate_a, gate_b, gate_c) while a simpler format
     # with flat "covered"/"uncovered"/"drifted"/"orphaned" keys is also
     # supported for flexibility.
-    covered_ids, uncovered_ids, drifted_ids, orphaned_tests = _parse_traceability_data(
+    covered_ids, uncovered_ids, drifted_ids, orphaned_tests, deferred_ids, deferred_releases = _parse_traceability_data(
         trace_data, all_vm_ids
     )
 
@@ -347,6 +353,7 @@ def build_report(
     passed = 0
     failed = 0
     manual_count = 0
+    deferred_count = 0
     rows: List[Dict[str, Any]] = []
 
     for req_id, req in req_index.items():
@@ -374,7 +381,10 @@ def build_report(
             # Determine row status FIRST — this controls whether we
             # look up Behave results (uncovered/drifted VMs should NOT
             # inherit test results from sibling VMs via req-level fallback)
-            if lookup_id in drifted_ids:
+            if lookup_id in deferred_ids:
+                status = "deferred"
+                deferred_count += 1
+            elif lookup_id in drifted_ids:
                 status = "drifted"
             elif lookup_id in uncovered_ids:
                 status = "uncovered"
@@ -415,20 +425,25 @@ def build_report(
                 "test_result": behave_result_for_row["status"] if behave_result_for_row else None,
                 "feature_file": behave_result_for_row["feature_file"] if behave_result_for_row else None,
                 "scenario_name": behave_result_for_row["name"] if behave_result_for_row else None,
+                "target_release": deferred_releases.get(vm_id, "") if status == "deferred" else None,
             }
             rows.append(row)
 
     covered_count = len(covered_ids)
     uncovered_count = len(uncovered_ids)
     drifted_count = len(drifted_ids)
-    coverage_percent = (covered_count / total_vms * 100) if total_vms > 0 else 0.0
+    # Coverage % is calculated against in-scope VMs only (total minus deferred)
+    in_scope_vms = total_vms - deferred_count
+    coverage_percent = (covered_count / in_scope_vms * 100) if in_scope_vms > 0 else 0.0
 
     summary: Dict[str, Any] = {
         "total_requirements": total_requirements,
         "total_vms": total_vms,
+        "in_scope_vms": in_scope_vms,
         "covered_vms": covered_count,
         "uncovered_vms": uncovered_count,
         "drifted_vms": drifted_count,
+        "deferred_vms": deferred_count,
         "orphaned_tests": len(orphaned_tests),
         "passed": passed,
         "failed": failed,
@@ -508,6 +523,7 @@ def write_html_report(
     traceability_raw: Optional[Dict[str, Any]] = None,
     sbom_data: Optional[Dict[str, Any]] = None,
     grype_data: Optional[Dict[str, Any]] = None,
+    release_plan_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Render and write the HTML traceability report.
 
@@ -552,6 +568,7 @@ def write_html_report(
                 traceability_json=_safe_json(traceability_raw),
                 sbom_json=_safe_json(sbom_data),
                 grype_json=_safe_json(grype_data),
+                release_plan_json=_safe_json(release_plan_data),
             )
         except Exception as exc:
             logger.warning(
@@ -677,6 +694,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional path to Grype vulnerability scan results JSON.",
     )
     parser.add_argument(
+        "--release-plan",
+        type=Path,
+        default=None,
+        help="Optional path to release-plan.json for release progress tab.",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -723,6 +746,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     traceability_raw = _load_json(args.traceability_input)
     sbom_data = _load_optional_json(getattr(args, "sbom_path", None))
     grype_data = _load_optional_json(getattr(args, "grype_path", None))
+    release_plan_data = _load_optional_json(getattr(args, "release_plan", None))
 
     write_json_report(report, args.output_json)
     write_html_report(
@@ -734,6 +758,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         traceability_raw=traceability_raw,
         sbom_data=sbom_data,
         grype_data=grype_data,
+        release_plan_data=release_plan_data,
     )
 
     summary = report["summary"]

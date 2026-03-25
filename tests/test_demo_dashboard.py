@@ -77,7 +77,8 @@ class TestDemoDashboard:
     # ---- HERO HEADER ----
 
     def test_hero_coverage_percent(self):
-        assert self.summary["coverage_percent"] == 87.5
+        # Coverage is against in-scope VMs only (7 in-scope, all covered = 100%)
+        assert self.summary["coverage_percent"] == 100.0
 
     def test_hero_total_vms(self):
         assert self.summary["total_vms"] == 8
@@ -92,7 +93,11 @@ class TestDemoDashboard:
         assert self.summary["failed"] == 1
 
     def test_hero_uncovered(self):
-        assert self.summary["uncovered_vms"] == 1
+        # SYS-REQ-003-VM-02 is now deferred, not uncovered
+        assert self.summary["uncovered_vms"] == 0
+
+    def test_hero_deferred(self):
+        assert self.summary["deferred_vms"] == 1
 
     def test_hero_drifted(self):
         assert self.summary["drifted_vms"] == 1
@@ -104,9 +109,9 @@ class TestDemoDashboard:
         assert self.summary["orphaned_tests"] == 1
 
     def test_hero_math_adds_up(self):
-        """pass + fail + manual + uncovered + drifted must equal total VMs."""
+        """pass + fail + manual + uncovered + drifted + deferred must equal total VMs."""
         s = self.summary
-        total = s["passed"] + s["failed"] + s["manual"] + s["uncovered_vms"] + s["drifted_vms"]
+        total = s["passed"] + s["failed"] + s["manual"] + s["uncovered_vms"] + s["drifted_vms"] + s["deferred_vms"]
         assert total == s["total_vms"], f"{total} != {s['total_vms']}"
 
     def test_hero_pipeline_badge_shows_attention(self):
@@ -137,12 +142,12 @@ class TestDemoDashboard:
         assert r["status"] == "pass"
         assert r["method"] == "Demonstration"
 
-    def test_req003_vm02_uncovered(self):
+    def test_req003_vm02_deferred(self):
         r = self.rows["SYS-REQ-003-VM-02"]
-        assert r["status"] == "uncovered"
+        assert r["status"] == "deferred"
         assert r["test_result"] is None
         assert r["scenario_name"] is None
-        assert r["feature_file"] is None
+        assert r["target_release"] == "1.1.0"
 
     def test_req004_manual_analysis(self):
         r = self.rows["SYS-REQ-004-VM-01"]
@@ -170,8 +175,8 @@ class TestDemoDashboard:
 
     # ---- TAB 1: NO CROSS-CONTAMINATION ----
 
-    def test_uncovered_vm_not_inheriting_sibling_results(self):
-        """REQ-003 has 2 VMs. VM-01 passes. VM-02 must NOT inherit VM-01's result."""
+    def test_deferred_vm_not_inheriting_sibling_results(self):
+        """REQ-003 has 2 VMs. VM-01 passes. VM-02 (deferred) must NOT inherit VM-01's result."""
         vm02 = self.rows["SYS-REQ-003-VM-02"]
         assert vm02["test_result"] is None
         assert vm02["scenario_name"] is None
@@ -202,16 +207,17 @@ class TestDemoDashboard:
 
     # ---- TAB 3: QUALITY GATES ----
 
-    def test_gate_a_failed_with_uncovered(self):
+    def test_gate_a_passes_with_deferred(self):
+        """Gate A passes because the only uncovered VM is deferred."""
         ga = self.js_trace["gate_a"]
-        assert ga["passed"] is False
+        assert ga["passed"] is True
         assert len(ga["items"]) == 1
         assert ga["items"][0]["verificationMethodId"] == "SYS-REQ-003-VM-02"
 
-    def test_gate_a_has_stub_path(self):
+    def test_gate_a_item_is_deferred(self):
         item = self.js_trace["gate_a"]["items"][0]
-        assert "stubGenerated" in item
-        assert item["stubGenerated"] != ""
+        assert item["deferred"] is True
+        assert item["targetRelease"] == "1.1.0"
 
     def test_gate_b_failed_with_drift(self):
         gb = self.js_trace["gate_b"]
@@ -240,8 +246,8 @@ class TestDemoDashboard:
 
     # ---- TAB 3-TAB 1 CONSISTENCY ----
 
-    def test_gate_a_count_matches_uncovered_rows(self):
-        uncov = [r for r in self.report["requirements"] if r["status"] == "uncovered"]
+    def test_gate_a_count_matches_uncovered_plus_deferred(self):
+        uncov = [r for r in self.report["requirements"] if r["status"] in ("uncovered", "deferred")]
         assert len(self.js_trace["gate_a"]["items"]) == len(uncov)
 
     def test_gate_b_count_matches_drifted_rows(self):
@@ -311,8 +317,9 @@ class TestDemoDashboard:
 
     # ---- HTML STRUCTURE ----
 
-    def test_all_5_tabs_present(self):
+    def test_all_6_tabs_present(self):
         assert 'id="panel-traceability"' in self.html
+        assert 'id="panel-releases"' in self.html
         assert 'id="panel-security"' in self.html
         assert 'id="panel-gates"' in self.html
         assert 'id="panel-tests"' in self.html
