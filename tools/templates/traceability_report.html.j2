@@ -805,14 +805,14 @@ function navigateToVC(reqId, vcId, isOrphan, orphanKey) {
   /* Collapse all previously open cards so only the target is expanded */
   document.querySelectorAll('.req-body.open').forEach(b => b.classList.remove('open'));
   document.querySelectorAll('.req-header .arrow.open').forEach(a => a.classList.remove('open'));
-  /* Also clear any previous glow highlights */
-  document.querySelectorAll('.req-card, .vc-row').forEach(el => { el.style.boxShadow = ''; });
+  /* Also clear any previous highlights */
+  document.querySelectorAll('.req-card, .vc-row').forEach(el => { el.style.background = ''; });
 
   function flashHighlight(el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.style.transition = 'box-shadow 0.3s';
-    el.style.boxShadow = '0 0 0 3px #FFC107';
-    setTimeout(() => { el.style.boxShadow = ''; }, 2500);
+    el.style.transition = 'background 0.3s';
+    el.style.background = '#FFF3CD';
+    setTimeout(() => { el.style.background = ''; }, 2500);
   }
 
   /* For orphaned items, find the orphaned card directly */
