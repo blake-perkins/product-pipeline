@@ -158,6 +158,88 @@ def generate(output_dir: Path):
                 "satisfiedBy": [],
                 "tracesTo": [],
             },
+            {
+                # REQ-007: 2 VCs (Test) — both pass, scoped to 1.1.0
+                "requirementId": "SYS-REQ-007",
+                "title": "Configuration Management",
+                "description": "The system shall support runtime configuration updates without restart.",
+                "priority": "High",
+                "status": "Approved",
+                "parentRequirementId": None,
+                "verificationCriteria": [
+                    {
+                        "verificationCriteriaId": "SYS-REQ-007-VC-01",
+                        "method": "Test",
+                        "criteria": "Verify that configuration changes are applied within 5 seconds without service interruption.",
+                    },
+                    {
+                        "verificationCriteriaId": "SYS-REQ-007-VC-02",
+                        "method": "Test",
+                        "criteria": "Verify that invalid configuration values are rejected with a descriptive error message.",
+                    },
+                ],
+                "satisfiedBy": ["ComponentA"],
+                "tracesTo": [],
+            },
+            {
+                # REQ-008: 1 VC (Test) — pass, scoped to 2.0.0
+                "requirementId": "SYS-REQ-008",
+                "title": "Startup Self-Test",
+                "description": "The system shall perform a self-test on startup and report results.",
+                "priority": "High",
+                "status": "Approved",
+                "parentRequirementId": None,
+                "verificationCriteria": [
+                    {
+                        "verificationCriteriaId": "SYS-REQ-008-VC-01",
+                        "method": "Test",
+                        "criteria": "Verify that self-test completes within 10 seconds and all subsystem checks pass.",
+                    },
+                ],
+                "satisfiedBy": ["ComponentA", "ComponentB"],
+                "tracesTo": [],
+            },
+            {
+                # REQ-009: 2 VCs (Test + Demonstration) — both scoped to 2.0.0, Test passes, Demo uncovered
+                "requirementId": "SYS-REQ-009",
+                "title": "Data Logging and Replay",
+                "description": "The system shall log all ICD transactions for post-mission replay.",
+                "priority": "Medium",
+                "status": "Approved",
+                "parentRequirementId": None,
+                "verificationCriteria": [
+                    {
+                        "verificationCriteriaId": "SYS-REQ-009-VC-01",
+                        "method": "Test",
+                        "criteria": "Verify that all ICD transactions are logged with timestamps and can be parsed.",
+                    },
+                    {
+                        "verificationCriteriaId": "SYS-REQ-009-VC-02",
+                        "method": "Demonstration",
+                        "criteria": "Demonstrate replaying a 10-minute mission log through the simulator.",
+                    },
+                ],
+                "satisfiedBy": ["ComponentA"],
+                "tracesTo": ["SYS-REQ-001"],
+            },
+            {
+                # REQ-010: 1 VC (Test) — scoped to 2.0.0, pass
+                "requirementId": "SYS-REQ-010",
+                "title": "Firmware Update Verification",
+                "description": "The system shall verify firmware image integrity before applying updates.",
+                "priority": "Critical",
+                "status": "Approved",
+                "parentRequirementId": None,
+                "verificationCriteria": [
+                    {
+                        "verificationCriteriaId": "SYS-REQ-010-VC-01",
+                        "method": "Test",
+                        "criteria": "Verify that a corrupted firmware image is rejected and the system continues running the current version.",
+                    },
+                ],
+                "satisfiedBy": ["ComponentB"],
+                "tracesTo": [],
+            },
         ],
     }
 
@@ -293,7 +375,110 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 5: ORPHANED — references a deleted requirement
+        # Feature 5: Configuration Management — both VCs pass
+        {
+            "keyword": "Feature",
+            "name": "Configuration Management",
+            "tags": ["REQ:SYS-REQ-007"],
+            "location": "features/automated/sys_req_007_config_mgmt.feature:2",
+            "status": "passed",
+            "elements": [
+                {
+                    "keyword": "Scenario",
+                    "name": "Configuration changes applied without restart",
+                    "tags": ["VC:SYS-REQ-007-VC-01", "VER:Test"],
+                    "type": "scenario",
+                    "status": "passed",
+                    "steps": [
+                        step("Given ", "the system is running with default configuration"),
+                        step("When ", "the configuration file is updated"),
+                        step("Then ", "the new configuration should be applied within 5 seconds", duration=0.003),
+                        step("And ", "no service interruption should occur"),
+                    ],
+                },
+                {
+                    "keyword": "Scenario",
+                    "name": "Invalid configuration values are rejected",
+                    "tags": ["VC:SYS-REQ-007-VC-02", "VER:Test"],
+                    "type": "scenario",
+                    "status": "passed",
+                    "steps": [
+                        step("Given ", "the system is running with default configuration"),
+                        step("When ", "an invalid configuration value is submitted"),
+                        step("Then ", "the system should reject the change with a descriptive error"),
+                        step("And ", "the previous configuration should remain active"),
+                    ],
+                },
+            ],
+        },
+        # Feature 6: Startup Self-Test — passes
+        {
+            "keyword": "Feature",
+            "name": "Startup Self-Test",
+            "tags": ["REQ:SYS-REQ-008"],
+            "location": "features/automated/sys_req_008_self_test.feature:2",
+            "status": "passed",
+            "elements": [
+                {
+                    "keyword": "Scenario",
+                    "name": "Self-test completes within timeout",
+                    "tags": ["VC:SYS-REQ-008-VC-01", "VER:Test"],
+                    "type": "scenario",
+                    "status": "passed",
+                    "steps": [
+                        step("Given ", "the system has just started"),
+                        step("Then ", 'the logs should contain "Self-test PASSED" within 10 seconds', duration=0.005),
+                        step("And ", "all subsystem checks should report OK"),
+                    ],
+                },
+            ],
+        },
+        # Feature 7: Data Logging — VC-01 passes, VC-02 (Demonstration) not run
+        {
+            "keyword": "Feature",
+            "name": "Data Logging and Replay",
+            "tags": ["REQ:SYS-REQ-009"],
+            "location": "features/automated/sys_req_009_data_logging.feature:2",
+            "status": "passed",
+            "elements": [
+                {
+                    "keyword": "Scenario",
+                    "name": "All ICD transactions are logged with timestamps",
+                    "tags": ["VC:SYS-REQ-009-VC-01", "VER:Test"],
+                    "type": "scenario",
+                    "status": "passed",
+                    "steps": [
+                        step("Given ", "the simulation logs are loaded"),
+                        step("Then ", "every ICD transaction should have a timestamp"),
+                        step("And ", "the log format should be parseable JSON"),
+                    ],
+                },
+            ],
+        },
+        # Feature 8: Firmware Update — passes
+        {
+            "keyword": "Feature",
+            "name": "Firmware Update Verification",
+            "tags": ["REQ:SYS-REQ-010"],
+            "location": "features/automated/sys_req_010_firmware.feature:2",
+            "status": "passed",
+            "elements": [
+                {
+                    "keyword": "Scenario",
+                    "name": "Corrupted firmware image is rejected",
+                    "tags": ["VC:SYS-REQ-010-VC-01", "VER:Test"],
+                    "type": "scenario",
+                    "status": "passed",
+                    "steps": [
+                        step("Given ", "a corrupted firmware image is available"),
+                        step("When ", "the firmware update is initiated"),
+                        step("Then ", 'the system should log "Firmware integrity check FAILED"'),
+                        step("And ", "the current firmware version should remain active"),
+                    ],
+                },
+            ],
+        },
+        # Feature 9: ORPHANED — references a deleted requirement
         {
             "keyword": "Feature",
             "name": "Legacy Telemetry Validation",
@@ -321,10 +506,10 @@ def generate(output_dir: Path):
     # ------------------------------------------------------------------
     traceability_report = {
         "timestamp": "2026-03-24T10:05:00Z",
-        "requirements_total": 6,
-        "features_scanned": 5,
-        "vcs_total": 8,
-        "vcs_covered": 6,
+        "requirements_total": 10,
+        "features_scanned": 9,
+        "vcs_total": 14,
+        "vcs_covered": 11,
         "gate_a": {
             "gate": "A",
             "passed": False,
@@ -485,28 +670,31 @@ def generate(output_dir: Path):
             {
                 "version": "1.1.0",
                 "targetDate": "2026-09-01",
-                "description": "Degradation handling and ICD demonstration verification",
+                "description": "Degradation handling, configuration management, and ICD demonstration",
                 "scope": [
                     "SYS-REQ-001-VC-02",
                     "SYS-REQ-003",
+                    "SYS-REQ-007",
                 ],
             },
             {
                 "version": "2.0.0",
                 "targetDate": "2027-01-01",
-                "description": "Full compliance \u2014 thermal analysis and physical inspection",
+                "description": "Full compliance \u2014 thermal analysis, self-test, data logging, firmware, and inspection",
                 "scope": [
                     "SYS-REQ-004",
                     "SYS-REQ-006",
+                    "SYS-REQ-008",
+                    "SYS-REQ-009",
+                    "SYS-REQ-010",
                 ],
             },
         ],
     }
 
     # Update traceability to mark out-of-scope VCs as deferred
-    # For demo, current release is 1.0.0 so REQ-003-VC-02, REQ-004, REQ-006 are deferred
-    # REQ-001-VC-02 is in 1.0.0 scope (via SYS-REQ-001) so it stays uncovered
-    # But SYS-REQ-003-VC-02 is in 1.1.0 so it should be deferred
+    # Current release is 1.0.0. Out-of-scope VCs get deferred status.
+    # SYS-REQ-009-VC-02 (Demonstration) has no scenario even in its target release.
     traceability_report["gate_a"]["items"] = [
         {
             "requirementId": "SYS-REQ-003",
@@ -516,9 +704,57 @@ def generate(output_dir: Path):
             "deferred": True,
             "targetRelease": "1.1.0",
         },
+        {
+            "requirementId": "SYS-REQ-007",
+            "verificationCriteriaId": "SYS-REQ-007-VC-01",
+            "method": "Test",
+            "title": "Configuration Management",
+            "deferred": True,
+            "targetRelease": "1.1.0",
+        },
+        {
+            "requirementId": "SYS-REQ-007",
+            "verificationCriteriaId": "SYS-REQ-007-VC-02",
+            "method": "Test",
+            "title": "Configuration Management",
+            "deferred": True,
+            "targetRelease": "1.1.0",
+        },
+        {
+            "requirementId": "SYS-REQ-008",
+            "verificationCriteriaId": "SYS-REQ-008-VC-01",
+            "method": "Test",
+            "title": "Startup Self-Test",
+            "deferred": True,
+            "targetRelease": "2.0.0",
+        },
+        {
+            "requirementId": "SYS-REQ-009",
+            "verificationCriteriaId": "SYS-REQ-009-VC-01",
+            "method": "Test",
+            "title": "Data Logging and Replay",
+            "deferred": True,
+            "targetRelease": "2.0.0",
+        },
+        {
+            "requirementId": "SYS-REQ-009",
+            "verificationCriteriaId": "SYS-REQ-009-VC-02",
+            "method": "Demonstration",
+            "title": "Data Logging and Replay",
+            "deferred": True,
+            "targetRelease": "2.0.0",
+        },
+        {
+            "requirementId": "SYS-REQ-010",
+            "verificationCriteriaId": "SYS-REQ-010-VC-01",
+            "method": "Test",
+            "title": "Firmware Update Verification",
+            "deferred": True,
+            "targetRelease": "2.0.0",
+        },
     ]
     traceability_report["gate_a"]["passed"] = True
-    traceability_report["gate_a"]["message"] = "All in-scope verification criteria covered; 1 deferred to future releases."
+    traceability_report["gate_a"]["message"] = "All in-scope verification criteria covered; 7 deferred to future releases."
 
     # ------------------------------------------------------------------
     # Write files

@@ -85,7 +85,7 @@ class TestDemoDashboard:
         assert self.summary["coverage_percent"] == 100.0
 
     def test_hero_total_vcs(self):
-        assert self.summary["total_vcs"] == 8
+        assert self.summary["total_vcs"] == 14
 
     def test_hero_covered_vcs(self):
         assert self.summary["covered_vcs"] == 7
@@ -101,7 +101,7 @@ class TestDemoDashboard:
         assert self.summary["uncovered_vcs"] == 0
 
     def test_hero_deferred(self):
-        assert self.summary["deferred_vcs"] == 1
+        assert self.summary["deferred_vcs"] == 7
 
     def test_hero_drifted(self):
         assert self.summary["drifted_vcs"] == 1
@@ -212,16 +212,17 @@ class TestDemoDashboard:
     # ---- TAB 3: QUALITY GATES ----
 
     def test_gate_a_passes_with_deferred(self):
-        """Gate A passes because the only uncovered VC is deferred."""
+        """Gate A passes because all uncovered VCs are deferred."""
         ga = self.js_trace["gate_a"]
         assert ga["passed"] is True
-        assert len(ga["items"]) == 1
-        assert ga["items"][0]["verificationCriteriaId"] == "SYS-REQ-003-VC-02"
+        assert len(ga["items"]) == 7
+        # All items should be deferred
+        assert all(item.get("deferred") is True for item in ga["items"])
 
     def test_gate_a_item_is_deferred(self):
         item = self.js_trace["gate_a"]["items"][0]
         assert item["deferred"] is True
-        assert item["targetRelease"] == "1.1.0"
+        assert item["targetRelease"] in ("1.1.0", "2.0.0")
 
     def test_gate_b_failed_with_drift(self):
         gb = self.js_trace["gate_b"]
@@ -264,7 +265,7 @@ class TestDemoDashboard:
     # ---- TAB 4: TEST EXECUTION ----
 
     def test_behave_has_5_features(self):
-        assert len(self.js_behave) == 5
+        assert len(self.js_behave) == 9
 
     def test_automated_features_are_4(self):
         """Manual/stub features should be filtered out in Tab 4."""
@@ -275,7 +276,7 @@ class TestDemoDashboard:
                     for t in f.get("tags", [])]
             if not manual_tags.intersection(tags):
                 automated.append(f)
-        assert len(automated) == 5  # All 5 features are automated in demo
+        assert len(automated) == 9  # All 5 features are automated in demo
 
     def test_fail_scenario_has_error_message(self):
         feat = [f for f in self.js_behave if f["name"] == "Basic ICD Communications"][0]
