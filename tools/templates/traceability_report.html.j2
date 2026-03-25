@@ -665,7 +665,8 @@ function computeFilteredSummary() {
     else if (r.status === 'deferred') { s.deferred_vcs++; s.in_scope_vcs--; }
   });
   s.total_requirements = reqIds.size;
-  s.orphaned_tests = REPORT.orphaned_tests ? REPORT.orphaned_tests.length : 0;
+  var isCompReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
+  s.orphaned_tests = isCompReleased ? 0 : (REPORT.orphaned_tests ? REPORT.orphaned_tests.length : 0);
   s.coverage_percent = s.in_scope_vcs > 0 ? Math.round(s.passed / s.in_scope_vcs * 100) : 0;
   return s;
 }
@@ -965,8 +966,9 @@ function renderTraceability() {
     html += '</div>'; /* req-card */
   });
 
-  /* Orphaned tests */
-  if (REPORT.orphaned_tests && REPORT.orphaned_tests.length) {
+  /* Orphaned tests — suppress for released versions */
+  var showOrphans = !(selectedRelease !== 'all' && isReleasedVersion(selectedRelease));
+  if (showOrphans && REPORT.orphaned_tests && REPORT.orphaned_tests.length) {
     html += '<h3 style="margin:20px 0 8px;color:var(--orphaned)">Orphaned Tests</h3>';
     html += '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px">These scenarios reference requirements or verification criteria that no longer exist in the model. They should be removed or reassigned.</p>';
     REPORT.orphaned_tests.forEach(o => {
@@ -1426,9 +1428,10 @@ function renderGates() {
     const data = TRACEABILITY[g.key] || {};
     const allItems = data.items || [];
     /* Filter gate items by release scope */
+    var isGateReleased = selectedRelease !== 'all' && isReleasedVersion(selectedRelease);
     const items = vcFilter ? allItems.filter(item => {
       const id = item.verificationCriteriaId || item.vc_id || '';
-      if (g.key === 'gate_c') return true; /* orphans always shown */
+      if (g.key === 'gate_c') return !isGateReleased; /* suppress orphans for released versions */
       return !id || vcFilter.has(id);
     }) : allItems;
     const passed = vcFilter ? items.length === 0 : data.passed !== false;
@@ -1461,11 +1464,13 @@ function renderGates() {
   });
   html += '</div>';
 
-  /* Overall */
+  /* Overall — use filtered stats when a release is selected */
+  var allGatesPass = gates.every(function(g) { var d = TRACEABILITY[g.key] || {}; var ai = d.items || []; return (vcFilter ? ai.filter(function(item) { var id = item.verificationCriteriaId || item.vc_id || ''; if (g.key === 'gate_c') return !isGateReleased; return !id || vcFilter.has(id); }).length === 0 : d.passed !== false); });
+  var fs = computeFilteredSummary();
   html += '<div style="margin-top:20px;text-align:center">';
-  html += '<strong>Overall Pipeline: </strong>' + badgeFor(TRACEABILITY.overall_pass ? 'pass' : 'fail');
+  html += '<strong>Overall Pipeline: </strong>' + badgeFor(allGatesPass ? 'pass' : 'fail');
   html += '<span style="margin-left:8px;font-size:0.85rem;color:var(--text-muted)">';
-  html += TRACEABILITY.requirements_total + ' requirements, ' + TRACEABILITY.vcs_total + ' VCs, ' + TRACEABILITY.features_scanned + ' features scanned';
+  html += (fs.total_requirements || TRACEABILITY.requirements_total) + ' requirements, ' + (fs.total_vcs || TRACEABILITY.vcs_total) + ' VCs';
   html += '</span></div>';
 
   container.innerHTML = html;
@@ -1703,7 +1708,8 @@ function renderExecutiveSummary() {
       });
     }
     const vcStatus = {};
-    rows.forEach(r => { if (r.vc_id) vcStatus[r.vc_id] = r.status; });
+    /* Use ALL rows for status lookup so released versions still show correct stats */
+    allRows.forEach(r => { if (r.vc_id) vcStatus[r.vc_id] = r.status; });
 
     RELEASE_PLAN.releases.forEach(rel => {
       const scopeVCs = [];
