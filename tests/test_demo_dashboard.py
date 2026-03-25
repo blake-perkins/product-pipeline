@@ -429,6 +429,216 @@ class TestDemoDashboard:
         assert "Top Issues" in self.html
 
 
+    # ---- GLOBAL RELEASE FILTER ----
+
+    def test_release_filter_dropdown_present(self):
+        """Global release filter dropdown exists in the hero."""
+        assert 'id="release-filter"' in self.html
+
+    def test_release_filter_has_all_option(self):
+        assert "All Releases" in self.html
+
+    def test_release_filter_onchange_wired(self):
+        assert "onReleaseFilterChange()" in self.html
+
+    def test_render_hero_function_exists(self):
+        assert "function renderHero()" in self.html
+
+    def test_hero_dynamic_container_exists(self):
+        assert 'id="hero-dynamic"' in self.html
+
+    def test_pipeline_badge_dynamic(self):
+        """Pipeline badge is now JS-rendered."""
+        assert 'id="hero-pipeline-badge"' in self.html
+
+    def test_compute_filtered_summary_function_exists(self):
+        assert "function computeFilteredSummary()" in self.html
+
+    def test_get_filtered_vc_ids_function_exists(self):
+        assert "function getFilteredVCIds()" in self.html
+
+    def test_selected_release_var_exists(self):
+        assert "var selectedRelease" in self.html
+
+    def test_expand_scope_global_function_exists(self):
+        assert "function expandScopeGlobal(" in self.html
+
+    def test_on_release_filter_change_calls_render_hero(self):
+        assert "renderHero()" in self.html
+
+    def test_on_release_filter_change_calls_render_security(self):
+        """Cyber tab re-renders on release change."""
+        # Check the onReleaseFilterChange function calls renderSecurity
+        idx = self.html.index("function onReleaseFilterChange()")
+        snippet = self.html[idx:idx+400]
+        assert "renderSecurity()" in snippet
+
+    def test_traceability_uses_vc_filter(self):
+        """Traceability renderer respects the release filter."""
+        assert "getFilteredVCIds()" in self.html
+
+    def test_gates_filter_items_by_release(self):
+        """Gate items are filtered by release scope."""
+        idx = self.html.index("function renderGates()")
+        snippet = self.html[idx:idx+1000]
+        assert "vcFilter" in snippet
+
+    def test_tests_filter_by_release(self):
+        """Test execution tab filters features by release scope."""
+        idx = self.html.index("function renderTests()")
+        snippet = self.html[idx:idx+800]
+        assert "vcFilter" in snippet
+
+    def test_cyber_released_version_clean(self):
+        """Released versions show clean cyber scan."""
+        assert "isFilteredToReleased" in self.html
+
+    def test_cache_control_headers(self):
+        """Browser cache busting meta tags present."""
+        assert 'Cache-Control' in self.html
+        assert 'no-cache' in self.html
+
+    # ---- RELEASE FILTER DATA INTEGRITY ----
+
+    def test_release_plan_has_current_version(self):
+        assert self.js_release_plan["currentVersion"] == "1.1.0"
+
+    def test_release_100_vcs_all_pass(self):
+        """All VCs in release 1.0.0 should be pass status (shipped clean)."""
+        scope = self.js_release_plan["releases"][0]["scope"]
+        reqs = {r["requirementId"]: r for r in self.js_reqs["requirements"]}
+        vc_ids = []
+        for sid in scope:
+            if "-VC-" in sid:
+                vc_ids.append(sid)
+            elif sid in reqs:
+                for vc in reqs[sid].get("verificationCriteria", reqs[sid].get("verificationMethods", [])):
+                    vc_ids.append(vc.get("verificationCriteriaId") or vc.get("verificationMethodId"))
+        for vc_id in vc_ids:
+            row = self.rows.get(vc_id)
+            assert row is not None, f"VC {vc_id} missing from report"
+            assert row["status"] == "pass", f"VC {vc_id} should be pass for shipped 1.0.0, got {row['status']}"
+
+    def test_release_110_has_issues(self):
+        """Release 1.1.0 (current) should have at least one non-pass VC."""
+        scope = self.js_release_plan["releases"][1]["scope"]
+        reqs = {r["requirementId"]: r for r in self.js_reqs["requirements"]}
+        vc_ids = []
+        for sid in scope:
+            if "-VC-" in sid:
+                vc_ids.append(sid)
+            elif sid in reqs:
+                for vc in reqs[sid].get("verificationCriteria", reqs[sid].get("verificationMethods", [])):
+                    vc_ids.append(vc.get("verificationCriteriaId") or vc.get("verificationMethodId"))
+        statuses = [self.rows[vid]["status"] for vid in vc_ids if vid in self.rows]
+        non_pass = [s for s in statuses if s != "pass"]
+        assert len(non_pass) > 0, "Release 1.1.0 should have issues"
+
+    def test_vc_arrow_hidden_when_no_scenarios(self):
+        """VCs with no scenarios (uncovered, drifted) should not have clickable arrows."""
+        assert "var hasExpandable = scenarios.length > 0" in self.html
+        # Check that non-expandable VCs get a spacer instead
+        assert 'display:inline-block;width:1rem' in self.html
+
+    def test_no_scrollintoview_on_tab_switch(self):
+        """Tab switch should not auto-scroll."""
+        # Find the switchTab function
+        idx = self.html.index("function switchTab(")
+        snippet = self.html[idx:idx+300]
+        assert "scrollIntoView" not in snippet
+
+    def test_release_progress_vcs_clickable(self):
+        """VCs in Release Progress tab should be clickable."""
+        assert "navigateToVC" in self.html
+
+
+class TestDemoWithSBOM(TestDemoDashboard):
+    """Re-run demo dashboard tests with SBOM/Grype data loaded."""
+
+    @classmethod
+    def setup_class(cls):
+        """Generate demo data with SBOM and Grype, then render."""
+        cls.tmpdir = Path("build/test_demo_sbom")
+        generate_demo_data.generate(cls.tmpdir)
+
+        sbom_path = cls.tmpdir / "sbom.json"
+        grype_path = cls.tmpdir / "grype-results.json"
+
+        cls.report = report_generator.build_report(
+            cls.tmpdir / "requirements.json",
+            cls.tmpdir / "behave-results.json",
+            cls.tmpdir / "traceability_report.json",
+        )
+
+        cls.req_raw = json.loads((cls.tmpdir / "requirements.json").read_text(encoding="utf-8"))
+        cls.behave_raw = json.loads((cls.tmpdir / "behave-results.json").read_text(encoding="utf-8"))
+        cls.trace_raw = json.loads((cls.tmpdir / "traceability_report.json").read_text(encoding="utf-8"))
+        release_plan_path = cls.tmpdir / "release-plan.json"
+        cls.release_plan_raw = json.loads(release_plan_path.read_text(encoding="utf-8")) if release_plan_path.is_file() else None
+
+        sbom_data = json.loads(sbom_path.read_text(encoding="utf-8")) if sbom_path.is_file() else None
+        grype_data = json.loads(grype_path.read_text(encoding="utf-8")) if grype_path.is_file() else None
+
+        html_path = cls.tmpdir / "dashboard.html"
+        report_generator.write_json_report(cls.report, cls.tmpdir / "report.json")
+        report_generator.write_html_report(
+            cls.report, html_path,
+            requirements_raw=cls.req_raw,
+            behave_raw=cls.behave_raw,
+            traceability_raw=cls.trace_raw,
+            release_plan_data=cls.release_plan_raw,
+            sbom_data=sbom_data,
+            grype_data=grype_data,
+        )
+        cls.html = html_path.read_text(encoding="utf-8")
+
+        cls.js_report = _extract_js_json(cls.html, "REPORT")
+        cls.js_reqs = _extract_js_json(cls.html, "REQUIREMENTS")
+        cls.js_behave = _extract_js_json(cls.html, "BEHAVE")
+        cls.js_trace = _extract_js_json(cls.html, "TRACEABILITY")
+        cls.js_sbom = _extract_js_json(cls.html, "SBOM")
+        cls.js_grype = _extract_js_json(cls.html, "GRYPE")
+        cls.js_release_plan = _extract_js_json(cls.html, "RELEASE_PLAN")
+
+        cls.rows = {r["vc_id"]: r for r in cls.report["requirements"]}
+        cls.summary = cls.report["summary"]
+
+    def test_sbom_not_null(self):
+        assert self.js_sbom is not None
+
+    def test_grype_not_null(self):
+        assert self.js_grype is not None
+
+    def test_sbom_has_components(self):
+        assert len(self.js_sbom["components"]) > 0
+
+    def test_grype_has_matches(self):
+        assert len(self.js_grype["matches"]) > 0
+
+    def test_grype_has_critical(self):
+        severities = [m["vulnerability"]["severity"] for m in self.js_grype["matches"]]
+        assert "Critical" in severities
+
+    def test_cyber_policy_fail_in_html(self):
+        """POLICY: FAIL banner should appear when critical CVEs exist."""
+        assert "POLICY: FAIL" in self.html
+
+    def test_cyber_released_clean_logic_in_html(self):
+        """HTML should contain logic to hide vulns for released versions."""
+        assert "isFilteredToReleased" in self.html
+
+    # Override tests that assume no SBOM/Grype
+    def test_sbom_null(self):
+        assert self.js_sbom is not None  # opposite of parent
+
+    def test_grype_null(self):
+        assert self.js_grype is not None  # opposite of parent
+
+    def test_security_empty_state_in_html(self):
+        # With SBOM/Grype data loaded, we should NOT see the empty state
+        assert "Vulnerability Summary" in self.html
+
+
 if __name__ == "__main__":
     import pytest
     sys.exit(pytest.main([__file__, "-v", "--tb=short"]))
