@@ -540,6 +540,34 @@ if (TRACEABILITY && TRACEABILITY.gate_b && TRACEABILITY.gate_b.items) {
   });
 }
 
+/* Semver compare: returns -1 if a<b, 0 if a==b, 1 if a>b */
+function semverCmp(a, b) {
+  if (!a || !b) return 0;
+  const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i]||0) < (pb[i]||0)) return -1;
+    if ((pa[i]||0) > (pb[i]||0)) return 1;
+  }
+  return 0;
+}
+
+/* Get current product version from the release plan */
+function getCurrentVersion() {
+  if (RELEASE_PLAN && RELEASE_PLAN.currentVersion) return RELEASE_PLAN.currentVersion;
+  return null;
+}
+const CURRENT_VERSION = getCurrentVersion();
+
+function isReleasedVersion(version) {
+  if (!CURRENT_VERSION || !version) return false;
+  return semverCmp(version, CURRENT_VERSION) < 0;
+}
+
+function isCurrentVersion(version) {
+  if (!CURRENT_VERSION || !version) return false;
+  return semverCmp(version, CURRENT_VERSION) === 0;
+}
+
 function fmtDate(iso) {
   if (!iso) return '\u2014';
   try {
@@ -1465,16 +1493,27 @@ function renderExecutiveSummary() {
       const complete = scopeVCs.filter(id => { const st = vcStatus[id]; return st === 'pass'; }).length;
       const manualCount = scopeVCs.filter(id => { const st = vcStatus[id]; return st === 'manual'; }).length;
       const pct = total ? Math.round(complete / total * 100) : 0;
-      html += '<div style="margin-bottom:12px">';
+      const released = isReleasedVersion(rel.version);
+      const isCurrent = isCurrentVersion(rel.version);
+      html += '<div style="margin-bottom:12px' + (released ? ';opacity:0.6' : '') + '">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
-      html += '<span style="font-weight:600;font-size:0.9rem">Release ' + esc(rel.version) + '</span>';
-      html += '<span style="font-size:0.85rem;color:' + (pct === 100 && manualCount === 0 ? 'var(--pass)' : 'var(--text-muted)') + ';font-weight:600">' + pct + '% (' + complete + '/' + total + ')' + (manualCount > 0 ? ' <span style="color:var(--manual);font-weight:400">+ ' + manualCount + ' manual</span>' : '') + '</span>';
+      html += '<span style="font-weight:600;font-size:0.9rem">Release ' + esc(rel.version);
+      if (released) html += ' <span class="badge" style="background:var(--pass);color:#fff;font-size:0.65rem;vertical-align:middle">RELEASED</span>';
+      else if (isCurrent) html += ' <span class="badge" style="background:var(--blue-ng);color:#fff;font-size:0.65rem;vertical-align:middle">CURRENT</span>';
+      html += '</span>';
+      if (released) {
+        html += '<span style="font-size:0.85rem;color:var(--pass);font-weight:600">Shipped</span>';
+      } else {
+        html += '<span style="font-size:0.85rem;color:' + (pct === 100 && manualCount === 0 ? 'var(--pass)' : 'var(--text-muted)') + ';font-weight:600">' + pct + '% (' + complete + '/' + total + ')' + (manualCount > 0 ? ' <span style="color:var(--manual);font-weight:400">+ ' + manualCount + ' manual</span>' : '') + '</span>';
+      }
       html += '</div>';
-      html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e9ecef">';
-      if (complete > 0) html += '<div style="width:' + (complete/total*100) + '%;background:var(--pass)"></div>';
-      if (manualCount > 0) html += '<div style="width:' + (manualCount/total*100) + '%;background:var(--manual)" title="Manual: ' + manualCount + '"></div>';
-      html += '</div>';
-      if (rel.targetDate) html += '<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px">Target: ' + fmtDate(rel.targetDate + 'T00:00:00Z') + '</div>';
+      if (!released) {
+        html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e9ecef">';
+        if (complete > 0) html += '<div style="width:' + (complete/total*100) + '%;background:var(--pass)"></div>';
+        if (manualCount > 0) html += '<div style="width:' + (manualCount/total*100) + '%;background:var(--manual)" title="Manual: ' + manualCount + '"></div>';
+        html += '</div>';
+      }
+      if (rel.targetDate && !released) html += '<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px">Target: ' + fmtDate(rel.targetDate + 'T00:00:00Z') + '</div>';
       html += '</div>';
     });
   } else {
@@ -1623,19 +1662,29 @@ function renderReleases() {
     /* Target date formatting */
     const targetDate = rel.targetDate ? fmtDate(rel.targetDate + 'T00:00:00Z') : '';
 
-    html += '<div style="border:1px solid #e9ecef;border-radius:10px;margin-bottom:16px;overflow:hidden;border-left:4px solid ' + (pct === 100 ? 'var(--pass)' : pct > 0 ? 'var(--blue-ng)' : 'var(--border)') + '">';
+    const relReleased = isReleasedVersion(rel.version);
+    const relCurrent = isCurrentVersion(rel.version);
+    const borderColor = relReleased ? 'var(--pass)' : pct === 100 ? 'var(--pass)' : pct > 0 ? 'var(--blue-ng)' : 'var(--border)';
+    html += '<div style="border:1px solid #e9ecef;border-radius:10px;margin-bottom:16px;overflow:hidden;border-left:4px solid ' + borderColor + '">';
 
     /* Release header */
-    html += '<div style="padding:16px 20px;display:flex;align-items:center;gap:16px;cursor:pointer" onclick="this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.arrow\').classList.toggle(\'open\')">';
-    html += '<span class="arrow" style="font-size:0.7rem;color:var(--text-muted);transition:transform 0.2s">&#9654;</span>';
+    html += '<div style="padding:16px 20px;display:flex;align-items:center;gap:16px;cursor:pointer' + (relReleased ? ';opacity:0.7' : '') + '" onclick="this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.arrow\').classList.toggle(\'open\')">';
+    html += '<span class="arrow" style="font-size:0.9rem;color:var(--text-muted);transition:transform 0.2s">&#9654;</span>';
     html += '<div style="flex:1">';
-    html += '<div style="font-weight:700;font-size:1.1rem;color:var(--navy-1)">Release ' + esc(rel.version) + '</div>';
+    html += '<div style="font-weight:700;font-size:1.1rem;color:var(--navy-1)">Release ' + esc(rel.version);
+    if (relReleased) html += ' <span class="badge" style="background:var(--pass);color:#fff;font-size:0.65rem;vertical-align:middle">RELEASED</span>';
+    else if (relCurrent) html += ' <span class="badge" style="background:var(--blue-ng);color:#fff;font-size:0.65rem;vertical-align:middle">CURRENT</span>';
+    html += '</div>';
     html += '<div style="font-size:0.85rem;color:var(--text-muted)">' + esc(rel.description || '') + '</div>';
-    if (targetDate) html += '<div style="font-size:0.8rem;color:var(--text-muted)">Target: ' + targetDate + '</div>';
+    if (targetDate && !relReleased) html += '<div style="font-size:0.8rem;color:var(--text-muted)">Target: ' + targetDate + '</div>';
     html += '</div>';
     html += '<div style="text-align:right;min-width:120px">';
-    html += '<div style="font-size:1.4rem;font-weight:700;color:' + (pct === 100 ? 'var(--pass)' : 'var(--text)') + '">' + pct + '%</div>';
-    html += '<div style="font-size:0.75rem;color:var(--text-muted)">' + complete + ' of ' + total + ' VCs</div>';
+    if (relReleased) {
+      html += '<div style="font-size:1.1rem;font-weight:700;color:var(--pass)">&#10003; Shipped</div>';
+    } else {
+      html += '<div style="font-size:1.4rem;font-weight:700;color:' + (pct === 100 ? 'var(--pass)' : 'var(--text)') + '">' + pct + '%</div>';
+      html += '<div style="font-size:0.75rem;color:var(--text-muted)">' + complete + ' of ' + total + ' VCs</div>';
+    }
     html += '</div>';
     html += '</div>';
 

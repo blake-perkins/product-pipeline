@@ -656,6 +656,7 @@ def generate(output_dir: Path):
     # 6. Release plan
     # ------------------------------------------------------------------
     release_plan = {
+        "currentVersion": "1.1.0",
         "releases": [
             {
                 "version": "1.0.0",
