@@ -601,6 +601,14 @@ function getFilteredVCIds() {
   return cumulative;
 }
 
+/* Returns only the VCs directly scoped to the selected release (non-cumulative), or null for 'all' */
+function getReleaseDirectVCIds() {
+  if (selectedRelease === 'all' || !RELEASE_PLAN || !RELEASE_PLAN.releases) return null;
+  const rel = RELEASE_PLAN.releases.find(function(r) { return r.version === selectedRelease; });
+  if (!rel) return null;
+  return new Set(expandScopeGlobal(rel.scope));
+}
+
 /* Returns filtered requirement IDs for the selected release, or null for 'all' */
 function getFilteredReqIds() {
   const vcSet = getFilteredVCIds();
@@ -714,12 +722,16 @@ function renderHero() {
   }
   html += '<div style="font-size:1.1rem;font-weight:700;color:var(--navy-1);margin-bottom:4px">' + esc(relName) + '</div>';
   html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px">' + relDetail + '</div>';
+  /* Show release-specific VC count (not cumulative) when a release is selected */
+  var directVCs = getReleaseDirectVCIds();
+  var heroVCCount = directVCs ? directVCs.size : (s.in_scope_vcs || s.total_vcs);
+  var heroTotalLabel = directVCs ? heroVCCount + ' VCs in this release' : (s.in_scope_vcs || s.total_vcs) + ' of ' + s.total_vcs + ' VCs in scope';
   html += '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">';
-  html += '<span style="font-size:1.8rem;font-weight:700;color:var(--navy-1)">' + (s.in_scope_vcs || s.total_vcs) + '</span>';
-  html += '<span style="font-size:0.85rem;color:var(--text-muted)">of ' + s.total_vcs + ' VCs in scope</span>';
+  html += '<span style="font-size:1.8rem;font-weight:700;color:var(--navy-1)">' + heroVCCount + '</span>';
+  html += '<span style="font-size:0.85rem;color:var(--text-muted)">' + heroTotalLabel + '</span>';
   html += '</div>';
   html += '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.5">';
-  if (s.deferred_vcs > 0) html += '<div style="color:var(--deferred)">&#9201; ' + s.deferred_vcs + ' deferred to future releases</div>';
+  if (!directVCs && s.deferred_vcs > 0) html += '<div style="color:var(--deferred)">&#9201; ' + s.deferred_vcs + ' deferred to future releases</div>';
   if (s.manual > 0) html += '<div>&#9995; ' + s.manual + ' require manual review</div>';
   html += '</div></div>';
 
