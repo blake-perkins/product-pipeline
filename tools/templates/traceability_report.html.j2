@@ -1701,25 +1701,44 @@ function renderExecutiveSummary() {
 
   let html = '';
 
-  /* Section 1: Readiness Ring */
-  const circumference = 2 * Math.PI * 46;
-  const dashOffset = circumference * (1 - readinessPct / 100);
-  html += '<div class="readiness">';
-  html += '<div class="readiness-ring">';
-  html += '<svg width="120" height="120" viewBox="0 0 120 120">';
-  html += '<circle cx="60" cy="60" r="46" fill="none" stroke="#e9ecef" stroke-width="10"/>';
-  html += '<circle cx="60" cy="60" r="46" fill="none" stroke="' + ringColor + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference.toFixed(1) + '" stroke-dashoffset="' + dashOffset.toFixed(1) + '"/>';
-  html += '</svg>';
-  html += '<span class="pct" style="color:' + ringColor + '">' + readinessPct + '%</span>';
-  html += '</div>';
-  html += '<div class="readiness-info">';
-  html += '<h2>Release Readiness</h2>';
-  html += '<p>' + readinessLabel + '</p>';
-  if (remaining.length > 0) {
-    html += '<div class="readiness-items">' + remaining.join('<br>') + '</div>';
+  /* Section 1: Readiness Ring — or Shipped confirmation for released versions */
+  if (S.isReleased) {
+    var relObj = RELEASE_PLAN && RELEASE_PLAN.releases ? RELEASE_PLAN.releases.find(function(r) { return r.version === S.release; }) : null;
+    html += '<div class="readiness">';
+    html += '<div class="readiness-ring">';
+    html += '<svg width="120" height="120" viewBox="0 0 120 120">';
+    html += '<circle cx="60" cy="60" r="46" fill="none" stroke="var(--pass)" stroke-width="10"/>';
+    html += '<path d="M45 60 L55 70 L78 47" fill="none" stroke="var(--pass)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
+    html += '</svg>';
+    html += '</div>';
+    html += '<div class="readiness-info">';
+    html += '<h2 style="color:var(--pass)">Released</h2>';
+    html += '<p>Release ' + esc(S.release) + ' shipped successfully</p>';
+    html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">' + s.passed + ' verification criteria passed';
+    if (relObj && relObj.targetDate) html += '<br>Target date: ' + fmtDate(relObj.targetDate + 'T00:00:00Z');
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+  } else {
+    const circumference = 2 * Math.PI * 46;
+    const dashOffset = circumference * (1 - readinessPct / 100);
+    html += '<div class="readiness">';
+    html += '<div class="readiness-ring">';
+    html += '<svg width="120" height="120" viewBox="0 0 120 120">';
+    html += '<circle cx="60" cy="60" r="46" fill="none" stroke="#e9ecef" stroke-width="10"/>';
+    html += '<circle cx="60" cy="60" r="46" fill="none" stroke="' + ringColor + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference.toFixed(1) + '" stroke-dashoffset="' + dashOffset.toFixed(1) + '"/>';
+    html += '</svg>';
+    html += '<span class="pct" style="color:' + ringColor + '">' + readinessPct + '%</span>';
+    html += '</div>';
+    html += '<div class="readiness-info">';
+    html += '<h2>Release Readiness</h2>';
+    html += '<p>' + readinessLabel + '</p>';
+    if (remaining.length > 0) {
+      html += '<div class="readiness-items">' + remaining.join('<br>') + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
   }
-  html += '</div>';
-  html += '</div>';
 
   html += '<div class="exec-grid">';
 
