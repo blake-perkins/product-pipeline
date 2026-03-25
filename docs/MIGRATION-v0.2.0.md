@@ -1,0 +1,235 @@
+# Migration Guide: v0.1.x to v0.2.0
+
+This guide covers all breaking changes introduced in the v0.2.0 release and the steps needed to migrate an existing deployment.
+
+## What Changed
+
+### 1. Data Model: 1-to-Many Verification Methods (Breaking)
+
+**Before (v0.1.x):** Each requirement had a single `verificationMethod` and `verificationCriteria` field.
+
+```json
+{
+  "requirementId": "SYS-REQ-001",
+  "verificationMethod": "Test",
+  "verificationCriteria": "Verify that..."
+}
+```
+
+**After (v0.2.0):** Each requirement has a `verificationMethods` array. Each entry has a unique scoped ID.
+
+```json
+{
+  "requirementId": "SYS-REQ-001",
+  "verificationMethods": [
+    {
+      "verificationMethodId": "SYS-REQ-001-VM-01",
+      "method": "Test",
+      "criteria": "Verify that..."
+    },
+    {
+      "verificationMethodId": "SYS-REQ-001-VM-02",
+      "method": "Demonstration",
+      "criteria": "Demonstrate that..."
+    }
+  ]
+}
+```
+
+### 2. Gherkin Tags: `@VM:` Required at Scenario Level
+
+**Before:** Features used `@REQ:SYS-REQ-001` at the feature level. No VM-level tags.
+
+**After:** `@REQ:` stays at the feature level, but each scenario now needs a `@VM:` tag linking it to a specific verification criteria.
+
+```gherkin
+@REQ:SYS-REQ-001
+Feature: Basic ICD Communications
+
+  @VM:SYS-REQ-001-VM-01 @VER:Test
+  Scenario: Valid ICD request produces correct response
+    ...
+
+  @VM:SYS-REQ-001-VM-02 @VER:Demonstration
+  Scenario: Demonstrate round-trip exchange
+    ...
+```
+
+### 3. Traceability Baseline Format
+
+**Before:** Baseline keyed by requirement ID.
+
+**After:** Baseline keyed by VM ID (`SYS-REQ-001-VM-01`) and includes criteria text alongside hashes.
+
+### 4. New Files
+
+| File | Purpose |
+|------|---------|
+| `release-plan.json` | Maps requirements/VCs to release versions (optional but recommended) |
+| `tests/test_dashboard.py` | Dashboard unit tests (106 tests) |
+| `tests/test_demo_dashboard.py` | Demo dashboard integration tests |
+| `tools/generate_demo_data.py` | Generates sample data exercising all dashboard states |
+
+### 5. New CLI Flags
+
+| Tool | New Flag | Purpose |
+|------|----------|---------|
+| `traceability_checker.py` | `--release-plan` | Path to release-plan.json |
+| `traceability_checker.py` | `--release` | Override current release version |
+| `report_generator.py` | `--sbom-path` | Path to Syft CycloneDX SBOM JSON |
+| `report_generator.py` | `--grype-path` | Path to Grype vulnerability scan JSON |
+| `report_generator.py` | `--release-plan` | Path to release-plan.json |
+
+### 6. Dashboard Replaces Flat Report
+
+The HTML report is now a 6-tab interactive dashboard (Traceability, Release Progress, Quality Gates, Test Execution, Cyber, Export). It's a single self-contained HTML file — no server needed.
+
+---
+
+## Migration Steps
+
+### Step 1: Update Both Repos
+
+```bash
+# Repo 1: cameo-model-pipeline
+cd cameo-model-pipeline
+git pull origin master
+
+# Repo 2: product-pipeline
+cd product-pipeline
+git pull origin master
+```
+
+### Step 2: Update Your Requirements JSON
+
+Your existing `requirements_export.json` needs to be re-exported from Cameo with the new schema.
+
+**If using the Groovy macro:** The updated `ExportRequirements.groovy` automatically wraps the single verification method/criteria into the new `verificationMethods` array format. Re-run the macro in Cameo and commit.
+
+**If manually maintaining the JSON:** Convert each requirement:
+
+```bash
+# For each requirement, change:
+#   "verificationMethod": "Test"
+#   "verificationCriteria": "Verify that..."
+#
+# To:
+#   "verificationMethods": [
+#     {
+#       "verificationMethodId": "SYS-REQ-001-VM-01",
+#       "method": "Test",
+#       "criteria": "Verify that..."
+#     }
+#   ]
+```
+
+**VM ID format:** `{requirementId}-VM-{zero-padded index}` (e.g., `SYS-REQ-001-VM-01`).
+
+### Step 3: Add `@VM:` Tags to Your Feature Files
+
+Every scenario that has an `@REQ:` tag now also needs a `@VM:` tag at the **scenario level** (not feature level).
+
+**Before:**
+```gherkin
+@REQ:SYS-REQ-001 @VER:Test
+Feature: Basic ICD Communications
+
+  Scenario: Valid ICD request produces correct response
+    ...
+```
+
+**After:**
+```gherkin
+@REQ:SYS-REQ-001
+Feature: Basic ICD Communications
+
+  @VM:SYS-REQ-001-VM-01 @VER:Test
+  Scenario: Valid ICD request produces correct response
+    ...
+```
+
+If your requirement previously had one verification method, you'll have one VM (e.g., `-VM-01`). Put `@REQ:` at feature level and `@VM:` at scenario level.
+
+### Step 4: Reset the Traceability Baseline
+
+The old baseline format is incompatible. Delete it and regenerate:
+
+```bash
+rm bdd/features/.traceability-baseline.json
+
+python tools/traceability_checker.py \
+  --requirements build/cameo/requirements/requirements.json \
+  --features-dir bdd/features \
+  --stubs-output-dir bdd/features/automated \
+  --non-test-output-dir bdd/features/non_test \
+  --report-output /dev/null \
+  --update-baseline
+```
+
+### Step 5: Create a Release Plan (Optional)
+
+If you want incremental delivery, create `release-plan.json` in the repo root:
+
+```json
+{
+  "releases": [
+    {
+      "version": "1.0.0",
+      "targetDate": "2026-06-01",
+      "description": "Initial release",
+      "scope": ["SYS-REQ-001", "SYS-REQ-002"]
+    }
+  ]
+}
+```
+
+See Section 9 of the [Pipeline Guide](docs/pipeline-guide.md) for details.
+
+### Step 6: Install New Dependencies
+
+```bash
+pip install -r tools/requirements.txt
+```
+
+`pytest` has been added for dashboard tests.
+
+### Step 7: Run the Pipeline Locally to Verify
+
+```bash
+# Run traceability check
+python tools/traceability_checker.py \
+  --requirements build/cameo/requirements/requirements.json \
+  --features-dir bdd/features \
+  --stubs-output-dir bdd/features/automated \
+  --non-test-output-dir bdd/features/non_test \
+  --report-output build/reports/traceability/traceability_report.json \
+  --fail-on-orphaned
+
+# Run tests
+python -m pytest tests/ -v
+
+# If all passes, commit and push
+```
+
+### Step 8: Bump VERSION
+
+Update `VERSION` to `0.2.0` in the cameo-model-pipeline repo if you haven't already.
+
+---
+
+## Backward Compatibility
+
+The tools have **limited backward compatibility** for the old flat format:
+
+- `traceability_checker.py` will fall back to legacy `verificationMethod`/`verificationCriteria` fields if `verificationMethods` is missing, wrapping them into a single-element array.
+- `report_generator.py` handles both formats in `build_report()`.
+
+However, this fallback is for transition only. **You should migrate fully** — the old format will not receive new features and may be removed in a future version.
+
+## Questions?
+
+See the [Pipeline Guide](docs/pipeline-guide.md) for full documentation, or run the demo data generator to see all features in action:
+
+```bash
+python tools/generate_demo_data.py --output-dir build/demo
+```
