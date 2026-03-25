@@ -346,12 +346,12 @@
 
     <h2 class="section-title">Report Legend</h2>
     <div class="legend-grid">
-      <div class="legend-item"><span class="legend-dot" style="background:var(--pass)"></span> &#10003; Pass — VC covered, test passed</div>
-      <div class="legend-item"><span class="legend-dot" style="background:var(--fail)"></span> &#10007; Fail — VC covered, test failed</div>
-      <div class="legend-item"><span class="legend-dot" style="background:var(--uncovered)"></span> &#8212; Uncovered — No scenario written yet</div>
-      <div class="legend-item"><span class="legend-dot" style="background:var(--drifted)"></span> &#8635; Drifted — Criteria changed since baseline</div>
-      <div class="legend-item"><span class="legend-dot" style="background:var(--manual)"></span> &#9995; Manual — Analysis or Inspection method</div>
-      <div class="legend-item"><span class="legend-dot" style="background:var(--orphaned)"></span> ? Orphaned — References a deleted requirement</div>
+      <div class="legend-item"><span class="badge b-pass">&#10003; pass</span> VC covered, test passed</div>
+      <div class="legend-item"><span class="badge b-fail">&#10007; fail</span> VC covered, test failed</div>
+      <div class="legend-item"><span class="badge b-uncovered">&#8212; uncovered</span> No scenario written yet</div>
+      <div class="legend-item"><span class="badge b-drifted">&#8635; drifted</span> Criteria changed since baseline</div>
+      <div class="legend-item"><span class="badge b-manual">&#9995; manual</span> Analysis or Inspection method</div>
+      <div class="legend-item"><span class="badge b-orphaned">? orphaned</span> References a deleted requirement</div>
     </div>
 
     <h2 class="section-title">Glossary</h2>
@@ -371,12 +371,12 @@
   <button class="legend-fab" onclick="document.getElementById('legend-popup').classList.toggle('open')" title="Status Legend">?</button>
   <div class="legend-popup" id="legend-popup">
     <h4>Status Legend</h4>
-    <div class="legend-item"><span class="legend-dot" style="background:var(--pass)"></span> &#10003; Pass — VC covered, test passed</div>
-    <div class="legend-item"><span class="legend-dot" style="background:var(--fail)"></span> &#10007; Fail — VC covered, test failed</div>
-    <div class="legend-item"><span class="legend-dot" style="background:var(--uncovered)"></span> &#8212; Uncovered — No scenario written yet</div>
-    <div class="legend-item"><span class="legend-dot" style="background:var(--drifted)"></span> &#8635; Drifted — Criteria changed since baseline</div>
-    <div class="legend-item"><span class="legend-dot" style="background:var(--manual)"></span> &#9995; Manual — Analysis or Inspection method</div>
-    <div class="legend-item"><span class="legend-dot" style="background:var(--orphaned)"></span> ? Orphaned — References a deleted requirement</div>
+    <div class="legend-item"><span class="badge b-pass">&#10003; pass</span> VC covered, test passed</div>
+    <div class="legend-item"><span class="badge b-fail">&#10007; fail</span> VC covered, test failed</div>
+    <div class="legend-item"><span class="badge b-uncovered">&#8212; uncovered</span> No scenario written yet</div>
+    <div class="legend-item"><span class="badge b-drifted">&#8635; drifted</span> Criteria changed since baseline</div>
+    <div class="legend-item"><span class="badge b-manual">&#9995; manual</span> Analysis or Inspection method</div>
+    <div class="legend-item"><span class="badge b-orphaned">? orphaned</span> References a deleted requirement</div>
   </div>
 </div>
 
