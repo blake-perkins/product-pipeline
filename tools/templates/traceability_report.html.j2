@@ -1745,7 +1745,7 @@ renderExecutiveSummary();
     /* Find the current release (last one whose scope contributes to in_scope_vcs) */
     /* For now, show the first release that has in-scope VCs not yet fully covered, or the last one */
     const releases = RELEASE_PLAN.releases;
-    const currentRel = releases[0]; /* First release is typically the current target */
+    const currentRel = releases.find(r => isCurrentVersion(r.version)) || releases.find(r => !isReleasedVersion(r.version)) || releases[0];
     relName.textContent = 'Release ' + (currentRel.version || '');
     const parts = [];
     if (currentRel.description) parts.push(currentRel.description);
