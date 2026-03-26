@@ -66,28 +66,31 @@ Quick look at Traceability Matrix -- show the additional requirement (SYS-REQ-00
 The hero animates -- numbers count up, the badge turns red, blockers appear.
 
 **Say:**
-> "This is our current release. The pipeline caught two things."
+> "This is our current release. The pipeline caught three things -- one for each quality gate."
 
 Point at the Readiness ring in Executive Summary:
-> "We're at about 50% readiness. Two items to resolve before this can ship."
+> "We're at about 63% readiness. A few items to resolve before this can ship."
 
 Click the **failed test** (SYS-REQ-007-VC-01) in the Top Issues section:
 - The dashboard switches to Traceability Matrix and highlights the failing VC with a yellow flash.
 
 **Say:**
-> "A configuration update is taking 12 seconds instead of the required 5. The developer can see exactly which requirement it traces to, what the test expected, and the actual error message. No guessing."
+> "Gate A -- Coverage -- caught a test failure. A configuration update is taking 12 seconds instead of the required 5. The developer can see exactly which requirement it traces to, what the test expected, and the actual error message. No guessing."
 
 Navigate back to **Executive Summary** tab. Click the **drifted VC** (SYS-REQ-003-VC-01):
 - The dashboard shows the word-level diff: green highlight on the added text.
 
 **Say:**
-> "A systems engineer updated the model in Cameo -- they added a requirement for automatic failover. The pipeline detected the text changed and flagged it. See the green highlight showing exactly what was added. The test needs to be updated to cover the new criteria."
+> "Gate B -- Drift Detection. A systems engineer updated the model in Cameo -- they added a requirement for automatic failover. The pipeline detected the text changed and flagged it. See the green highlight showing exactly what was added. The test needs to be updated to cover the new criteria."
 
 Pause to let them read the diff.
 
-> "Both of these issues are scoped to Release 1.2.0. They don't affect the releases we already shipped. The pipeline knows the difference."
+Navigate to **Quality Gates** tab. Point at Gate C:
+> "Gate C -- Orphan Detection. Someone deleted a requirement from the model, but a test still references it. The pipeline flagged it so the team can clean it up. Without this, you'd have stale tests giving you false confidence."
 
-**Takeaway:** The audience sees real problems being caught automatically, with full traceability back to the model.
+> "All three of these issues are scoped to Release 1.2.0. They don't affect the releases we already shipped. The pipeline knows the difference."
+
+**Takeaway:** The audience sees all three quality gates catching real problems -- a failing test, a model change, and a stale test -- with full traceability back to the model.
 
 ---
 

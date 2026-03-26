@@ -110,7 +110,7 @@ class TestDemoDashboard:
         assert self.summary["manual"] == 0
 
     def test_hero_orphaned(self):
-        assert self.summary["orphaned_tests"] == 0
+        assert self.summary["orphaned_tests"] == 1
 
     def test_hero_math_adds_up(self):
         """pass + fail + manual + uncovered + drifted + deferred must equal total VCs."""
@@ -177,10 +177,11 @@ class TestDemoDashboard:
         assert r["status"] == "deferred"
         assert r["method"] == "Test"
 
-    def test_orphaned_tests_absent(self):
-        """No orphaned tests in the new demo data."""
+    def test_orphaned_tests_present(self):
+        """One orphaned test referencing deleted SYS-REQ-099."""
         orphaned = self.report["orphaned_tests"]
-        assert len(orphaned) == 0
+        assert len(orphaned) == 1
+        assert "SYS-REQ-099" in str(orphaned[0])
 
     # ---- TAB 1: NO CROSS-CONTAMINATION ----
 
@@ -239,15 +240,16 @@ class TestDemoDashboard:
         assert "oldHash" in item and "newHash" in item
         assert item["oldHash"] != item["newHash"]
 
-    def test_gate_c_passes_no_orphans(self):
-        """Gate C passes — no orphaned tests in the new demo data."""
+    def test_gate_c_failed_with_orphan(self):
+        """Gate C fails — orphaned test references deleted SYS-REQ-099."""
         gc = self.js_trace["gate_c"]
-        assert gc["passed"] is True
-        assert len(gc["items"]) == 0
+        assert gc["passed"] is False
+        assert len(gc["items"]) == 1
 
-    def test_gate_c_items_empty(self):
-        """No orphaned items in Gate C."""
-        assert len(self.js_trace["gate_c"]["items"]) == 0
+    def test_gate_c_has_orphan_ids(self):
+        """Gate C item references the deleted requirement."""
+        item = self.js_trace["gate_c"]["items"][0]
+        assert "SYS-REQ-099" in item.get("orphanedReqIds", [])
 
     def test_overall_pipeline_fails(self):
         assert self.js_trace["overall_pass"] is False
@@ -267,11 +269,11 @@ class TestDemoDashboard:
 
     # ---- TAB 4: TEST EXECUTION ----
 
-    def test_behave_has_5_features(self):
-        assert len(self.js_behave) == 9
+    def test_behave_has_10_features(self):
+        assert len(self.js_behave) == 10  # 9 requirement features + 1 orphaned
 
-    def test_automated_features_are_4(self):
-        """Manual/stub features should be filtered out in Tab 4."""
+    def test_automated_features_are_10(self):
+        """All features are automated in demo (no manual/stub tags)."""
         manual_tags = {"manual", "stub", "auto_generated"}
         automated = []
         for f in self.js_behave:
@@ -279,7 +281,7 @@ class TestDemoDashboard:
                     for t in f.get("tags", [])]
             if not manual_tags.intersection(tags):
                 automated.append(f)
-        assert len(automated) == 9  # All 5 features are automated in demo
+        assert len(automated) == 10
 
     def test_fail_scenario_has_error_message(self):
         feat = [f for f in self.js_behave if f["name"] == "Configuration Management"][0]

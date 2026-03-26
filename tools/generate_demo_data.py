@@ -467,7 +467,27 @@ def generate(output_dir: Path):
             ],
         },
         # NOTE: No feature for REQ-008 (Data Logging) — it is deferred AND uncovered
-        # NOTE: No feature for REQ-010 (Network Fault Tolerance) — wait, it HAS a passing scenario
+        # Feature 9: ORPHANED — references a deleted requirement (Gate C catches this)
+        {
+            "keyword": "Feature",
+            "name": "Legacy Telemetry Validation",
+            "tags": ["REQ:SYS-REQ-099"],
+            "location": "features/automated/sys_req_099_telemetry.feature:2",
+            "status": "passed",
+            "elements": [
+                {
+                    "keyword": "Scenario",
+                    "name": "Telemetry packets are within expected range",
+                    "tags": ["VC:SYS-REQ-099-VC-01", "VER:Test"],
+                    "type": "scenario",
+                    "status": "passed",
+                    "steps": [
+                        step("Given ", "the simulation logs are loaded"),
+                        step("Then ", "all telemetry values should be within nominal range"),
+                    ],
+                },
+            ],
+        },
     ]
 
     # Feature 9: Network Fault Tolerance — deferred (2.1.0), has passing scenario
@@ -502,7 +522,7 @@ def generate(output_dir: Path):
     traceability_report = {
         "timestamp": "2026-03-24T10:05:00Z",
         "requirements_total": 10,
-        "features_scanned": 9,
+        "features_scanned": 10,
         "vcs_total": 12,
         "vcs_covered": 11,
         "gate_a": {
@@ -580,9 +600,16 @@ def generate(output_dir: Path):
         },
         "gate_c": {
             "gate": "C",
-            "passed": True,
-            "items": [],
-            "message": "No orphaned scenarios detected.",
+            "passed": False,
+            "items": [
+                {
+                    "featureFile": "features/automated/sys_req_099_telemetry.feature",
+                    "scenarioName": "Telemetry packets are within expected range",
+                    "orphanedReqIds": ["SYS-REQ-099"],
+                    "orphanedVcIds": ["SYS-REQ-099-VC-01"],
+                },
+            ],
+            "message": "1 orphaned scenario found referencing deleted requirement SYS-REQ-099.",
         },
         "overall_pass": False,
     }
