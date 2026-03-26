@@ -193,8 +193,8 @@ jobs:
       - name: Generate MBSE Traceability Dashboard
         run: |
           # For prototype: use demo data for all inputs so the dashboard
-          # exercises every state (pass, fail, uncovered, drifted, manual,
-          # orphaned, deferred) with SBOM/Grype and release planning.
+          # exercises every state (pass, fail, uncovered, drifted, deferred)
+          # across 5 releases with SBOM/Grype and release planning.
           #
           # In production, replace these paths with real pipeline outputs:
           #   --requirements   build/cameo/requirements/requirements.json
