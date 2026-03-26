@@ -1052,6 +1052,9 @@ function renderTraceability() {
           html += '<span class="step-text">' + esc(step.name) + '</span>';
           html += '<span class="step-dur">' + fmtDur(dur) + '</span>';
           html += '</div>';
+          if (stepStatus === 'failed' && step.result && step.result.error_message) {
+            html += '<div style="padding:4px 0 4px 80px;color:var(--fail);font-size:0.8rem;font-family:monospace;white-space:pre-wrap">' + esc(step.result.error_message) + '</div>';
+          }
         });
         html += '</div>';
       });
