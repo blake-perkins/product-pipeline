@@ -1694,7 +1694,7 @@ function renderExecutiveSummary() {
 
   /* Determine ring color — suppress CVE/orphan warnings for released versions */
   const hasFailures = s.failed > 0;
-  const hasCriticalCVE = !SNAP.isReleased && GRYPE && GRYPE.matches && GRYPE.matches.some(m => (m.vulnerability || {}).severity === 'Critical');
+  const hasCriticalCVE = SNAP.vulnMatches.some(function(m) { return (m.vulnerability || {}).severity === 'Critical'; });
   const ringColor = (hasFailures || hasCriticalCVE) ? 'var(--fail)' : readinessPct >= 100 ? 'var(--pass)' : readinessPct >= 50 ? 'var(--blue-ng)' : 'var(--uncovered)';
 
   /* Build remaining items list */
