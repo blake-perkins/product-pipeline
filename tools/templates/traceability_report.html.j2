@@ -1686,7 +1686,7 @@ function renderExecutiveSummary() {
     var relObj = RELEASE_PLAN && RELEASE_PLAN.releases ? RELEASE_PLAN.releases.find(function(r) { return r.version === SNAP.release; }) : null;
     html += '<div class="readiness">';
     html += '<div class="readiness-ring">';
-    html += '<svg width="120" height="120" viewBox="0 0 120 120">';
+    html += '<svg width="120" height="120" viewBox="0 0 120 120" style="transform:none">';
     html += '<circle cx="60" cy="60" r="46" fill="none" stroke="var(--pass)" stroke-width="10"/>';
     html += '<polyline points="37,58 52,76 84,40" fill="none" stroke="var(--pass)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>';
     html += '</svg>';
