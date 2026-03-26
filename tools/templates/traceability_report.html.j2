@@ -1867,6 +1867,16 @@ function renderExecutiveSummary() {
   html += '</div>';
 
   container.innerHTML = html;
+
+  /* Animate readiness ring from empty to target (double-rAF ensures paint between) */
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var ring = container.querySelector('.ring-progress');
+      if (ring) {
+        ring.style.strokeDashoffset = ring.getAttribute('data-target-offset');
+      }
+    });
+  });
 }
 
 function renderReleases() {
@@ -2007,22 +2017,6 @@ function renderReleases() {
   });
 
   container.innerHTML = html;
-
-  /* Animate readiness ring from empty to target (double-rAF ensures paint between) */
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      var ring = container.querySelector('.ring-progress');
-      if (ring) {
-        ring.style.strokeDashoffset = ring.getAttribute('data-target-offset');
-      }
-    });
-  });
-
-  /* Animate hero counter numbers */
-  var counters = container.querySelectorAll('[data-counter]');
-  for (var ci = 0; ci < counters.length; ci++) {
-    animateCounter(counters[ci], parseInt(counters[ci].getAttribute('data-counter'), 10));
-  }
 }
 </script>
 
