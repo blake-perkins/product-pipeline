@@ -207,6 +207,7 @@
     .readiness { display: flex; align-items: center; gap: 32px; padding: 24px; border-radius: 10px; margin-bottom: 24px; background: #f9fafb; border: 1px solid #e9ecef; }
     .readiness-ring { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
     .readiness-ring svg { transform: rotate(-90deg); }
+    .ring-progress { transition: stroke-dashoffset 0.8s ease-out; }
     .readiness-ring .pct { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.8rem; font-weight: 800; }
     .readiness-info { flex: 1; }
     .readiness-info h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; color: var(--navy-1); }
@@ -236,6 +237,9 @@
     .exec-section-link:hover { border-color: var(--blue-ng) !important; }
     .release-vc-row:hover { background: #f0f4f8 !important; }
     .release-header:hover { background: #f7f8fa; }
+
+    /* ---- Release Transition ---- */
+    #hero-dynamic, #summary-content { transition: opacity 0.15s ease; }
 
     /* ---- Print ---- */
     @media print {
@@ -499,6 +503,19 @@ function isCurrentVersion(version) {
   return semverCmp(version, CURRENT_VERSION) === 0;
 }
 
+/* Animate a number element from 0 to target using requestAnimationFrame */
+function animateCounter(el, target) {
+  if (!el || target <= 0) { if (el) el.textContent = target || '0'; return; }
+  var start = performance.now();
+  var duration = 500;
+  function tick(now) {
+    var progress = Math.min((now - start) / duration, 1);
+    el.textContent = Math.round(target * progress);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 function fmtDate(iso) {
   if (!iso) return '\u2014';
   try {
@@ -730,6 +747,11 @@ function buildSnapshot() {
 }
 
 function onReleaseFilterChange() {
+  var heroDyn = document.getElementById('hero-dynamic');
+  var summaryContent = document.getElementById('summary-content');
+  if (heroDyn) heroDyn.style.opacity = '0';
+  if (summaryContent) summaryContent.style.opacity = '0';
+
   selectedRelease = document.getElementById('release-filter').value;
   buildSnapshot();
   renderHero();
@@ -739,6 +761,11 @@ function onReleaseFilterChange() {
   renderSecurity();
   renderExecutiveSummary();
   applyFilters();
+
+  requestAnimationFrame(function() {
+    if (heroDyn) heroDyn.style.opacity = '1';
+    if (summaryContent) summaryContent.style.opacity = '1';
+  });
 }
 
 /* Render the hero section dynamically */
@@ -796,7 +823,7 @@ function renderHero() {
   var heroVCCount = directVCs ? directVCs.size : (s.in_scope_vcs || s.total_vcs);
   var heroTotalLabel = directVCs ? 'VCs in this release' : 'of ' + s.total_vcs + ' VCs in scope';
   html += '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">';
-  html += '<span style="font-size:1.8rem;font-weight:700;color:var(--navy-1)">' + heroVCCount + '</span>';
+  html += '<span data-counter="' + heroVCCount + '" style="font-size:1.8rem;font-weight:700;color:var(--navy-1)">' + heroVCCount + '</span>';
   html += '<span style="font-size:0.85rem;color:var(--text-muted)">' + heroTotalLabel + '</span>';
   html += '</div>';
   html += '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.5">';
@@ -811,10 +838,10 @@ function renderHero() {
   html += '<span style="font-size:0.75rem;color:var(--blue-ng)">View Tests &#8250;</span>';
   html += '</div>';
   html += '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">';
-  html += '<span style="font-size:1.8rem;font-weight:700;color:' + (s.failed > 0 ? 'var(--fail)' : 'var(--pass)') + '">' + s.passed + '</span>';
+  html += '<span data-counter="' + s.passed + '" style="font-size:1.8rem;font-weight:700;color:' + (s.failed > 0 ? 'var(--fail)' : 'var(--pass)') + '">' + s.passed + '</span>';
   html += '<span style="font-size:0.85rem;color:var(--text-muted)">passed</span>';
   if (s.failed > 0) {
-    html += '<span style="font-size:1.8rem;font-weight:700;color:var(--fail);margin-left:8px">' + s.failed + '</span>';
+    html += '<span data-counter="' + s.failed + '" style="font-size:1.8rem;font-weight:700;color:var(--fail);margin-left:8px">' + s.failed + '</span>';
     html += '<span style="font-size:0.85rem;color:var(--text-muted)">failed</span>';
   }
   html += '</div>';
@@ -852,7 +879,7 @@ function renderHero() {
     html += '<div style="font-size:1.4rem;font-weight:700;color:var(--pass)">&#10003; None</div>';
     html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">All quality gates passed</div>';
   } else {
-    html += '<div style="font-size:1.8rem;font-weight:700;color:var(--fail)">' + blockerCount + '</div>';
+    html += '<div data-counter="' + blockerCount + '" style="font-size:1.8rem;font-weight:700;color:var(--fail)">' + blockerCount + '</div>';
     html += '<div style="font-size:0.82rem;line-height:1.6;margin-top:4px">';
     if (s.failed > 0) html += '<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + '</span><br>';
     if (s.drifted_vcs > 0) html += '<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria drifted</span><br>';
@@ -891,6 +918,12 @@ function renderHero() {
   html += '</div></div>';
 
   container.innerHTML = html;
+
+  /* Animate hero counter numbers */
+  var counters = container.querySelectorAll('[data-counter]');
+  for (var ci = 0; ci < counters.length; ci++) {
+    animateCounter(counters[ci], parseInt(counters[ci].getAttribute('data-counter'), 10));
+  }
 }
 </script>
 
@@ -1706,7 +1739,7 @@ function renderExecutiveSummary() {
     html += '<div class="readiness-ring">';
     html += '<svg width="120" height="120" viewBox="0 0 120 120">';
     html += '<circle cx="60" cy="60" r="46" fill="none" stroke="#e9ecef" stroke-width="10"/>';
-    html += '<circle cx="60" cy="60" r="46" fill="none" stroke="' + ringColor + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference.toFixed(1) + '" stroke-dashoffset="' + dashOffset.toFixed(1) + '"/>';
+    html += '<circle class="ring-progress" cx="60" cy="60" r="46" fill="none" stroke="' + ringColor + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference.toFixed(1) + '" stroke-dashoffset="' + circumference.toFixed(1) + '" data-target-offset="' + dashOffset.toFixed(1) + '"/>';
     html += '</svg>';
     html += '<span class="pct" style="color:' + ringColor + '">' + readinessPct + '%</span>';
     html += '</div>';
@@ -1974,6 +2007,20 @@ function renderReleases() {
   });
 
   container.innerHTML = html;
+
+  /* Animate readiness ring from empty to target */
+  requestAnimationFrame(function() {
+    var ring = container.querySelector('.ring-progress');
+    if (ring) {
+      ring.style.strokeDashoffset = ring.getAttribute('data-target-offset');
+    }
+  });
+
+  /* Animate hero counter numbers */
+  var counters = container.querySelectorAll('[data-counter]');
+  for (var ci = 0; ci < counters.length; ci++) {
+    animateCounter(counters[ci], parseInt(counters[ci].getAttribute('data-counter'), 10));
+  }
 }
 </script>
 
@@ -2036,6 +2083,16 @@ document.body.addEventListener('input', function(e) {
     filterTests();
   }
 });
+
+/* Default to first released version if available */
+var filterEl = document.getElementById('release-filter');
+if (filterEl && RELEASE_PLAN && RELEASE_PLAN.releases) {
+  var firstReleased = RELEASE_PLAN.releases.find(function(r) { return isReleasedVersion(r.version); });
+  if (firstReleased) {
+    filterEl.value = firstReleased.version;
+    selectedRelease = firstReleased.version;
+  }
+}
 
 buildSnapshot();
 renderHero();

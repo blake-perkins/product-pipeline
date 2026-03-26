@@ -81,14 +81,14 @@ class TestDemoDashboard:
     # ---- HERO HEADER ----
 
     def test_hero_coverage_percent(self):
-        # Coverage is against in-scope VCs only (7 in-scope, all covered = 100%)
-        assert self.summary["coverage_percent"] == 90.0
+        # Coverage is against in-scope VCs only (8 in-scope, 7 covered = 87.5%)
+        assert self.summary["coverage_percent"] == 87.5
 
     def test_hero_total_vcs(self):
-        assert self.summary["total_vcs"] == 14
+        assert self.summary["total_vcs"] == 13
 
     def test_hero_covered_vcs(self):
-        assert self.summary["covered_vcs"] == 9
+        assert self.summary["covered_vcs"] == 7
 
     def test_hero_passed(self):
         assert self.summary["passed"] == 5
@@ -101,16 +101,16 @@ class TestDemoDashboard:
         assert self.summary["uncovered_vcs"] == 1
 
     def test_hero_deferred(self):
-        assert self.summary["deferred_vcs"] == 4
+        assert self.summary["deferred_vcs"] == 5
 
     def test_hero_drifted(self):
         assert self.summary["drifted_vcs"] == 1
 
     def test_hero_manual(self):
-        assert self.summary["manual"] == 2
+        assert self.summary["manual"] == 0
 
     def test_hero_orphaned(self):
-        assert self.summary["orphaned_tests"] == 1
+        assert self.summary["orphaned_tests"] == 0
 
     def test_hero_math_adds_up(self):
         """pass + fail + manual + uncovered + drifted + deferred must equal total VCs."""
@@ -148,23 +148,22 @@ class TestDemoDashboard:
         assert r["test_result"] == "passed"
 
     def test_req003_vc01_drifted_in_release(self):
-        """REQ-003-VC-01 criteria changed in 1.1.0 model update."""
+        """REQ-003-VC-01 criteria changed in 1.2.0 model update."""
         r = self.rows["SYS-REQ-003-VC-01"]
         assert r["status"] == "drifted"
-        assert r["method"] == "Demonstration"
+        assert r["method"] == "Test"
 
     def test_req003_vc02_uncovered(self):
-        """SYS-REQ-003-VC-02 is in 1.1.0 scope but has no scenario."""
+        """SYS-REQ-003-VC-02 is in 1.2.0 scope but has no scenario."""
         r = self.rows["SYS-REQ-003-VC-02"]
         assert r["status"] == "uncovered"
         assert r["test_result"] is None
 
-    def test_req004_manual_analysis(self):
+    def test_req004_deferred(self):
+        """REQ-004-VC-01 is deferred to 2.0.0."""
         r = self.rows["SYS-REQ-004-VC-01"]
-        assert r["status"] == "manual"
-        assert r["method"] == "Analysis"
-        assert r["test_result"] is None
-        assert r["scenario_name"] is None
+        assert r["status"] == "deferred"
+        assert r["method"] == "Test"
 
     def test_req005_passes(self):
         """REQ-005 shipped in 1.0.0 — passes."""
@@ -172,16 +171,16 @@ class TestDemoDashboard:
         assert r["status"] == "pass"
 
 
-    def test_req006_manual_inspection(self):
+    def test_req006_deferred(self):
+        """REQ-006-VC-01 is deferred to 2.0.0."""
         r = self.rows["SYS-REQ-006-VC-01"]
-        assert r["status"] == "manual"
-        assert r["method"] == "Inspection"
-        assert r["test_result"] is None
+        assert r["status"] == "deferred"
+        assert r["method"] == "Test"
 
-    def test_orphaned_tests_present(self):
+    def test_orphaned_tests_absent(self):
+        """No orphaned tests in the new demo data."""
         orphaned = self.report["orphaned_tests"]
-        assert len(orphaned) == 1
-        assert "SYS-REQ-099" in orphaned[0].get("orphaned_req_ids", [])
+        assert len(orphaned) == 0
 
     # ---- TAB 1: NO CROSS-CONTAMINATION ----
 
@@ -216,17 +215,18 @@ class TestDemoDashboard:
     # ---- TAB 3: QUALITY GATES ----
 
     def test_gate_a_has_uncovered_and_deferred(self):
-        """Gate A fails: 1 uncovered in-scope + 4 deferred to 2.0.0."""
+        """Gate A fails: 1 uncovered in-scope + 5 deferred."""
         ga = self.js_trace["gate_a"]
         assert ga["passed"] is False
-        assert len(ga["items"]) == 5
-        assert sum(1 for item in ga["items"] if item.get("deferred")) == 4
+        assert len(ga["items"]) == 6
+        assert sum(1 for item in ga["items"] if item.get("deferred")) == 5
         assert sum(1 for item in ga["items"] if not item.get("deferred")) == 1
 
     def test_gate_a_has_deferred_items(self):
         deferred = [i for i in self.js_trace["gate_a"]["items"] if i.get("deferred")]
-        assert len(deferred) == 4
-        assert all(i["targetRelease"] == "2.0.0" for i in deferred)
+        assert len(deferred) == 5
+        targets = {i["targetRelease"] for i in deferred}
+        assert targets == {"2.0.0", "2.1.0"}
 
     def test_gate_b_failed_with_drift(self):
         gb = self.js_trace["gate_b"]
@@ -239,16 +239,15 @@ class TestDemoDashboard:
         assert "oldHash" in item and "newHash" in item
         assert item["oldHash"] != item["newHash"]
 
-    def test_gate_c_failed_with_orphan(self):
+    def test_gate_c_passes_no_orphans(self):
+        """Gate C passes — no orphaned tests in the new demo data."""
         gc = self.js_trace["gate_c"]
-        assert gc["passed"] is False
-        assert len(gc["items"]) == 1
-        assert gc["items"][0]["orphanedReqIds"] == ["SYS-REQ-099"]
+        assert gc["passed"] is True
+        assert len(gc["items"]) == 0
 
-    def test_gate_c_has_vc_ids(self):
-        item = self.js_trace["gate_c"]["items"][0]
-        assert "orphanedVcIds" in item
-        assert "SYS-REQ-099-VC-01" in item["orphanedVcIds"]
+    def test_gate_c_items_empty(self):
+        """No orphaned items in Gate C."""
+        assert len(self.js_trace["gate_c"]["items"]) == 0
 
     def test_overall_pipeline_fails(self):
         assert self.js_trace["overall_pass"] is False
@@ -387,21 +386,21 @@ class TestDemoDashboard:
     def test_release_plan_loaded(self):
         assert self.js_release_plan is not None
 
-    def test_release_plan_has_3_releases(self):
-        assert len(self.js_release_plan["releases"]) == 3
+    def test_release_plan_has_5_releases(self):
+        assert len(self.js_release_plan["releases"]) == 5
 
     def test_release_versions(self):
         versions = [r["version"] for r in self.js_release_plan["releases"]]
-        assert versions == ["1.0.0", "1.1.0", "2.0.0"]
+        assert versions == ["1.0.0", "1.1.0", "1.2.0", "2.0.0", "2.1.0"]
 
     def test_release_100_scope(self):
         rel = self.js_release_plan["releases"][0]
         assert "SYS-REQ-001" in rel["scope"]
         assert "SYS-REQ-002" in rel["scope"]
-        assert "SYS-REQ-005" in rel["scope"]
 
-    def test_release_110_scope(self):
-        rel = self.js_release_plan["releases"][1]
+    def test_release_120_scope(self):
+        """Release 1.2.0 (current) has REQ-003 and REQ-007."""
+        rel = self.js_release_plan["releases"][2]
         assert "SYS-REQ-003" in rel["scope"]
         assert "SYS-REQ-007" in rel["scope"]
 
@@ -470,7 +469,7 @@ class TestDemoDashboard:
         """Cyber tab re-renders on release change."""
         # Check the onReleaseFilterChange function calls renderSecurity
         idx = self.html.index("function onReleaseFilterChange()")
-        snippet = self.html[idx:idx+400]
+        snippet = self.html[idx:idx+600]
         assert "renderSecurity()" in snippet
 
     def test_traceability_uses_vc_filter(self):
@@ -501,7 +500,7 @@ class TestDemoDashboard:
     # ---- RELEASE FILTER DATA INTEGRITY ----
 
     def test_release_plan_has_current_version(self):
-        assert self.js_release_plan["currentVersion"] == "1.1.0"
+        assert self.js_release_plan["currentVersion"] == "1.2.0"
 
     def test_release_100_vcs_all_pass(self):
         """All VCs in release 1.0.0 should be pass status (shipped clean)."""
@@ -519,9 +518,9 @@ class TestDemoDashboard:
             assert row is not None, f"VC {vc_id} missing from report"
             assert row["status"] == "pass", f"VC {vc_id} should be pass for shipped 1.0.0, got {row['status']}"
 
-    def test_release_110_has_issues(self):
-        """Release 1.1.0 (current) should have at least one non-pass VC."""
-        scope = self.js_release_plan["releases"][1]["scope"]
+    def test_release_120_has_issues(self):
+        """Release 1.2.0 (current) should have at least one non-pass VC."""
+        scope = self.js_release_plan["releases"][2]["scope"]
         reqs = {r["requirementId"]: r for r in self.js_reqs["requirements"]}
         vc_ids = []
         for sid in scope:
@@ -532,7 +531,7 @@ class TestDemoDashboard:
                     vc_ids.append(vc.get("verificationCriteriaId") or vc.get("verificationMethodId"))
         statuses = [self.rows[vid]["status"] for vid in vc_ids if vid in self.rows]
         non_pass = [s for s in statuses if s != "pass"]
-        assert len(non_pass) > 0, "Release 1.1.0 should have issues"
+        assert len(non_pass) > 0, "Release 1.2.0 should have issues"
 
     def test_vc_arrow_hidden_when_no_scenarios(self):
         """VCs with no scenarios (uncovered, drifted) should not have clickable arrows."""

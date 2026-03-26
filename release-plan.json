@@ -1,32 +1,49 @@
 {
-  "currentVersion": "1.0.0",
+  "currentVersion": "1.2.0",
   "releases": [
     {
       "version": "1.0.0",
       "targetDate": "2026-06-01",
-      "description": "Initial deployment — core ICD communications, health monitoring, and error handling",
+      "description": "Initial deployment — core ICD communications and health monitoring",
       "scope": [
         "SYS-REQ-001",
-        "SYS-REQ-002",
-        "SYS-REQ-005"
+        "SYS-REQ-002"
       ]
     },
     {
       "version": "1.1.0",
-      "targetDate": "2026-09-01",
-      "description": "Degradation handling and ICD demonstration verification",
+      "targetDate": "2026-07-15",
+      "description": "Error handling and message validation",
       "scope": [
-        "SYS-REQ-001-VC-02",
-        "SYS-REQ-003"
+        "SYS-REQ-005"
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "targetDate": "2026-09-01",
+      "description": "Degradation handling and configuration management",
+      "scope": [
+        "SYS-REQ-003",
+        "SYS-REQ-007"
       ]
     },
     {
       "version": "2.0.0",
       "targetDate": "2027-01-01",
-      "description": "Full compliance — thermal analysis and physical inspection",
+      "description": "System resilience, self-test, and data logging",
       "scope": [
         "SYS-REQ-004",
-        "SYS-REQ-006"
+        "SYS-REQ-006",
+        "SYS-REQ-008"
+      ]
+    },
+    {
+      "version": "2.1.0",
+      "targetDate": "2027-04-01",
+      "description": "Firmware update and network fault tolerance",
+      "scope": [
+        "SYS-REQ-009",
+        "SYS-REQ-010"
       ]
     }
   ]
