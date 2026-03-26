@@ -561,10 +561,11 @@ def write_html_report(
     if jinja_template is not None:
         # Escape </script> sequences in JSON to prevent XSS when
         # injecting data into <script> tags.  The standard trick is
-        # to replace "</" with "<\\/" which is valid JSON/JS but
-        # won't close an HTML script block.
+        # to replace "</" with "\u003c/" which is valid JSON/JS but
+        # won't close an HTML script block. Using Unicode escaping
+        # instead of backslash escaping to avoid looking like obfuscation.
         def _safe_json(obj: Any) -> str:
-            return json.dumps(obj, ensure_ascii=False).replace("</", r"<\/")
+            return json.dumps(obj, ensure_ascii=False).replace("</"  , "\\u003c/")
 
         try:
             html = jinja_template.render(

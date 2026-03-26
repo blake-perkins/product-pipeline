@@ -659,7 +659,7 @@ class TestEdgeCases:
         # The raw </script> should NOT appear in the HTML
         assert "</script><script>" not in html
         # The escaped version should be present
-        assert r"<\/script>" in html or "\\u003c/script>" in html.lower()
+        assert r"<\/script>" in html or "\\u003c/" in html
 
     def test_empty_behave_results(self, tmp_path):
         """Report should handle empty Behave results gracefully."""

@@ -30,7 +30,7 @@ def _extract_js_json(html, var_name):
         elif c == "n" and html[i:i+4] == "null" and depth == 0:
             return None
         i += 1
-    raw = html[start:i].replace(r"<\/", "</")
+    raw = html[start:i].replace(r"<\/", "</").replace("\\u003c/", "</")
     return json.loads(raw)
 
 
