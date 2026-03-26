@@ -576,7 +576,7 @@ def generate(output_dir: Path):
                 "vulnerability": {
                     "id": "CVE-2024-5535",
                     "severity": "Critical",
-                    "description": "OpenSSL SSL_select_next_proto has an out-of-bounds read when processing a crafted ALPN protocol list.",
+                    "description": "OpenSSL SSL_select_next_proto has an out-of-bounds read when processing a specially formed ALPN protocol list.",
                     "fix": {"versions": ["3.0.15"]},
                 },
                 "artifact": {"name": "openssl", "version": "3.0.13"},
