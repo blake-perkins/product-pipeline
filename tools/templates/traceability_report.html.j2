@@ -403,10 +403,8 @@ const GRYPE = {{ grype_json }};
 const RELEASE_PLAN = {{ release_plan_json }};
 </script>
 
+<!-- ======== NAVIGATION AND UTILITIES ======== -->
 <script>
-/* ================================================================
-   TAB NAVIGATION
-   ================================================================ */
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -419,9 +417,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
-/* ================================================================
-   HELPERS
-   ================================================================ */
 function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const VALID_STATUSES = ['pass','fail','uncovered','drifted','manual','orphaned','stub','deferred'];
 const STATUS_ICONS = {pass:'\u2713',fail:'\u2717',uncovered:'\u2014',drifted:'\u21BB',manual:'\u270B',orphaned:'?',stub:'\u2014',deferred:'\u23F1'};
@@ -579,10 +574,10 @@ function findScenariosForVC(vcId, reqId, reportRow) {
   }
   return results;
 }
+</script>
 
-/* ================================================================
-   GLOBAL RELEASE FILTER
-   ================================================================ */
+<!-- ======== RELEASE FILTER AND DATA SNAPSHOT ======== -->
+<script>
 var selectedRelease = 'all';
 
 /* Build reqId -> VC IDs lookup (reuse across functions) */
@@ -647,9 +642,6 @@ function getFilteredReqIds() {
   select.insertAdjacentHTML('beforeend', optionsHtml);
 })();
 
-/* ================================================================
-   CENTRALIZED SNAPSHOT
-   ================================================================ */
 var SNAP = null;
 
 function buildSnapshot() {
@@ -900,10 +892,10 @@ function renderHero() {
 
   container.innerHTML = html;
 }
+</script>
 
-/* ================================================================
-   TAB 1: TRACEABILITY MATRIX
-   ================================================================ */
+<!-- ======== TRACEABILITY MATRIX TAB ======== -->
+<script>
 function renderTraceability() {
   const container = document.getElementById('trace-accordion');
   if (!REPORT || !REPORT.requirements || !REPORT.requirements.length) {
@@ -1251,10 +1243,10 @@ function applyFilters() {
     });
   }
 }
+</script>
 
-/* ================================================================
-   TAB: CYBER
-   ================================================================ */
+<!-- ======== CYBER TAB ======== -->
+<script>
 function renderSecurity() {
   const container = document.getElementById('security-content');
 
@@ -1459,10 +1451,10 @@ function filterSBOM() {
   const search = q.toLowerCase();
   rows.forEach(r => { r.style.display = r.textContent.toLowerCase().includes(search) ? '' : 'none'; });
 }
+</script>
 
-/* ================================================================
-   TAB 3: QUALITY GATES
-   ================================================================ */
+<!-- ======== QUALITY GATES TAB ======== -->
+<script>
 function renderGates() {
   const container = document.getElementById('gates-content');
   if (!TRACEABILITY) { container.innerHTML = '<div class="empty-state"><h3>No traceability data available</h3></div>'; return; }
@@ -1516,10 +1508,10 @@ function renderGates() {
 
   container.innerHTML = html;
 }
+</script>
 
-/* ================================================================
-   TAB 4: TEST EXECUTION
-   ================================================================ */
+<!-- ======== TEST RESULTS TAB ======== -->
+<script>
 function renderTests() {
   const container = document.getElementById('tests-content');
 
@@ -1628,10 +1620,10 @@ function toggleTestFeature(el) {
   body.classList.toggle('open');
   el.querySelector('.arrow').classList.toggle('open');
 }
+</script>
 
-/* ================================================================
-   TAB 5: EXPORT & METADATA
-   ================================================================ */
+<!-- ======== EXPORT, SUMMARY, AND RELEASE TABS ======== -->
+<script>
 function renderMetadata() {
   const grid = document.getElementById('metadata-grid');
   const meta = (REQUIREMENTS && REQUIREMENTS.exportMetadata) || {};
@@ -1655,9 +1647,6 @@ function downloadJSON() {
   dl.click();
 }
 
-/* ================================================================
-   TAB: EXECUTIVE SUMMARY
-   ================================================================ */
 function renderExecutiveSummary() {
   const container = document.getElementById('summary-content');
   if (!REPORT || !REPORT.summary) { container.innerHTML = '<div class="empty-state"><h3>No data available</h3></div>'; return; }
@@ -1847,9 +1836,6 @@ function renderExecutiveSummary() {
   container.innerHTML = html;
 }
 
-/* ================================================================
-   TAB: RELEASE PROGRESS
-   ================================================================ */
 function renderReleases() {
   const container = document.getElementById('releases-content');
   if (!RELEASE_PLAN || !RELEASE_PLAN.releases || !RELEASE_PLAN.releases.length) {
@@ -1989,10 +1975,10 @@ function renderReleases() {
 
   container.innerHTML = html;
 }
+</script>
 
-/* ================================================================
-   DELEGATED EVENT LISTENERS (replaces all inline handlers)
-   ================================================================ */
+<!-- ======== EVENT ROUTING AND INITIALIZATION ======== -->
+<script>
 document.body.addEventListener('click', function(e) {
   var target = e.target.closest('[data-action]');
   if (!target) return;
@@ -2051,9 +2037,6 @@ document.body.addEventListener('input', function(e) {
   }
 });
 
-/* ================================================================
-   INIT
-   ================================================================ */
 buildSnapshot();
 renderHero();
 renderTraceability();
