@@ -2008,12 +2008,14 @@ function renderReleases() {
 
   container.innerHTML = html;
 
-  /* Animate readiness ring from empty to target */
+  /* Animate readiness ring from empty to target (double-rAF ensures paint between) */
   requestAnimationFrame(function() {
-    var ring = container.querySelector('.ring-progress');
-    if (ring) {
-      ring.style.strokeDashoffset = ring.getAttribute('data-target-offset');
-    }
+    requestAnimationFrame(function() {
+      var ring = container.querySelector('.ring-progress');
+      if (ring) {
+        ring.style.strokeDashoffset = ring.getAttribute('data-target-offset');
+      }
+    });
   });
 
   /* Animate hero counter numbers */
