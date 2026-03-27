@@ -823,8 +823,15 @@ function buildSnapshot() {
 
   // Filtered behave features (automated only, in scope)
   function isManualFeature(feat) {
-    var tags = (feat.tags || []).map(function(t) { return (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase(); });
-    return tags.indexOf('manual') >= 0 || tags.indexOf('stub') >= 0 || tags.indexOf('auto_generated') >= 0;
+    var fTags = (feat.tags || []).map(function(t) { return (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase(); });
+    if (fTags.indexOf('manual') >= 0 || fTags.indexOf('stub') >= 0 || fTags.indexOf('auto_generated') >= 0) return true;
+    /* Also filter if ALL scenarios are stubs */
+    var scenarios = (feat.elements || []).filter(function(e) { return e.keyword !== 'Background'; });
+    if (scenarios.length > 0 && scenarios.every(function(sc) {
+      var sTags = (sc.tags || []).map(function(t) { return (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase(); });
+      return sTags.indexOf('stub') >= 0 || sTags.indexOf('auto_generated') >= 0;
+    })) return true;
+    return false;
   }
   var features = behaveFeatures.filter(function(f) { return !isManualFeature(f); });
   if (vcScope) {
