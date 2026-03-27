@@ -147,9 +147,9 @@ class TestDemoDashboard:
         assert r["status"] == "pass"
         assert r["test_result"] == "passed"
 
-    def test_req003_vc01_drifted_in_release(self):
-        """REQ-003-VC-01 criteria changed in 1.2.0 model update."""
-        r = self.rows["SYS-REQ-003-VC-01"]
+    def test_req011_vc01_drifted_in_release(self):
+        """REQ-011-VC-01 criteria changed in 1.2.0 model update."""
+        r = self.rows["SYS-REQ-011-VC-01"]
         assert r["status"] == "drifted"
         assert r["method"] == "Test"
 
@@ -192,8 +192,8 @@ class TestDemoDashboard:
         assert vm02["scenario_name"] is None
 
     def test_drifted_vc_not_inheriting_results(self):
-        """REQ-003-VC-01 is drifted. It must NOT show a test result."""
-        vc = self.rows["SYS-REQ-003-VC-01"]
+        """REQ-011-VC-01 is drifted. It must NOT show a test result."""
+        vc = self.rows["SYS-REQ-011-VC-01"]
         assert vc["test_result"] is None
 
     def test_fail_vc_gets_correct_scenario_not_sibling(self):
@@ -233,7 +233,7 @@ class TestDemoDashboard:
         gb = self.js_trace["gate_b"]
         assert gb["passed"] is False
         assert len(gb["items"]) == 1
-        assert gb["items"][0]["verificationCriteriaId"] == "SYS-REQ-003-VC-01"
+        assert gb["items"][0]["verificationCriteriaId"] == "SYS-REQ-011-VC-01"
 
     def test_gate_b_has_hash_diff(self):
         item = self.js_trace["gate_b"]["items"][0]
@@ -270,7 +270,7 @@ class TestDemoDashboard:
     # ---- TAB 4: TEST EXECUTION ----
 
     def test_behave_has_10_features(self):
-        assert len(self.js_behave) == 10  # 9 requirement features + 1 orphaned
+        assert len(self.js_behave) == 11  # 10 requirement features + 1 orphaned
 
     def test_automated_features_are_10(self):
         """All features are automated in demo (no manual/stub tags)."""
@@ -281,7 +281,7 @@ class TestDemoDashboard:
                     for t in f.get("tags", [])]
             if not manual_tags.intersection(tags):
                 automated.append(f)
-        assert len(automated) == 10
+        assert len(automated) == 11
 
     def test_fail_scenario_has_error_message(self):
         feat = [f for f in self.js_behave if f["name"] == "Configuration Management"][0]
@@ -367,9 +367,9 @@ class TestDemoDashboard:
         vms = [r for r in self.report["requirements"] if r["requirement_id"] == "SYS-REQ-001"]
         assert len(vms) == 2
 
-    def test_req003_has_2_vcs(self):
+    def test_req003_has_1_vc(self):
         vms = [r for r in self.report["requirements"] if r["requirement_id"] == "SYS-REQ-003"]
-        assert len(vms) == 2
+        assert len(vms) == 1
 
     def test_descriptions_present_in_requirements(self):
         for req in self.js_reqs["requirements"]:

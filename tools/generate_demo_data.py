@@ -8,7 +8,7 @@ Releases:
   2.0.0 (Future)    — Planning Ahead       (3 deferred reqs, 1 uncovered)
   2.1.0 (Future)    — Security and Compliance (2 deferred reqs)
 
-10 requirements, 12 VCs, ALL method "Test", NO orphans.
+11 requirements, 13 VCs, ALL method "Test", NO orphans.
 
 Usage:
     python tools/generate_demo_data.py --output-dir build/demo
@@ -30,7 +30,7 @@ def generate(output_dir: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
-    # 1. Requirements (10 requirements, 12 VCs — all method "Test")
+    # 1. Requirements (11 requirements, 13 VCs — all method "Test")
     # ------------------------------------------------------------------
     requirements = {
         "exportMetadata": {
@@ -82,8 +82,7 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-003: Graceful Degradation — 2 VCs (1.2.0)
-                #   VC-01: DRIFTED (criteria changed to add failover language)
+                # REQ-003: Graceful Degradation — 1 VC (1.2.0)
                 #   VC-02: UNCOVERED (no scenario written, stub generated)
                 "requirementId": "SYS-REQ-003",
                 "title": "Graceful Degradation",
@@ -92,12 +91,6 @@ def generate(output_dir: Path):
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
-                    {
-                        "verificationCriteriaId": "SYS-REQ-003-VC-01",
-                        "method": "Test",
-                        # NEW criteria — includes failover language (drifted from baseline)
-                        "criteria": "Verify continued operation when logging subsystem is unavailable, including automatic failover to backup logging.",
-                    },
                     {
                         "verificationCriteriaId": "SYS-REQ-003-VC-02",
                         "method": "Test",
@@ -240,6 +233,25 @@ def generate(output_dir: Path):
                 "satisfiedBy": ["ComponentA", "ComponentB"],
                 "tracesTo": [],
             },
+            {
+                # REQ-011: Logging Subsystem Failover — 1 VC (1.2.0)
+                #   VC-01: DRIFTED (moved from REQ-003, criteria includes failover language)
+                "requirementId": "SYS-REQ-011",
+                "title": "Logging Subsystem Failover",
+                "description": "The system shall automatically failover to backup logging when the primary logging subsystem is unavailable.",
+                "priority": "High",
+                "status": "Approved",
+                "parentRequirementId": None,
+                "verificationCriteria": [
+                    {
+                        "verificationCriteriaId": "SYS-REQ-011-VC-01",
+                        "method": "Test",
+                        "criteria": "Verify continued operation when logging subsystem is unavailable, including automatic failover to backup logging.",
+                    },
+                ],
+                "satisfiedBy": ["ComponentA", "ComponentB"],
+                "tracesTo": ["SYS-REQ-003"],
+            },
         ],
     }
 
@@ -315,18 +327,27 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 3: Graceful Degradation — only VC-01 has a scenario (VC-02 is UNCOVERED)
+        # Feature 3: Graceful Degradation — VC-02 is UNCOVERED (no scenarios)
         {
             "keyword": "Feature",
             "name": "Graceful Degradation",
             "tags": ["REQ:SYS-REQ-003"],
             "location": "features/automated/sys_req_003_graceful_degradation.feature:2",
             "status": "passed",
+            "elements": [],
+        },
+        # Feature 3b: Logging Subsystem Failover — VC-01 passes
+        {
+            "keyword": "Feature",
+            "name": "Logging Subsystem Failover",
+            "tags": ["REQ:SYS-REQ-011"],
+            "location": "features/automated/sys_req_011_logging_failover.feature:2",
+            "status": "passed",
             "elements": [
                 {
                     "keyword": "Scenario",
                     "name": "System continues processing when logging subsystem fails",
-                    "tags": ["VC:SYS-REQ-003-VC-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-011-VC-01", "VER:Test"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
@@ -336,7 +357,6 @@ def generate(output_dir: Path):
                         step("And ", "no crash or panic entries should appear in the product logs"),
                     ],
                 },
-                # NOTE: No scenario for VC-02 — it is UNCOVERED
             ],
         },
         # Feature 4: Error Handling — 1 scenario, passes (1.1.0)
@@ -521,8 +541,8 @@ def generate(output_dir: Path):
     # ------------------------------------------------------------------
     traceability_report = {
         "timestamp": "2026-03-24T10:05:00Z",
-        "requirements_total": 10,
-        "features_scanned": 10,
+        "requirements_total": 11,
+        "features_scanned": 11,
         "vcs_total": 12,
         "vcs_covered": 11,
         "gate_a": {
@@ -585,15 +605,15 @@ def generate(output_dir: Path):
             "passed": False,
             "items": [
                 {
-                    "requirementId": "SYS-REQ-003",
-                    "verificationCriteriaId": "SYS-REQ-003-VC-01",
+                    "requirementId": "SYS-REQ-011",
+                    "verificationCriteriaId": "SYS-REQ-011-VC-01",
                     "method": "Test",
-                    "title": "Graceful Degradation",
+                    "title": "Logging Subsystem Failover",
                     "oldHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
                     "newHash": "f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1",
                     "oldCriteria": "Verify continued operation when logging subsystem is unavailable.",
                     "newCriteria": "Verify continued operation when logging subsystem is unavailable, including automatic failover to backup logging.",
-                    "affectedFeatureFiles": ["features/automated/sys_req_003_graceful_degradation.feature"],
+                    "affectedFeatureFiles": ["features/automated/sys_req_011_logging_failover.feature"],
                 },
             ],
             "message": "1 drifted verification criteria detected. Scenarios flagged for review.",
@@ -738,6 +758,7 @@ def generate(output_dir: Path):
                 "scope": [
                     "SYS-REQ-003",
                     "SYS-REQ-007",
+                    "SYS-REQ-011",
                 ],
             },
             {
@@ -786,10 +807,10 @@ def generate(output_dir: Path):
     print("  Release 1.1.0 (Released)  — Building On It")
     print("    SYS-REQ-005-VC-01  Test  PASS")
     print("  Release 1.2.0 (Current)   — The Model Changed")
-    print("    SYS-REQ-003-VC-01  Test  DRIFTED (criteria changed: added failover)")
     print("    SYS-REQ-003-VC-02  Test  UNCOVERED (no scenario, stub generated)")
     print("    SYS-REQ-007-VC-01  Test  FAIL (config update 12.3s > 5s)")
     print("    SYS-REQ-007-VC-02  Test  PASS")
+    print("    SYS-REQ-011-VC-01  Test  DRIFTED (criteria changed: added failover)")
     print("  Release 2.0.0 (Future)    — Planning Ahead")
     print("    SYS-REQ-004-VC-01  Test  deferred (passing scenario ahead of schedule)")
     print("    SYS-REQ-006-VC-01  Test  deferred (passing scenario ahead of schedule)")
