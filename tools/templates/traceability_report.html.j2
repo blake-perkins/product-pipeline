@@ -539,7 +539,7 @@ const RELEASE_PLAN = {{ release_plan_json }};
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  const btn = document.querySelector('[data-tab="' + tabName + '"]');
+  const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
   if (btn) btn.classList.add('active');
   const panel = document.getElementById('panel-' + tabName);
   if (panel) { panel.classList.add('active'); }
