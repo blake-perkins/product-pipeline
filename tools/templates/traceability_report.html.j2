@@ -909,7 +909,7 @@ function renderHero() {
   html += '<div class="hero-card" data-action="switch-tab" data-tab="releases" style="background:var(--surface);border-radius:8px;padding:16px;border:1px solid var(--surface-border);cursor:pointer;transition:all 0.15s">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
   html += '<span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">Release Scope</span>';
-  html += '<span style="font-size:0.75rem;color:var(--blue-ng)">View Releases &#8250;</span>';
+  html += '<span style="font-size:0.75rem;color:var(--text-muted)">View Releases &#8250;</span>';
   html += '</div>';
 
   /* Find the relevant release to show */
@@ -985,7 +985,7 @@ function renderHero() {
   html += '<div class="hero-card" data-action="switch-tab" data-tab="tests" style="background:var(--surface);border-radius:8px;padding:16px;border:1px solid var(--surface-border);cursor:pointer;transition:all 0.15s">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
   html += '<span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">Test Results</span>';
-  html += '<span style="font-size:0.75rem;color:var(--blue-ng)">View Tests &#8250;</span>';
+  html += '<span style="font-size:0.75rem;color:var(--text-muted)">View Tests &#8250;</span>';
   html += '</div>';
   html += '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">';
   html += '<span data-counter="' + s.passed + '" style="font-size:1.8rem;font-weight:700;color:var(--pass)">' + s.passed + '</span>';
@@ -1016,7 +1016,7 @@ function renderHero() {
   html += '<div class="hero-card-blockers" data-action="switch-tab" data-tab="gates" style="background:' + (hasBlockers ? 'var(--blocker-bg)' : 'var(--surface)') + ';border-radius:8px;padding:16px;border:1px solid ' + (hasBlockers ? 'var(--blocker-border)' : 'var(--surface-border)') + ';cursor:pointer;transition:all 0.15s">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
   html += '<span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">Blockers</span>';
-  html += '<span style="font-size:0.75rem;color:var(--blue-ng)">View Gates &#8250;</span>';
+  html += '<span style="font-size:0.75rem;color:var(--text-muted)">View Gates &#8250;</span>';
   html += '</div>';
   if (!hasBlockers) {
     html += '<div style="font-size:1.4rem;font-weight:700;color:var(--pass)">&#10003; None</div>';
@@ -1867,7 +1867,7 @@ function renderExecutiveSummary() {
 
   /* Section 2: Release Progress (left column) — click to navigate */
   html += '<div class="exec-section exec-section-link" style="cursor:pointer" data-action="switch-tab" data-tab="releases">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Release Progress</h3><span style="font-size:0.75rem;color:var(--blue-ng)">View Details &#8250;</span></div>';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Release Progress</h3><span style="font-size:0.75rem;color:var(--text-muted)">View Details &#8250;</span></div>';
   if (RELEASE_PLAN && RELEASE_PLAN.releases && RELEASE_PLAN.releases.length) {
     const reqToVCs = {};
     if (REQUIREMENTS && REQUIREMENTS.requirements) {
@@ -1950,7 +1950,7 @@ function renderExecutiveSummary() {
 
   /* Section 4: Cyber Risk Summary — click to navigate */
   html += '<div class="exec-section exec-section-link" style="margin-bottom:20px;cursor:pointer" data-action="switch-tab" data-tab="security">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Cyber Risk</h3><span style="font-size:0.75rem;color:var(--blue-ng)">View Details &#8250;</span></div>';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Cyber Risk</h3><span style="font-size:0.75rem;color:var(--text-muted)">View Details &#8250;</span></div>';
   if (SNAP.isReleased) {
     html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; All vulnerabilities resolved before release</div>';
   } else if (!GRYPE || !GRYPE.matches) {
