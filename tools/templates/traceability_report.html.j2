@@ -1258,6 +1258,34 @@ function renderTraceability() {
       if (reqIds) html += '<div style="margin-bottom:6px"><strong>References deleted requirement(s):</strong> <code style="font-size:0.85rem;color:var(--fail)">' + esc(reqIds) + '</code></div>';
       if (vcIds) html += '<div style="margin-bottom:6px"><strong>References deleted VC(s):</strong> <code style="font-size:0.85rem;color:var(--fail)">' + esc(vcIds) + '</code></div>';
       html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:8px"><strong>Action required:</strong> Delete this feature file or update its tags to reference a valid requirement.</div>';
+      /* Find and render the orphaned Gherkin scenarios */
+      var orphanFeature = behaveFeatures.find(function(f) {
+        return (f.location || f.filename || '').indexOf(file.replace(/.*\//, '')) >= 0 || f.name === name;
+      });
+      if (orphanFeature) {
+        (orphanFeature.elements || []).filter(function(el) { return el.keyword !== 'Background'; }).forEach(function(sc) {
+          html += '<div style="margin-top:10px;padding:10px 14px;background:var(--surface);border-radius:6px;border:1px solid var(--surface-border)">';
+          var scTags = (sc.tags || []).map(function(t) { return typeof t === 'string' ? t : (t.name || ''); });
+          if (scTags.length > 0) {
+            html += '<div style="margin-bottom:4px">';
+            scTags.forEach(function(tag) {
+              html += '<span style="display:inline-block;padding:1px 6px;margin-right:4px;border-radius:3px;font-size:0.7rem;font-family:monospace;background:var(--tag-bg);color:var(--text-muted)">' + esc(tag) + '</span>';
+            });
+            html += '</div>';
+          }
+          html += '<div class="scenario-name"><span>' + esc(sc.name) + '</span><span>' + badgeFor('orphaned') + '</span></div>';
+          (sc.steps || []).forEach(function(step) {
+            var kw = (step.keyword || '').trim().toLowerCase().replace(/\*/, 'and');
+            var kwClass = ['given','when','then','and','but'].indexOf(kw) >= 0 ? kw : 'and';
+            html += '<div class="step">';
+            html += '<span class="step-status"></span>';
+            html += '<span class="step-kw ' + kwClass + '">' + esc(step.keyword) + '</span>';
+            html += '<span class="step-text">' + esc(step.name) + '</span>';
+            html += '</div>';
+          });
+          html += '</div>';
+        });
+      }
       html += '</div>';
       html += '</div>';
     });
