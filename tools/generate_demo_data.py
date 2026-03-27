@@ -444,7 +444,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "System recovers from transient fault within timeout",
-                    "tags": ["VC:SYS-REQ-004-VC-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-004-VC-01", "VER:Test", "DEFERRED"],
                     "type": "scenario",
                     "status": "undefined",
                     "steps": [
@@ -467,7 +467,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "Self-test completes within timeout",
-                    "tags": ["VC:SYS-REQ-006-VC-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-006-VC-01", "VER:Test", "DEFERRED"],
                     "type": "scenario",
                     "status": "undefined",
                     "steps": [
@@ -489,7 +489,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "Corrupted firmware image is rejected",
-                    "tags": ["VC:SYS-REQ-009-VC-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-009-VC-01", "VER:Test", "DEFERRED"],
                     "type": "scenario",
                     "status": "undefined",
                     "steps": [
@@ -537,7 +537,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "System buffers messages during network outage",
-                    "tags": ["VC:SYS-REQ-010-VC-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-010-VC-01", "VER:Test", "DEFERRED"],
                     "type": "scenario",
                     "status": "undefined",
                     "steps": [
