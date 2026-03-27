@@ -195,7 +195,7 @@ jobs:
             --behave-results build/demo/behave-results.json \
             --traceability-input build/demo/traceability_report.json \
             --output-json build/reports/traceability/final_traceability_report.json \
-            --output-html build/reports/traceability/MBSE_Traceability_Dashboard.html \
+            --output-html build/reports/traceability/Deployment_Pipeline_Report.html \
             --release-plan build/demo/release-plan.json \
             --sbom-path build/demo/sbom.json \
             --grype-path build/demo/grype-results.json
@@ -208,10 +208,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dashboard
-          path: |
-            build/reports/traceability/MBSE_Traceability_Dashboard.html
-            build/reports/traceability/final_traceability_report.json
+          name: Reports
+          path: build/reports/traceability/Deployment_Pipeline_Report.html
 
       - uses: actions/upload-artifact@v4
         with:
