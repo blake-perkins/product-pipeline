@@ -1008,7 +1008,7 @@ function renderHero() {
   var highCVEs = SNAP.vulnMatches.filter(function(m) { return (m.vulnerability || {}).severity === 'High'; }).length;
   var blockerCount = s.failed + s.uncovered_vcs + s.drifted_vcs + orphanCount + criticalCVEs + highCVEs;
   var hasBlockers = blockerCount > 0;
-  html += '<div class="hero-card-blockers" data-action="switch-tab" data-tab="gates" style="background:' + (hasBlockers ? 'var(--blocker-bg)' : 'var(--success-bg)') + ';border-radius:8px;padding:16px;border:1px solid ' + (hasBlockers ? 'var(--blocker-border)' : 'var(--success-border)') + ';cursor:pointer;transition:all 0.15s">';
+  html += '<div class="hero-card-blockers" data-action="switch-tab" data-tab="gates" style="background:' + (hasBlockers ? 'var(--blocker-bg)' : 'var(--surface)') + ';border-radius:8px;padding:16px;border:1px solid ' + (hasBlockers ? 'var(--blocker-border)' : 'var(--surface-border)') + ';cursor:pointer;transition:all 0.15s">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
   html += '<span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">Blockers</span>';
   html += '<span style="font-size:0.75rem;color:var(--blue-ng)">View Gates &#8250;</span>';
