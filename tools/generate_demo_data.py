@@ -664,24 +664,6 @@ def generate(output_dir: Path):
         "matches": [
             {
                 "vulnerability": {
-                    "id": "CVE-2024-5535",
-                    "severity": "Critical",
-                    "description": "OpenSSL SSL_select_next_proto has an out-of-bounds read when processing a specially formed ALPN protocol list.",
-                    "fix": {"versions": ["3.0.15"]},
-                },
-                "artifact": {"name": "openssl", "version": "3.0.13"},
-            },
-            {
-                "vulnerability": {
-                    "id": "CVE-2024-2236",
-                    "severity": "High",
-                    "description": "libcurl SOCKS5 proxy handshake may write beyond allocated memory when hostname exceeds 255 bytes.",
-                    "fix": {"versions": ["7.88.2"]},
-                },
-                "artifact": {"name": "libcurl", "version": "7.88.1"},
-            },
-            {
-                "vulnerability": {
                     "id": "CVE-2023-45853",
                     "severity": "Medium",
                     "description": "MiniZip in zlib through 1.3 has an arithmetic wraparound in zipOpenNewFileInZip4_64 leading to incorrect memory allocation.",

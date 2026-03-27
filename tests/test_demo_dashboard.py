@@ -616,13 +616,13 @@ class TestDemoWithSBOM(TestDemoDashboard):
     def test_grype_has_matches(self):
         assert len(self.js_grype["matches"]) > 0
 
-    def test_grype_has_critical(self):
+    def test_grype_has_medium(self):
         severities = [m["vulnerability"]["severity"] for m in self.js_grype["matches"]]
-        assert "Critical" in severities
+        assert "Medium" in severities
 
-    def test_cyber_policy_fail_in_html(self):
-        """POLICY: FAIL banner should appear when critical CVEs exist."""
-        assert "POLICY: FAIL" in self.html
+    def test_cyber_policy_pass_in_html(self):
+        """POLICY: PASS banner should appear when no critical/high CVEs."""
+        assert "POLICY: PASS" in self.html
 
     def test_cyber_released_clean_logic_in_html(self):
         """HTML should contain logic to hide vulns for released versions via SNAP."""

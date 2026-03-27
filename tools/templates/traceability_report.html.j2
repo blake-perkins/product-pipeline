@@ -159,6 +159,7 @@
     .sev-medium { background: var(--sev-medium); color: var(--text); }
     .sev-low { background: var(--sev-low); }
     .sev-negligible { background: var(--sev-negligible); }
+    .sev-none { background: var(--surface-border); color: var(--text-muted); }
     table.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     table.data-table th { background: var(--header-bg); color: #fff; padding: 10px 12px; text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; position: sticky; top: 0; }
     table.data-table th:hover { background: var(--navy-1); }
@@ -1489,7 +1490,8 @@ function renderSecurity() {
     html += '<h2 class="section-title" style="margin-top:0">Vulnerability Summary</h2>';
     html += '<div class="sev-cards">';
     ['Critical','High','Medium','Low','Negligible'].forEach(s => {
-      html += '<div class="sev-card sev-' + s.toLowerCase() + '"><div class="sev-val">' + sevCounts[s] + '</div><div class="sev-lbl">' + s + '</div></div>';
+      var sevClass = sevCounts[s] > 0 ? 'sev-' + s.toLowerCase() : 'sev-none';
+      html += '<div class="sev-card ' + sevClass + '"><div class="sev-val">' + sevCounts[s] + '</div><div class="sev-lbl">' + s + '</div></div>';
     });
     html += '</div>';
 
