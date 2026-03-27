@@ -231,9 +231,9 @@
     .exec-issue:last-child { border-bottom: none; }
 
     /* ---- Floating Legend ---- */
-    .legend-fab { position: fixed; bottom: 24px; right: 24px; width: 44px; height: 44px; border-radius: 50%; background: var(--navy-1); color: #fff; border: none; font-size: 1.2rem; cursor: pointer; box-shadow: 0 3px 12px rgba(0,0,0,0.25); z-index: 100; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+    .legend-fab { position: fixed; bottom: 56px; right: 24px; width: 44px; height: 44px; border-radius: 50%; background: var(--navy-1); color: #fff; border: none; font-size: 1.2rem; cursor: pointer; box-shadow: 0 3px 12px rgba(0,0,0,0.25); z-index: 201; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
     .legend-fab:hover { transform: scale(1.1); }
-    .legend-popup { position: fixed; bottom: 80px; right: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); z-index: 100; display: none; min-width: 260px; }
+    .legend-popup { position: fixed; bottom: 112px; right: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); z-index: 201; display: none; min-width: 260px; }
     .legend-popup.open { display: block; }
     .legend-popup h4 { margin: 0 0 10px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
     .legend-popup .legend-item { margin-bottom: 6px; }
@@ -1027,7 +1027,7 @@ function renderHero() {
       var cyberParts = [];
       if (criticalCVEs > 0) cyberParts.push(criticalCVEs + ' critical');
       if (highCVEs > 0) cyberParts.push(highCVEs + ' high');
-      html += '<span style="color:var(--fail)">&#9888; ' + cyberParts.join(' + ') + ' vulnerability' + ((criticalCVEs + highCVEs) > 1 ? 'ies' : 'y') + '</span><br>';
+      html += '<span style="color:var(--fail)">&#9888; ' + cyberParts.join(' + ') + ((criticalCVEs + highCVEs) > 1 ? ' vulnerabilities' : ' vulnerability') + '</span><br>';
     }
     html += '</div>';
   }
