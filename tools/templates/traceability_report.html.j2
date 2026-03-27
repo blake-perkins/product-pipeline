@@ -110,6 +110,7 @@
     .req-card.rc-manual { border-left-color: var(--manual); }
     .req-card.rc-deferred { border-left-color: var(--deferred); }
     @keyframes flash-fade { 0% { background: #FFF3CD; } 100% { background: transparent; } }
+    @keyframes flash-fade-dark { 0% { background: #3a3520; } 100% { background: transparent; } }
     .req-card.flash-highlight, .req-card.flash-highlight .req-header, .req-card.flash-highlight .req-body { animation: flash-fade 2.5s ease-out forwards; }
     .req-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.15s; background: var(--card); }
     .req-header:hover { background: var(--surface); }
@@ -290,6 +291,7 @@
       .tab-btn:hover { background: var(--surface); }
       .tab-panel { background: var(--card); }
       .req-card { background: var(--card); border-color: var(--border); }
+      .req-card.flash-highlight, .req-card.flash-highlight .req-header, .req-card.flash-highlight .req-body { animation: flash-fade-dark 2.5s ease-out forwards; }
       .gate-card { background: var(--card); border-color: var(--border); }
       .gate-card.gate-pass .gate-title { background: var(--pass); }
       .gate-card.gate-fail .gate-title { background: var(--attention); }
@@ -346,6 +348,7 @@
     html.dark .tab-btn:hover { background: var(--surface); }
     html.dark .tab-panel { background: var(--card); }
     html.dark .req-card { background: var(--card); border-color: var(--border); }
+    html.dark .req-card.flash-highlight, html.dark .req-card.flash-highlight .req-header, html.dark .req-card.flash-highlight .req-body { animation: flash-fade-dark 2.5s ease-out forwards; }
     html.dark .gate-card { background: var(--card); border-color: var(--border); }
     html.dark .gate-card.gate-pass .gate-title { background: var(--pass); }
     html.dark .gate-card.gate-fail .gate-title { background: var(--attention); }
