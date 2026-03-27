@@ -42,7 +42,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
-    .container { max-width: 1440px; margin: 0 auto; padding: 16px 20px; padding-bottom: 40px; }
+    .container { max-width: 1440px; margin: 0 auto; padding: 16px 20px; padding-bottom: 64px; }
 
     /* ---- Hero Header ---- */
     .hero { background: var(--card); color: var(--text); padding: 28px 32px 24px; border-radius: 10px; margin-bottom: 0; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
@@ -249,7 +249,6 @@
     .release-header:hover { background: var(--surface); }
 
     /* ---- Release Transition ---- */
-    #hero-dynamic, #summary-content { transition: opacity 0.15s ease; }
 
     /* ---- Print ---- */
     @media print {
@@ -459,6 +458,7 @@
   <!-- ======== TAB 3: TEST EXECUTION ======== -->
   <div id="panel-tests" class="tab-panel">
     <div id="tests-content"></div>
+    <div id="test-filter-empty" class="empty-state" style="display:none"><h3>No matching results</h3><p>Try adjusting your filter or search term.</p></div>
   </div>
 
   <!-- ======== TAB 4: SECURITY ======== -->
@@ -881,11 +881,6 @@ function buildSnapshot() {
 }
 
 function onReleaseFilterChange() {
-  var heroDyn = document.getElementById('hero-dynamic');
-  var summaryContent = document.getElementById('summary-content');
-  if (heroDyn) heroDyn.style.opacity = '0';
-  if (summaryContent) summaryContent.style.opacity = '0';
-
   selectedRelease = document.getElementById('release-filter').value;
   buildSnapshot();
   renderHero();
@@ -895,13 +890,6 @@ function onReleaseFilterChange() {
   renderSecurity();
   renderExecutiveSummary();
   applyFilters();
-
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      if (heroDyn) heroDyn.style.opacity = '1';
-      if (summaryContent) summaryContent.style.opacity = '1';
-    });
-  });
 }
 
 /* Render the hero section dynamically */
@@ -1791,17 +1779,21 @@ function renderTests() {
 }
 
 function filterTests() {
-  const filter = (document.getElementById('test-filter') || {}).value || 'all';
-  const search = ((document.getElementById('test-search') || {}).value || '').toLowerCase();
-  document.querySelectorAll('.test-feature').forEach(feat => {
-    const status = feat.getAttribute('data-status') || '';
-    const text = feat.textContent.toLowerCase();
-    let show = true;
+  var filter = (document.getElementById('test-filter') || {}).value || 'all';
+  var search = ((document.getElementById('test-search') || {}).value || '').toLowerCase();
+  var anyVisible = false;
+  document.querySelectorAll('.test-feature').forEach(function(feat) {
+    var status = feat.getAttribute('data-status') || '';
+    var text = feat.textContent.toLowerCase();
+    var show = true;
     if (filter === 'failed' && status !== 'failed') show = false;
     if (filter === 'passed' && status !== 'passed') show = false;
     if (search && !text.includes(search)) show = false;
     feat.style.display = show ? '' : 'none';
+    if (show) anyVisible = true;
   });
+  var emptyEl = document.getElementById('test-filter-empty');
+  if (emptyEl) emptyEl.style.display = (!anyVisible && (filter !== 'all' || search)) ? '' : 'none';
 }
 
 function toggleTestFeature(el) {
