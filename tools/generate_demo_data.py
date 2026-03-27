@@ -362,7 +362,7 @@ def generate(output_dir: Path):
                 {
                     "keyword": "Scenario",
                     "name": "System continues processing when logging subsystem fails",
-                    "tags": ["VC:SYS-REQ-011-VC-01", "VER:Test"],
+                    "tags": ["VC:SYS-REQ-011-VC-01", "VER:Test", "REVIEW_REQUIRED"],
                     "type": "scenario",
                     "status": "passed",
                     "steps": [
