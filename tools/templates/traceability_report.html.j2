@@ -959,7 +959,7 @@ function renderHero() {
     html += '<polyline points="25,39 35,51 56,27" fill="none" stroke="var(--pass)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>';
     html += '</svg>';
     html += '</div>';
-    html += '<div style="font-size:0.75rem;color:var(--pass);font-weight:600;margin-top:4px">Shipped</div>';
+    html += '<div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-top:4px">Shipped</div>';
     html += '</div>';
   } else {
     var inScope = s.in_scope_vcs || s.total_vcs;
@@ -1898,7 +1898,7 @@ function renderExecutiveSummary() {
       else if (isCurrent) html += ' <span class="badge" style="background:var(--blue-ng);color:#fff;font-size:0.65rem;vertical-align:middle">CURRENT</span>';
       html += '</span>';
       if (released) {
-        html += '<span style="font-size:0.85rem;color:var(--pass);font-weight:600">Shipped</span>';
+        html += '<span style="font-size:0.85rem;color:var(--text-muted);font-weight:600">Shipped</span>';
       } else {
         html += '<span style="font-size:0.85rem;color:' + (pct === 100 && manualCount === 0 ? 'var(--pass)' : 'var(--text-muted)') + ';font-weight:600">' + pct + '% (' + complete + '/' + total + ')' + (manualCount > 0 ? ' <span style="color:var(--manual);font-weight:400">+ ' + manualCount + ' manual</span>' : '') + '</span>';
       }
@@ -2075,7 +2075,7 @@ function renderReleases() {
     html += '</div>';
     html += '<div style="text-align:right;min-width:120px">';
     if (relReleased) {
-      html += '<div style="font-size:1.1rem;font-weight:700;color:var(--pass)">&#10003; Shipped</div>';
+      html += '<div style="font-size:1.1rem;font-weight:700;color:var(--text-muted)">&#10003; Shipped</div>';
     } else {
       html += '<div style="font-size:1.4rem;font-weight:700;color:' + (pct === 100 ? 'var(--pass)' : 'var(--text)') + '">' + pct + '%</div>';
       html += '<div style="font-size:0.75rem;color:var(--text-muted)">' + complete + ' of ' + total + ' VCs</div>';
