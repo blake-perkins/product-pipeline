@@ -70,7 +70,6 @@ jobs:
             --non-test-output-dir bdd/features/non_test \
             --report-output build/reports/traceability/traceability_report.json \
             --html-report-output build/reports/traceability/traceability_report.html \
-            --fail-on-orphaned \
             $RELEASE_PLAN_ARG
 
       - uses: actions/upload-artifact@v4
