@@ -1212,7 +1212,7 @@ function renderTraceability() {
           });
           html += '</div>';
         }
-        var scenarioDisplayStatus = getScenarioStatus(s.scenario);
+        var scenarioDisplayStatus = (row.status === 'deferred') ? 'deferred' : getScenarioStatus(s.scenario);
         html += '<div class="scenario-name"><span>' + esc(s.scenario.name) + '</span><span>' + badgeFor(scenarioDisplayStatus) + '</span></div>';
         (s.scenario.steps || []).forEach(step => {
           const kw = (step.keyword || '').trim().toLowerCase().replace(/\*/, 'and');
