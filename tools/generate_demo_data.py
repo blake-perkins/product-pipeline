@@ -327,14 +327,29 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 3: Graceful Degradation — VC-02 is UNCOVERED (no scenarios)
+        # Feature 3: Graceful Degradation — VC-02 has auto-generated stub (UNCOVERED)
         {
             "keyword": "Feature",
             "name": "Graceful Degradation",
             "tags": ["REQ:SYS-REQ-003"],
-            "location": "features/automated/sys_req_003_graceful_degradation.feature:2",
-            "status": "passed",
-            "elements": [],
+            "location": "features/automated/sys_req_003_vc_02.feature:2",
+            "status": "failed",
+            "elements": [
+                {
+                    "keyword": "Scenario",
+                    "name": "[STUB] Graceful Degradation - Critical Message Processing",
+                    "tags": ["VC:SYS-REQ-003-VC-02", "VER:Test", "STUB", "AUTO_GENERATED"],
+                    "type": "scenario",
+                    "status": "failed",
+                    "steps": [
+                        step("Given ", "the system is deployed"),
+                        step("When ", "the scenario is executed"),
+                        step("Then ", "it should fail because it is not yet implemented",
+                             status="failed", duration=0.001,
+                             error="NotImplementedError: This is an auto-generated stub. Replace this scenario with a real test for SYS-REQ-003-VC-02."),
+                    ],
+                },
+            ],
         },
         # Feature 3b: Logging Subsystem Failover — VC-01 passes
         {

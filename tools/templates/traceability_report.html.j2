@@ -697,10 +697,6 @@ behaveFeatures.forEach(f => {
 
 /* Find behave scenarios matching a given VC ID */
 function findScenariosForVC(vcId, reqId, reportRow) {
-  /* Don't look for scenarios if this VC is uncovered — there aren't real ones */
-  if (reportRow && reportRow.status === 'uncovered') {
-    return [];
-  }
   const results = [];
   behaveFeatures.forEach(feat => {
     const fTags = (feat.tags || []).map(t => (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, ''));
