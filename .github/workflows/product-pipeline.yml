@@ -204,7 +204,7 @@ jobs:
       - name: Generate Requirements Document
         run: |
           python tools/generate_req_doc.py \
-            --requirements build/cameo/requirements/requirements.json \
+            --requirements build/demo/requirements.json \
             --output build/reports/requirements-document.html
 
       - uses: actions/upload-artifact@v4
