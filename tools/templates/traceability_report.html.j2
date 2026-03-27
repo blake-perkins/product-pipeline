@@ -824,12 +824,12 @@ function buildSnapshot() {
   // Filtered behave features (automated only, in scope)
   function isManualFeature(feat) {
     var fTags = (feat.tags || []).map(function(t) { return (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase(); });
-    if (fTags.indexOf('manual') >= 0 || fTags.indexOf('stub') >= 0 || fTags.indexOf('auto_generated') >= 0) return true;
-    /* Also filter if ALL scenarios are stubs */
+    if (fTags.indexOf('manual') >= 0 || fTags.indexOf('stub') >= 0 || fTags.indexOf('auto_generated') >= 0 || fTags.indexOf('deferred') >= 0) return true;
+    /* Also filter if ALL scenarios are stubs or deferred */
     var scenarios = (feat.elements || []).filter(function(e) { return e.keyword !== 'Background'; });
     if (scenarios.length > 0 && scenarios.every(function(sc) {
       var sTags = (sc.tags || []).map(function(t) { return (typeof t === 'string' ? t : (t.name || '')).replace(/^@/, '').toLowerCase(); });
-      return sTags.indexOf('stub') >= 0 || sTags.indexOf('auto_generated') >= 0;
+      return sTags.indexOf('stub') >= 0 || sTags.indexOf('auto_generated') >= 0 || sTags.indexOf('deferred') >= 0;
     })) return true;
     return false;
   }
