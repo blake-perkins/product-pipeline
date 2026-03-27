@@ -1212,12 +1212,12 @@ function renderTraceability() {
           });
           html += '</div>';
         }
-        var scenarioDisplayStatus = (row.status === 'deferred') ? 'deferred' : getScenarioStatus(s.scenario);
+        var scenarioDisplayStatus = getScenarioStatus(s.scenario);
         html += '<div class="scenario-name"><span>' + esc(s.scenario.name) + '</span><span>' + badgeFor(scenarioDisplayStatus) + '</span></div>';
         (s.scenario.steps || []).forEach(step => {
           const kw = (step.keyword || '').trim().toLowerCase().replace(/\*/, 'and');
           const kwClass = ['given','when','then','and','but'].includes(kw) ? kw : 'and';
-          const stepStatus = (row.status === 'deferred') ? '' : ((step.result && step.result.status) || '');
+          const stepStatus = (step.result && step.result.status) || '';
           const dur = step.result ? step.result.duration : null;
           html += '<div class="step">';
           html += '<span class="step-status ' + stepStatus + '"></span>';
