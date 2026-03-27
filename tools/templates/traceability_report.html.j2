@@ -1528,7 +1528,7 @@ function renderSecurity() {
     /* ---- #2 Fix availability summary ---- */
     html += '<div style="display:flex;gap:16px;margin:12px 0 20px;font-size:0.9rem">';
     html += '<span style="color:var(--pass);font-weight:600">\u2713 ' + withFix + ' with fix available</span>';
-    html += '<span style="color:var(--fail);font-weight:600">\u2717 ' + noFix + ' no fix available</span>';
+    html += '<span style="color:var(--text-muted);font-weight:600">&#8212; ' + noFix + ' no fix available</span>';
     html += '<span style="color:var(--text-muted)">' + matches.length + ' total</span>';
     html += '</div>';
 
@@ -1556,7 +1556,7 @@ function renderSecurity() {
         const fixVersions = v.fix && v.fix.versions ? v.fix.versions : [];
         const fixCell = fixVersions.length > 0
           ? '<span style="color:var(--pass);font-weight:600">\u2713 ' + esc(fixVersions.join(', ')) + '</span>'
-          : '<span style="color:var(--fail);font-weight:600">\u2717 No fix</span>';
+          : '<span style="color:var(--text-muted);font-weight:600">&#8212; No fix</span>';
         /* #4 Extract year from CVE ID */
         const cveYear = (v.id || '').match(/CVE-(\d{4})/);
         const yearStr = cveYear ? cveYear[1] : '\u2014';
