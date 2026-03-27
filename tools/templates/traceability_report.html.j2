@@ -298,7 +298,7 @@
         <select id="release-filter" data-action="release-filter-change" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;font-weight:600;color:var(--navy-1);background:#fff;cursor:pointer">
           <option value="all">All Releases</option>
         </select>
-        <button data-action="toggle-dark" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);cursor:pointer;font-size:0.85rem" title="Toggle dark mode">&#9790;</button>
+        <button data-action="toggle-dark" style="padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);cursor:pointer;font-size:0.85rem;font-weight:600;white-space:nowrap" title="Toggle dark mode">&#9790; Dark</button>
         <span class="pipeline-badge" id="hero-pipeline-badge"></span>
       </div>
     </div>
@@ -797,8 +797,10 @@ function onReleaseFilterChange() {
   applyFilters();
 
   requestAnimationFrame(function() {
-    if (heroDyn) heroDyn.style.opacity = '1';
-    if (summaryContent) summaryContent.style.opacity = '1';
+    requestAnimationFrame(function() {
+      if (heroDyn) heroDyn.style.opacity = '1';
+      if (summaryContent) summaryContent.style.opacity = '1';
+    });
   });
 }
 
@@ -1746,18 +1748,17 @@ function renderExecutiveSummary() {
   const resolved = s.passed; /* only passed tests count as complete */
   const readinessPct = inScope > 0 ? Math.round(resolved / inScope * 100) : 0;
 
-  /* Determine ring color — suppress CVE/orphan warnings for released versions */
-  const hasFailures = s.failed > 0;
-  const hasCriticalCVE = SNAP.vulnMatches.some(function(m) { return (m.vulnerability || {}).severity === 'Critical'; });
-  const ringColor = readinessPct >= 100 && remaining.length === 0 ? 'var(--pass)' : 'var(--blue-ng)';
-
   /* Build remaining items list */
   const remaining = [];
   if (s.failed > 0) remaining.push('<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + ' to resolve</span>');
   if (s.drifted_vcs > 0) remaining.push('<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria change' + (s.drifted_vcs > 1 ? 's' : '') + ' to review</span>');
   if (s.uncovered_vcs > 0) remaining.push('<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' scenario' + (s.uncovered_vcs > 1 ? 's' : '') + ' to write</span>');
   if (SNAP.orphanedTests.length > 0) remaining.push('<span style="color:var(--orphaned)">? ' + SNAP.orphanedTests.length + ' orphaned test' + (SNAP.orphanedTests.length > 1 ? 's' : '') + ' to clean up</span>');
+  const hasCriticalCVE = SNAP.vulnMatches.some(function(m) { return (m.vulnerability || {}).severity === 'Critical'; });
   if (hasCriticalCVE) remaining.push('<span style="color:var(--fail)">&#9888; Critical vulnerability to address</span>');
+
+  /* Determine ring color — blue for progress, green when complete */
+  const ringColor = readinessPct >= 100 && remaining.length === 0 ? 'var(--pass)' : 'var(--blue-ng)';
 
   /* Readiness label */
   const readinessLabel = readinessPct >= 100 && remaining.length === 0
