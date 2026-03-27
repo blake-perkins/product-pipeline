@@ -1966,14 +1966,20 @@ function renderExecutiveSummary() {
     issues.push({sev: 2, icon: '&#8212;', color: 'var(--uncovered)', text: '<strong>' + esc(r.vc_id) + '</strong> — uncovered (' + esc(r.method) + '): ' + esc(r.title), vcId: r.vc_id, reqId: r.requirement_id});
   });
   SNAP.orphanedTests.forEach(o => {
-    issues.push({sev: 3, icon: '?', color: 'var(--orphaned)', text: 'Orphaned: ' + esc(o.name || o.feature_file), vcId: '', reqId: ''});
+    var orphanKey = (o.orphaned_req_ids || [])[0] || (o.orphaned_vc_ids || o.orphaned_vm_ids || [])[0] || o.name || o.feature_file || '';
+    issues.push({sev: 3, icon: '?', color: 'var(--orphaned)', text: 'Orphaned: ' + esc(o.name || o.feature_file), vcId: '', reqId: '', isOrphan: true, orphanKey: orphanKey});
   });
   issues.sort((a, b) => a.sev - b.sev);
   if (issues.length === 0) {
     html += '<div style="color:var(--pass);font-size:0.95rem;font-weight:600">&#10003; No issues found</div>';
   }
   issues.slice(0, 8).forEach(iss => {
-    const clickAttr = iss.reqId ? ' style="cursor:pointer" data-action="navigate-to-vc" data-req-id="' + esc(iss.reqId) + '" data-vc-id="' + esc(iss.vcId) + '" data-is-orphan="false" data-orphan-key=""' : '';
+    var clickAttr = '';
+    if (iss.reqId) {
+      clickAttr = ' style="cursor:pointer" data-action="navigate-to-vc" data-req-id="' + esc(iss.reqId) + '" data-vc-id="' + esc(iss.vcId) + '" data-is-orphan="false" data-orphan-key=""';
+    } else if (iss.isOrphan) {
+      clickAttr = ' style="cursor:pointer" data-action="navigate-to-vc" data-req-id="" data-vc-id="" data-is-orphan="true" data-orphan-key="' + esc(iss.orphanKey) + '"';
+    }
     html += '<div class="exec-issue"' + clickAttr + '>';
     html += '<span style="color:' + iss.color + ';font-size:1rem;min-width:16px">' + iss.icon + '</span>';
     html += '<span>' + iss.text + '</span>';
