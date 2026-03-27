@@ -161,23 +161,11 @@ jobs:
           path: build/reports/
 
   traceability-dashboard:
-    needs: bdd-tests
+    needs: traceability-check
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: cameo-model
-          path: build/cameo
-      - uses: actions/download-artifact@v4
-        with:
-          name: test-reports
-          path: build/reports
-      - uses: actions/download-artifact@v4
-        with:
-          name: traceability-report
-          path: build/reports/traceability
       - uses: actions/download-artifact@v4
         with:
           name: demo-data
