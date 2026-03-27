@@ -414,10 +414,10 @@ class TestDemoDashboard:
 
     # ---- EXECUTIVE SUMMARY ----
 
-    def test_executive_summary_has_readiness(self):
-        """Demo has failures, so readiness should be less than 100%."""
-        assert "Release Readiness" in self.html
-        assert "remaining" in self.html.lower()
+    def test_hero_has_readiness_ring(self):
+        """Hero card has a readiness ring with passing count."""
+        assert "ring-progress" in self.html
+        assert "passing" in self.html.lower()
 
     def test_executive_summary_has_cyber_risk(self):
         assert "Cyber Risk" in self.html

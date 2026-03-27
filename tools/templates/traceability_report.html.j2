@@ -217,16 +217,7 @@
     .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
 
     /* ---- Executive Summary ---- */
-    .readiness { display: flex; align-items: center; gap: 32px; padding: 24px; border-radius: 10px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--surface-border); }
-    .readiness-ring { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
-    .readiness-ring svg { transform: rotate(-90deg); }
     .ring-progress { transition: stroke-dashoffset 0.8s ease-out; }
-    .readiness-ring .pct { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.8rem; font-weight: 800; }
-    .readiness-info { flex: 1; }
-    .readiness-info h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; color: var(--heading); }
-    .readiness-info p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
-    .readiness-items { margin-top: 8px; font-size: 0.85rem; }
-    .readiness-items div { padding: 2px 0; }
     .exec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
     .exec-section { background: var(--surface); border-radius: 8px; padding: 16px 20px; border: 1px solid var(--surface-border); }
     .exec-section h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px; }
@@ -317,7 +308,6 @@
       .accordion-header { border-color: var(--border); }
       .footer { color: var(--text-muted); }
       .demo-banner { background: #7B6A00; color: #e0e0e0; }
-      .readiness { background: var(--surface); border-color: var(--surface-border); }
       .exec-section { background: var(--surface); border-color: var(--surface-border); }
       .exec-issue { border-color: var(--divider); }
       .req-body { background: var(--surface); border-color: var(--surface-border); }
@@ -374,7 +364,6 @@
     html.dark .accordion-header { border-color: var(--border); }
     html.dark .footer { color: var(--text-muted); }
     html.dark .demo-banner { background: #7B6A00; color: #e0e0e0; }
-    html.dark .readiness { background: var(--surface); border-color: var(--surface-border); }
     html.dark .exec-section { background: var(--surface); border-color: var(--surface-border); }
     html.dark .exec-issue { border-color: var(--divider); }
     html.dark .req-body { background: var(--surface); border-color: var(--surface-border); }
@@ -944,6 +933,8 @@ function renderHero() {
       relDetail = parts.join('<br>');
     }
   }
+  html += '<div style="display:flex;gap:16px;align-items:center">';
+  html += '<div style="flex:1">';
   html += '<div style="font-size:1.1rem;font-weight:700;color:var(--heading);margin-bottom:4px">' + esc(relName) + '</div>';
   html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px">' + relDetail + '</div>';
   /* Show release-specific VC count (not cumulative) when a release is selected */
@@ -957,7 +948,38 @@ function renderHero() {
   html += '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.5">';
   if (!directVCs && s.deferred_vcs > 0) html += '<div style="color:var(--deferred)">&#9201; ' + s.deferred_vcs + ' deferred to future releases</div>';
   if (s.manual > 0) html += '<div>&#9995; ' + s.manual + ' require manual review</div>';
-  html += '</div></div>';
+  html += '</div>';
+  html += '</div>';
+  /* Readiness ring (right side) */
+  if (SNAP.isReleased) {
+    html += '<div style="text-align:center;flex-shrink:0">';
+    html += '<div style="position:relative;width:80px;height:80px">';
+    html += '<svg width="80" height="80" viewBox="0 0 80 80">';
+    html += '<circle cx="40" cy="40" r="30" fill="none" stroke="var(--pass)" stroke-width="7"/>';
+    html += '<polyline points="25,39 35,51 56,27" fill="none" stroke="var(--pass)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>';
+    html += '</svg>';
+    html += '</div>';
+    html += '<div style="font-size:0.75rem;color:var(--pass);font-weight:600;margin-top:4px">Shipped</div>';
+    html += '</div>';
+  } else {
+    var inScope = s.in_scope_vcs || s.total_vcs;
+    var readinessPct = inScope > 0 ? Math.round(s.passed / inScope * 100) : 0;
+    var circumference = 2 * Math.PI * 30;
+    var dashOffset = circumference * (1 - readinessPct / 100);
+    var ringColor = readinessPct >= 100 ? 'var(--pass)' : 'var(--blue-ng)';
+    html += '<div style="text-align:center;flex-shrink:0">';
+    html += '<div style="position:relative;width:80px;height:80px">';
+    html += '<svg width="80" height="80" viewBox="0 0 80 80">';
+    html += '<circle cx="40" cy="40" r="30" fill="none" stroke="var(--surface-border)" stroke-width="7"/>';
+    html += '<circle class="ring-progress" cx="40" cy="40" r="30" fill="none" stroke="' + ringColor + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + circumference.toFixed(1) + '" stroke-dashoffset="' + circumference.toFixed(1) + '" data-target-offset="' + dashOffset.toFixed(1) + '" style="transform:rotate(-90deg);transform-origin:center"/>';
+    html += '</svg>';
+    html += '<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1rem;font-weight:800;color:' + ringColor + '">' + readinessPct + '%</span>';
+    html += '</div>';
+    html += '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">' + s.passed + ' of ' + inScope + ' passing</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += '</div>';
 
   /* Story 2: Test Results */
   html += '<div class="hero-card" data-action="switch-tab" data-tab="tests" style="background:var(--surface);border-radius:8px;padding:16px;border:1px solid var(--surface-border);cursor:pointer;transition:all 0.15s">';
@@ -1060,6 +1082,14 @@ function renderHero() {
   for (var ci = 0; ci < counters.length; ci++) {
     animateCounter(counters[ci], parseInt(counters[ci].getAttribute('data-counter'), 10));
   }
+
+  /* Animate readiness ring in hero card */
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var ring = container.querySelector('.ring-progress');
+      if (ring) ring.style.strokeDashoffset = ring.getAttribute('data-target-offset');
+    });
+  });
 }
 </script>
 
@@ -1840,72 +1870,7 @@ function renderExecutiveSummary() {
   const allRows = SNAP.allRows;
   const rows = SNAP.rows;
 
-  /* Calculate readiness percentage */
-  const inScope = s.in_scope_vcs || s.total_vcs;
-  const resolved = s.passed; /* only passed tests count as complete */
-  const readinessPct = inScope > 0 ? Math.round(resolved / inScope * 100) : 0;
-
-  /* Build remaining items list */
-  const remaining = [];
-  if (s.failed > 0) remaining.push('<span style="color:var(--fail)">&#10007; ' + s.failed + ' test failure' + (s.failed > 1 ? 's' : '') + ' to resolve</span>');
-  if (s.drifted_vcs > 0) remaining.push('<span style="color:var(--drifted)">&#8635; ' + s.drifted_vcs + ' criteria change' + (s.drifted_vcs > 1 ? 's' : '') + ' to review</span>');
-  if (s.uncovered_vcs > 0) remaining.push('<span style="color:var(--uncovered)">&#8212; ' + s.uncovered_vcs + ' scenario' + (s.uncovered_vcs > 1 ? 's' : '') + ' to write</span>');
-  if (SNAP.orphanedTests.length > 0) remaining.push('<span style="color:var(--orphaned)">? ' + SNAP.orphanedTests.length + ' orphaned test' + (SNAP.orphanedTests.length > 1 ? 's' : '') + ' to clean up</span>');
-  const hasCriticalCVE = SNAP.vulnMatches.some(function(m) { return (m.vulnerability || {}).severity === 'Critical'; });
-  if (hasCriticalCVE) remaining.push('<span style="color:var(--fail)">&#9888; Critical vulnerability to address</span>');
-
-  /* Determine ring color — blue for progress, green when complete */
-  const ringColor = readinessPct >= 100 && remaining.length === 0 ? 'var(--pass)' : 'var(--blue-ng)';
-
-  /* Readiness label */
-  const readinessLabel = readinessPct >= 100 && remaining.length === 0
-    ? 'Release Ready'
-    : remaining.length > 0
-      ? remaining.length + ' item' + (remaining.length > 1 ? 's' : '') + ' remaining before release'
-      : 'Release Ready';
-
   let html = '';
-
-  /* Section 1: Readiness Ring — or Shipped confirmation for released versions */
-  if (SNAP.isReleased) {
-    var relObj = RELEASE_PLAN && RELEASE_PLAN.releases ? RELEASE_PLAN.releases.find(function(r) { return r.version === SNAP.release; }) : null;
-    html += '<div class="readiness">';
-    html += '<div class="readiness-ring">';
-    html += '<svg width="120" height="120" viewBox="0 0 120 120" style="transform:none">';
-    html += '<circle cx="60" cy="60" r="46" fill="none" stroke="var(--pass)" stroke-width="10"/>';
-    html += '<polyline points="37,58 52,76 84,40" fill="none" stroke="var(--pass)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>';
-    html += '</svg>';
-    html += '</div>';
-    html += '<div class="readiness-info">';
-    html += '<h2 style="color:var(--pass)">Released</h2>';
-    html += '<p>Release ' + esc(SNAP.release) + ' shipped successfully</p>';
-    html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">' + s.passed + ' verification criteria passed';
-    if (relObj && relObj.targetDate) html += '<br>Target date: ' + fmtDate(relObj.targetDate + 'T00:00:00Z');
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-  } else {
-    const circumference = 2 * Math.PI * 46;
-    const dashOffset = circumference * (1 - readinessPct / 100);
-    html += '<div class="readiness">';
-    html += '<div class="readiness-ring">';
-    html += '<svg width="120" height="120" viewBox="0 0 120 120">';
-    html += '<circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface-border)" stroke-width="10"/>';
-    html += '<circle class="ring-progress" cx="60" cy="60" r="46" fill="none" stroke="' + ringColor + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference.toFixed(1) + '" stroke-dashoffset="' + circumference.toFixed(1) + '" data-target-offset="' + dashOffset.toFixed(1) + '"/>';
-    html += '</svg>';
-    html += '<span class="pct" style="color:' + ringColor + '">' + readinessPct + '%</span>';
-    html += '</div>';
-    html += '<div class="readiness-info">';
-    var relVersion = SNAP.release !== 'all' ? SNAP.release : (CURRENT_VERSION || '');
-    html += relVersion ? '<h2>Release ' + esc(relVersion) + ' Readiness</h2>' : '<h2>Release Readiness</h2>';
-    html += '<p>' + readinessLabel + '</p>';
-    html += '<div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">' + s.passed + ' of ' + inScope + ' verification criteria passing</div>';
-    if (remaining.length > 0) {
-      html += '<div class="readiness-items">' + remaining.join('<br>') + '</div>';
-    }
-    html += '</div>';
-    html += '</div>';
-  }
 
   html += '<div class="exec-grid">';
 
@@ -2021,16 +1986,6 @@ function renderExecutiveSummary() {
   html += '</div>';
 
   container.innerHTML = html;
-
-  /* Animate readiness ring from empty to target (double-rAF ensures paint between) */
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      var ring = container.querySelector('.ring-progress');
-      if (ring) {
-        ring.style.strokeDashoffset = ring.getAttribute('data-target-offset');
-      }
-    });
-  });
 }
 
 function renderReleases() {
