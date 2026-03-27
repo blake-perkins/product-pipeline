@@ -101,7 +101,7 @@ def generate(output_dir: Path):
                 "tracesTo": ["SYS-REQ-001"],
             },
             {
-                # REQ-004: System Resilience — 1 VC, deferred (2.0.0), has passing scenario
+                # REQ-004: System Resilience — 1 VC, deferred (2.0.0), Gherkin written, steps not implemented
                 "requirementId": "SYS-REQ-004",
                 "title": "System Resilience",
                 "description": "The system shall recover from transient hardware faults within 30 seconds and resume normal operation without operator intervention.",
@@ -137,7 +137,7 @@ def generate(output_dir: Path):
                 "tracesTo": ["SYS-REQ-001"],
             },
             {
-                # REQ-006: Startup Self-Test — 1 VC, deferred (2.0.0), has passing scenario
+                # REQ-006: Startup Self-Test — 1 VC, deferred (2.0.0), Gherkin written, steps not implemented
                 "requirementId": "SYS-REQ-006",
                 "title": "Startup Self-Test",
                 "description": "The system shall perform a comprehensive self-test on startup, verifying all subsystem interfaces, and report pass/fail results to the mission computer.",
@@ -198,7 +198,7 @@ def generate(output_dir: Path):
                 "tracesTo": ["SYS-REQ-001"],
             },
             {
-                # REQ-009: Firmware Update — 1 VC, deferred (2.1.0), has passing scenario
+                # REQ-009: Firmware Update — 1 VC, deferred (2.1.0), Gherkin written, steps not implemented
                 "requirementId": "SYS-REQ-009",
                 "title": "Firmware Update",
                 "description": "The system shall verify firmware image integrity using cryptographic hash before applying any update, rejecting corrupted images.",
@@ -216,7 +216,7 @@ def generate(output_dir: Path):
                 "tracesTo": [],
             },
             {
-                # REQ-010: Network Fault Tolerance — 1 VC, deferred (2.1.0), has passing scenario
+                # REQ-010: Network Fault Tolerance — 1 VC, deferred (2.1.0), Gherkin written, steps not implemented
                 "requirementId": "SYS-REQ-010",
                 "title": "Network Fault Tolerance",
                 "description": "The system shall maintain operation during temporary network interruptions of up to 60 seconds, buffering outbound messages for transmission upon reconnection.",
@@ -433,70 +433,70 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 6: System Resilience — deferred (2.0.0), has passing scenario ahead of schedule
+        # Feature 6: System Resilience — deferred (2.0.0), Gherkin written but steps not implemented
         {
             "keyword": "Feature",
             "name": "System Resilience",
             "tags": ["REQ:SYS-REQ-004"],
             "location": "features/automated/sys_req_004_resilience.feature:2",
-            "status": "passed",
+            "status": "failed",
             "elements": [
                 {
                     "keyword": "Scenario",
                     "name": "System recovers from transient fault within timeout",
                     "tags": ["VC:SYS-REQ-004-VC-01", "VER:Test"],
                     "type": "scenario",
-                    "status": "passed",
+                    "status": "undefined",
                     "steps": [
-                        step("Given ", "the system is operating normally"),
-                        step("When ", "a transient hardware fault is injected"),
-                        step("Then ", "the system should recover within 30 seconds", duration=0.005),
-                        step("And ", "normal processing should resume without operator intervention"),
+                        step("Given ", "the system is operating normally", status="undefined"),
+                        step("When ", "a transient hardware fault is injected", status="skipped"),
+                        step("Then ", "the system should recover within 30 seconds", status="skipped"),
+                        step("And ", "normal processing should resume without operator intervention", status="skipped"),
                     ],
                 },
             ],
         },
-        # Feature 7: Startup Self-Test — deferred (2.0.0), has passing scenario ahead of schedule
+        # Feature 7: Startup Self-Test — deferred (2.0.0), Gherkin written but steps not implemented
         {
             "keyword": "Feature",
             "name": "Startup Self-Test",
             "tags": ["REQ:SYS-REQ-006"],
             "location": "features/automated/sys_req_006_self_test.feature:2",
-            "status": "passed",
+            "status": "failed",
             "elements": [
                 {
                     "keyword": "Scenario",
                     "name": "Self-test completes within timeout",
                     "tags": ["VC:SYS-REQ-006-VC-01", "VER:Test"],
                     "type": "scenario",
-                    "status": "passed",
+                    "status": "undefined",
                     "steps": [
-                        step("Given ", "the system has just started"),
-                        step("Then ", 'the logs should contain "Self-test PASSED" within 10 seconds', duration=0.005),
-                        step("And ", "all subsystem checks should report OK"),
+                        step("Given ", "the system has just started", status="undefined"),
+                        step("Then ", 'the logs should contain "Self-test PASSED" within 10 seconds', status="skipped"),
+                        step("And ", "all subsystem checks should report OK", status="skipped"),
                     ],
                 },
             ],
         },
-        # Feature 8: Firmware Update — deferred (2.1.0), has passing scenario ahead of schedule
+        # Feature 8: Firmware Update — deferred (2.1.0), Gherkin written but steps not implemented
         {
             "keyword": "Feature",
             "name": "Firmware Update",
             "tags": ["REQ:SYS-REQ-009"],
             "location": "features/automated/sys_req_009_firmware.feature:2",
-            "status": "passed",
+            "status": "failed",
             "elements": [
                 {
                     "keyword": "Scenario",
                     "name": "Corrupted firmware image is rejected",
                     "tags": ["VC:SYS-REQ-009-VC-01", "VER:Test"],
                     "type": "scenario",
-                    "status": "passed",
+                    "status": "undefined",
                     "steps": [
-                        step("Given ", "a corrupted firmware image is available"),
-                        step("When ", "the firmware update is initiated"),
-                        step("Then ", 'the system should log "Firmware integrity check FAILED"'),
-                        step("And ", "the current firmware version should remain active"),
+                        step("Given ", "a corrupted firmware image is available", status="undefined"),
+                        step("When ", "the firmware update is initiated", status="skipped"),
+                        step("Then ", 'the system should log "Firmware integrity check FAILED"', status="skipped"),
+                        step("And ", "the current firmware version should remain active", status="skipped"),
                     ],
                 },
             ],
@@ -525,26 +525,26 @@ def generate(output_dir: Path):
         },
     ]
 
-    # Feature 9: Network Fault Tolerance — deferred (2.1.0), has passing scenario
+    # Feature 9: Network Fault Tolerance — deferred (2.1.0), Gherkin written but steps not implemented
     behave_results.append(
         {
             "keyword": "Feature",
             "name": "Network Fault Tolerance",
             "tags": ["REQ:SYS-REQ-010"],
             "location": "features/automated/sys_req_010_network.feature:2",
-            "status": "passed",
+            "status": "failed",
             "elements": [
                 {
                     "keyword": "Scenario",
                     "name": "System buffers messages during network outage",
                     "tags": ["VC:SYS-REQ-010-VC-01", "VER:Test"],
                     "type": "scenario",
-                    "status": "passed",
+                    "status": "undefined",
                     "steps": [
-                        step("Given ", "the system is connected to the network"),
-                        step("When ", "the network connection is interrupted for 60 seconds"),
-                        step("Then ", "outbound messages should be buffered"),
-                        step("And ", "buffered messages should be transmitted upon reconnection", duration=0.003),
+                        step("Given ", "the system is connected to the network", status="undefined"),
+                        step("When ", "the network connection is interrupted for 60 seconds", status="skipped"),
+                        step("Then ", "outbound messages should be buffered", status="skipped"),
+                        step("And ", "buffered messages should be transmitted upon reconnection", status="skipped"),
                     ],
                 },
             ],
@@ -809,12 +809,12 @@ def generate(output_dir: Path):
     print("    SYS-REQ-007-VC-02  Test  PASS")
     print("    SYS-REQ-011-VC-01  Test  DRIFTED (criteria changed: added failover)")
     print("  Release 2.0.0 (Future)    — Planning Ahead")
-    print("    SYS-REQ-004-VC-01  Test  deferred (passing scenario ahead of schedule)")
-    print("    SYS-REQ-006-VC-01  Test  deferred (passing scenario ahead of schedule)")
+    print("    SYS-REQ-004-VC-01  Test  deferred (Gherkin written, steps not implemented)")
+    print("    SYS-REQ-006-VC-01  Test  deferred (Gherkin written, steps not implemented)")
     print("    SYS-REQ-008-VC-01  Test  deferred + UNCOVERED (no scenario)")
     print("  Release 2.1.0 (Future)    — Security and Compliance")
-    print("    SYS-REQ-009-VC-01  Test  deferred (passing scenario ahead of schedule)")
-    print("    SYS-REQ-010-VC-01  Test  deferred (passing scenario ahead of schedule)")
+    print("    SYS-REQ-009-VC-01  Test  deferred (Gherkin written, steps not implemented)")
+    print("    SYS-REQ-010-VC-01  Test  deferred (Gherkin written, steps not implemented)")
     print()
     print("Gates: A=FAIL, B=FAIL, C=PASS, overall=False")
     print()
