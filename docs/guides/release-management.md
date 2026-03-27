@@ -20,7 +20,7 @@ The pipeline supports **incremental requirement delivery** across multiple relea
 
 ```json
 {
-  "currentVersion": "1.1.0",
+  "currentVersion": "1.2.0",
   "releases": [
     {
       "version": "1.0.0",
@@ -42,12 +42,31 @@ The pipeline supports **incremental requirement delivery** across multiple relea
       ]
     },
     {
+      "version": "1.2.0",
+      "targetDate": "2026-12-01",
+      "description": "Configuration management and data logging",
+      "scope": [
+        "SYS-REQ-007",
+        "SYS-REQ-009",
+        "SYS-REQ-011"
+      ]
+    },
+    {
       "version": "2.0.0",
-      "targetDate": "2027-01-01",
-      "description": "Full compliance -- thermal analysis and physical inspection",
+      "targetDate": "2027-03-01",
+      "description": "Extended verification and system resilience",
       "scope": [
         "SYS-REQ-004",
-        "SYS-REQ-006"
+        "SYS-REQ-006",
+        "SYS-REQ-008"
+      ]
+    },
+    {
+      "version": "2.1.0",
+      "targetDate": "2027-06-01",
+      "description": "Full compliance and operational readiness",
+      "scope": [
+        "SYS-REQ-010"
       ]
     }
   ]

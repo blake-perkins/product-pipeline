@@ -3,8 +3,14 @@
 ## v0.4.0 (Interactive Dashboard + Release Management)
 
 ### New Features
-- 7-tab interactive MBSE Traceability Dashboard replacing the flat HTML report
-- Executive Summary tab with readiness ring, top issues, cyber risk summary
+- 7-tab interactive Deployment Pipeline Report (titled "Deployment Pipeline Report") replacing the flat HTML report
+- Dashboard output filename: `MBSE_Traceability_Dashboard.html`
+- Dark mode toggle (Light / Dark button) for switching between light and dark themes
+- Amber `--attention` color for pipeline badge and blockers (not red)
+- Readiness ring moved into the Release Scope hero card (not a standalone section in Executive Summary)
+- `@DEFERRED` Gherkin tag for deferred VCs
+- Demo data banner at bottom for DemoSystem projects
+- Executive Summary tab with top issues, cyber risk summary
 - Global release filter dropdown scoping the entire dashboard to a specific release
 - Centralized filter architecture (`buildSnapshot`) powering all dashboard tabs
 - Release planning system with `release-plan.json` and deferred VCs
@@ -12,6 +18,8 @@
 - Hero header with three clickable KPI cards (Release Scope, Test Results, Blockers)
 - Cross-tab navigation with yellow flash highlighting
 - Shipped confirmation state for released versions
+- Deferred and stub features filtered from Test Execution tab
+- Grey severity cards for zero-count CVEs on Cyber tab
 - Demo data generator exercising all dashboard states
 - 232 pytest tests (unit + demo + SBOM integration)
 - Dedicated release management guide (`docs/guides/release-management.md`)

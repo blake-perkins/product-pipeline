@@ -1,4 +1,4 @@
-# MBSE Traceability Dashboard: Customer Demo Script
+# Deployment Pipeline Report: Customer Demo Script
 
 **Duration:** ~10 minutes
 **Audience:** Non-technical stakeholders, program managers, leadership
@@ -11,7 +11,7 @@
 **What you see:** A clean, green dashboard showing Release 1.0.0 with "Pipeline Pass" badge.
 
 **Say:**
-> "This is the MBSE Traceability Dashboard. It's a single HTML file produced by our CI/CD pipeline on every build. No server, no installation -- you download it and open it in your browser. It works completely offline."
+> "This is the Deployment Pipeline Report. It's a single HTML file produced by our CI/CD pipeline on every build. No server, no installation -- you download it and open it in your browser. It works completely offline."
 
 Point at the three hero cards:
 > "At a glance, you see three things: what's in scope for this release, how many tests passed, and whether there are any blockers."
@@ -63,7 +63,7 @@ Quick look at Traceability Matrix -- show the additional requirement (SYS-REQ-00
 
 **Filter:** Select "Release 1.2.0 (Current)"
 
-The hero animates -- numbers count up, the badge turns red, blockers appear.
+The hero animates -- numbers count up, the badge turns amber, blockers appear.
 
 **Say:**
 > "This is our current release. The pipeline caught three things -- one for each quality gate."
@@ -77,7 +77,7 @@ Click the **failed test** (SYS-REQ-007-VC-01) in the Top Issues section:
 **Say:**
 > "Gate A -- Coverage -- caught a test failure. A configuration update is taking 12 seconds instead of the required 5. The developer can see exactly which requirement it traces to, what the test expected, and the actual error message. No guessing."
 
-Navigate back to **Executive Summary** tab. Click the **drifted VC** (SYS-REQ-003-VC-01):
+Navigate back to **Executive Summary** tab. Click the **drifted VC** (SYS-REQ-011-VC-01):
 - The dashboard shows the word-level diff: green highlight on the added text.
 
 **Say:**
@@ -129,10 +129,10 @@ Point at the SBOM section:
 > "This is the software bill of materials -- every component in the deployed artifact, with versions and sources."
 
 Point at the vulnerability table:
-> "The scanner found seven vulnerabilities, including one critical in OpenSSL. The policy banner at the top says we can't ship until it's resolved."
+> "The scanner found five vulnerabilities -- two Medium, two Low, and one Negligible. No Critical or High. The policy banner shows PASS -- we're clear to ship from a security standpoint."
 
 Point at the severity cards:
-> "The team can filter by severity, search for specific CVEs, or download the full list as a CSV for their security review."
+> "The severity cards show counts by level -- Critical and High are greyed out since there are none. The team can filter by severity, search for specific CVEs, or download the full list as a CSV for their security review."
 
 **Takeaway:** The audience sees how cyber scanning integrates into the same dashboard.
 
@@ -155,7 +155,7 @@ Click **Export & Info** tab:
 ## Tips for the Presenter
 
 - **Start on 1.0.0** (the dashboard defaults to it). Green first, problems later.
-- **Let the animations land.** When switching to 1.2.0, the numbers counting up and the red badge appearing create a moment. Don't talk over it.
+- **Let the animations land.** When switching to 1.2.0, the numbers counting up and the amber badge appearing create a moment. Don't talk over it.
 - **The cross-tab navigation is a wow moment.** When you click an issue and the dashboard flies to the exact VC with the yellow flash -- pause and let them see it.
 - **The word-level diff is a wow moment.** The green highlight showing exactly what the systems engineer changed is very visual. Pause on it.
 - **Don't explain every tab.** The audience doesn't need to understand Gherkin syntax or SBOM formats. Keep it at the "what does this mean for you" level.

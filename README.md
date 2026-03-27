@@ -172,7 +172,7 @@ python3 tools/report_generator.py \
     --behave-results build/reports/bdd/behave-results.json \
     --traceability-input build/reports/traceability/traceability_report.json \
     --output-json build/reports/traceability/traceability_report.json \
-    --output-html build/reports/traceability/traceability_report.html
+    --output-html build/reports/traceability/MBSE_Traceability_Dashboard.html
 ```
 
 The HTML output is a self-contained 7-tab interactive dashboard with zero external dependencies (air-gapped compatible):
@@ -256,6 +256,7 @@ The traceability checker (`tools/traceability_checker.py`) enforces three qualit
 | `@AUTO_GENERATED` | Indicates the file was machine-generated |
 | `@manual` | Skipped by automated Behave runs; requires human verification |
 | `@REVIEW_REQUIRED` | Injected by Gate B; indicates criteria drift needing human review |
+| `@DEFERRED` | Marks a VC that is out of scope for the current release |
 | `@regression` | Test kept for regression value after its requirement was removed |
 | `@topology:<type>` | Scenario only runs under the specified deployment topology |
 
@@ -388,7 +389,7 @@ product-release-<version>/
 │   ├── user-guide/                         # User documentation
 │   ├── release-notes/                      # Version release notes
 │   ├── requirements-document.html          # Auto-generated from Cameo model
-│   └── traceability-matrix.html            # Interactive 7-tab dashboard (see below)
+│   └── MBSE_Traceability_Dashboard.html    # Interactive 7-tab dashboard (see below)
 ├── security/
 │   ├── sbom.json                           # Software Bill of Materials
 │   └── grype-results.json                  # Vulnerability scan results
@@ -440,7 +441,7 @@ Defined in `.github/workflows/product-pipeline.yml`. Runs on pushes and pull req
 1. `fetch-model` — Checkout, setup Java 17 + Gradle, fetch and unpack Cameo model from Nexus. Falls back to sample data if Nexus is unavailable (prototype mode).
 2. `traceability-check` — Install Python tools, run all three quality gates.
 3. `bdd-tests` — Install Behave dependencies, run BDD log analysis. Uses pre-recorded sample logs in prototype/CI mode.
-4. `traceability-report` — Merge requirements, BDD results, and gate output into the interactive HTML dashboard and JSON report.
+4. `traceability-dashboard` — Merge requirements, BDD results, and gate output into the interactive HTML dashboard and JSON report.
 
 Artifacts are uploaded between jobs via `actions/upload-artifact` / `actions/download-artifact`.
 
