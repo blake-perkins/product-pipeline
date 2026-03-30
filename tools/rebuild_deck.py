@@ -202,12 +202,21 @@ def slide_03_solution(prs):
     tb = add_tb(slide, Inches(4.6), Inches(1.95), Inches(4.1), Inches(0.25))
     text(tb.text_frame, "Co-authored by SEs + Developers", size=9, color=GRAY_LIGHT, after=0, align=PP_ALIGN.CENTER, first=True)
 
-    # Gherkin example inside the center box
-    tb = add_tb(slide, Inches(4.7), Inches(2.4), Inches(3.9), Inches(2.1))
+    # Why Gherkin — value props
+    tb = add_tb(slide, Inches(4.7), Inches(2.3), Inches(3.9), Inches(0.9))
+    props = [
+        "Plain English that both sides can read and validate",
+        "Machine-executable \u2014 runs as automated tests on every build",
+        "Tagged to requirements \u2014 creates the traceability link",
+    ]
+    for i, prop in enumerate(props):
+        text(tb.text_frame, "\u2022  " + prop, size=8, color=WHITE, after=3, first=(i == 0))
+
+    # Compact Gherkin example
+    tb = add_tb(slide, Inches(4.7), Inches(3.2), Inches(3.9), Inches(1.3))
     gherkin_lines = [
         ("@REQ:SYS-REQ-001", True),
         ("Feature: Basic ICD Communications", True),
-        ("", False),
         ("  @VC:SYS-REQ-001-VC-01 @VER:Test", True),
         ("  Scenario: Valid ICD response", False),
         ("    Given the simulation logs are loaded", False),
@@ -215,7 +224,7 @@ def slide_03_solution(prs):
         ('         \"IcdResponse: status=OK\"', False),
     ]
     for i, (line, bold_line) in enumerate(gherkin_lines):
-        text(tb.text_frame, line if line else " ", size=8, bold=bold_line,
+        text(tb.text_frame, line, size=7, bold=bold_line,
              color=WHITE if bold_line else GRAY_LIGHT, after=1, first=(i == 0))
 
     # Right column: System Verification (Devs)
@@ -320,14 +329,12 @@ def slide_04_releases(prs):
     # Release timeline visualization
     releases = [
         ("1.0.0", "Shipped", "Core ICD &\nHealth Monitoring", BLUE_4, True),
-        ("1.1.0", "Shipped", "Error Handling &\nMessage Validation", BLUE_4, True),
         ("1.2.0", "Current", "Degradation &\nConfiguration Mgmt", BLUE_NG, False),
         ("2.0.0", "Planned", "Resilience, Self-Test\n& Data Logging", GRAY_DIM, False),
-        ("2.1.0", "Planned", "Firmware Update &\nNetwork Tolerance", GRAY_DIM, False),
     ]
 
     x = Inches(0.5)
-    rw = Inches(2.3)
+    rw = Inches(3.8)
     for ver, status, desc, color, shipped in releases:
         # Release card
         add_box(slide, x, Inches(1.8), rw, Inches(2.0), SURFACE_LIGHT, BORDER_LIGHT)
@@ -346,7 +353,7 @@ def slide_04_releases(prs):
         tb = add_tb(slide, x + Inches(0.1), Inches(2.65), rw - Inches(0.2), Inches(0.9))
         text(tb.text_frame, desc, size=9, color=GRAY_DARK, after=0, first=True)
 
-        x += rw + Inches(0.15)
+        x += rw + Inches(0.25)
 
     # How it works section
     tb = add_tb(slide, Inches(0.8), Inches(4.2), Inches(5), Inches(0.3))
@@ -561,6 +568,12 @@ def slide_07_tags(prs):
         text(tb.text_frame, tag, size=10, bold=True, color=BLUE_LIGHT, after=2, first=True)
         text(tb.text_frame, desc, size=8, color=GRAY, after=0)
         y += Inches(0.6)
+
+    # Bottom takeaway
+    add_box(slide, Inches(0.5), Inches(6.0), Inches(12.3), Inches(0.45), SURFACE, BLUE_NG)
+    tb = add_tb(slide, Inches(0.8), Inches(6.06), Inches(11.8), Inches(0.35))
+    text(tb.text_frame, "One spec. Readable by engineers. Executable by machines. Traceable to every requirement.",
+         size=11, bold=True, color=WHITE, after=0, align=PP_ALIGN.CENTER, first=True)
 
     page_num(slide, 6, TOTAL)
 

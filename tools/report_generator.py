@@ -85,8 +85,8 @@ _INLINE_HTML_TEMPLATE = textwrap.dedent(
     </div>
     <table>
     <thead><tr>
-      <th>Requirement ID</th><th>VC ID</th><th>Title</th><th>Method</th>
-      <th>Priority</th><th>Status</th><th>Test Result</th><th>Feature File</th>
+      <th>Requirement ID</th><th>VC ID</th><th>Name</th><th>Verification Method</th>
+      <th>Status</th><th>Test Result</th><th>Feature File</th>
     </tr></thead>
     <tbody>
     {rows}
@@ -215,7 +215,7 @@ def _parse_traceability_data(
     # --- Gate-based format ---
     def _extract_id(item: Dict[str, Any]) -> str:
         """Extract the best available ID from a gate item (prefer VC ID)."""
-        vc_id = item.get("verificationCriteriaId", item.get("verificationMethodId", item.get("vc_id", item.get("vm_id", ""))))
+        vc_id = item.get("verificationId", item.get("verificationCriteriaId", item.get("verificationMethodId", item.get("vc_id", item.get("vm_id", "")))))
         if vc_id:
             return vc_id
         return item.get("requirementId", item.get("requirement_id", ""))
@@ -340,7 +340,7 @@ def build_report(
     all_vc_ids: set[str] = set()
     for req in req_index.values():
         for vc in req.get("verificationCriteria", req.get("verificationMethods", [])):
-            vc_id = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
+            vc_id = vc.get("verificationId", vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
             if vc_id:
                 all_vc_ids.add(vc_id)
 
@@ -370,16 +370,16 @@ def build_report(
         # legacy fields for backwards compatibility
         if not verification_criteria:
             verification_criteria = [{
-                "verificationCriteriaId": "",
-                "method": req.get("verificationMethod", "Test"),
-                "criteria": req.get("verificationCriteria", ""),
+                "verificationId": "",
+                "verificationMethod": req.get("verificationMethod", "Test"),
+                "verificationDescription": req.get("verificationCriteria", ""),
             }]
 
         for vc in verification_criteria:
             total_vcs += 1
-            vc_id: str = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
-            method: str = vc.get("method", "Test")
-            criteria: str = vc.get("criteria", "")
+            vc_id: str = vc.get("verificationId", vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
+            method: str = vc.get("verificationMethod", vc.get("method", "Test"))
+            criteria: str = vc.get("verificationDescription", vc.get("criteria", ""))
             is_manual = method in manual_methods
 
             # The lookup key for traceability is the VC ID when available
@@ -424,10 +424,9 @@ def build_report(
             row: Dict[str, Any] = {
                 "requirement_id": req_id,
                 "vc_id": vc_id,
-                "title": req.get("title", ""),
-                "method": method,
-                "criteria": criteria,
-                "priority": req.get("priority", ""),
+                "name": req.get("name", req.get("title", "")),
+                "verificationMethod": method,
+                "verificationDescription": criteria,
                 "status": status,
                 "test_result": behave_result_for_row["status"] if behave_result_for_row else None,
                 "feature_file": behave_result_for_row["feature_file"] if behave_result_for_row else None,
@@ -606,9 +605,8 @@ def _render_inline_html(report: Dict[str, Any]) -> str:
             f'<tr class="{css_class}">'
             f'<td>{row["requirement_id"]}</td>'
             f'<td>{row.get("vc_id") or "—"}</td>'
-            f'<td>{row["title"]}</td>'
-            f'<td>{row.get("method") or "—"}</td>'
-            f'<td>{row.get("priority") or "—"}</td>'
+            f'<td>{row.get("name") or "—"}</td>'
+            f'<td>{row.get("verificationMethod") or "—"}</td>'
             f'<td>{row["status"]}</td>'
             f'<td>{row.get("test_result") or "—"}</td>'
             f'<td>{row.get("feature_file") or "—"}</td>'
@@ -624,7 +622,6 @@ def _render_inline_html(report: Dict[str, Any]) -> str:
             f"<td>—</td>"
             f"<td>—</td>"
             f"<td>{name}</td>"
-            f"<td>—</td>"
             f"<td>—</td>"
             f"<td>orphaned</td>"
             f"<td>{result}</td>"

@@ -56,18 +56,18 @@ VERIFICATION_METHODS_NON_TEST = frozenset({"Analysis", "Demonstration", "Inspect
 
 INLINE_STUB_TEMPLATE = textwrap.dedent(
     """\
-    @REQ:{{ requirement.requirementId }} @VC:{{ vc.verificationCriteriaId }}{% if vc.method not in ["Test"] %} @manual{% endif %}
+    @REQ:{{ requirement.requirementId }} @VC:{{ vc.verificationId }}{% if vc.verificationMethod not in ["Test"] %} @manual{% endif %}
 
-    Feature: {{ requirement.title }}
+    Feature: {{ requirement.name }}
       {{ requirement.description | default("No description provided.", true) }}
 
-      Scenario: Verify {{ requirement.title }} — {{ vc.verificationCriteriaId }}
+      Scenario: Verify {{ requirement.name }} — {{ vc.verificationId }}
         # Auto-generated stub — implement or replace with real steps.
-        # Verification method: {{ vc.method }}
-        # Verification criteria: {{ vc.criteria }}
+        # Verification method: {{ vc.verificationMethod }}
+        # Verification criteria: {{ vc.verificationDescription }}
         Given the system is set up for requirement {{ requirement.requirementId }}
         When the verification procedure is executed
-        Then the requirement "{{ requirement.title }}" is satisfied
+        Then the requirement "{{ requirement.name }}" is satisfied
     """
 )
 
@@ -95,9 +95,9 @@ class VerificationCriteria:
     @classmethod
     def from_dict(cls, data: dict) -> "VerificationCriteria":
         return cls(
-            vc_id=data.get("verificationCriteriaId", data.get("verificationMethodId", "")),
-            method=data.get("method", "Test"),
-            criteria=data.get("criteria", ""),
+            vc_id=data.get("verificationId", data.get("verificationCriteriaId", data.get("verificationMethodId", ""))),
+            method=data.get("verificationMethod", data.get("method", "Test")),
+            criteria=data.get("verificationDescription", data.get("criteria", "")),
         )
 
 
@@ -107,14 +107,11 @@ class Requirement:
 
     requirement_id: str
     cameo_uuid: str
-    title: str
+    name: str
     description: str
     verification_criteria_list: list[VerificationCriteria]
-    priority: str
     status: str
     parent_requirement_id: str | None
-    satisfied_by: list[str] = field(default_factory=list)
-    traces_to: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Requirement:
@@ -137,14 +134,11 @@ class Requirement:
         return cls(
             requirement_id=data["requirementId"],
             cameo_uuid=data.get("cameoUUID", ""),
-            title=data.get("title", ""),
+            name=data.get("name", data.get("title", "")),
             description=data.get("description", ""),
             verification_criteria_list=vcs,
-            priority=data.get("priority", ""),
             status=data.get("status", ""),
             parent_requirement_id=data.get("parentRequirementId"),
-            satisfied_by=data.get("satisfiedBy", []),
-            traces_to=data.get("tracesTo", []),
         )
 
     @property
@@ -310,13 +304,13 @@ def _render_stub(requirement: Requirement, vc: VerificationCriteria, template_pa
     context = {
         "requirement": {
             "requirementId": requirement.requirement_id,
-            "title": requirement.title,
+            "name": requirement.name,
             "description": requirement.description,
         },
         "vc": {
-            "verificationCriteriaId": vc.vc_id,
-            "method": vc.method,
-            "criteria": vc.criteria,
+            "verificationId": vc.vc_id,
+            "verificationMethod": vc.method,
+            "verificationDescription": vc.criteria,
         },
     }
 
@@ -344,27 +338,27 @@ def _render_stub(requirement: Requirement, vc: VerificationCriteria, template_pa
     # Inline fallback (manual mini-template rendering).
     req = context["requirement"]
     vc_ctx = context["vc"]
-    is_test = vc_ctx["method"] == "Test"
-    tag_line = f"@REQ:{req['requirementId']} @VC:{vc_ctx['verificationCriteriaId']}"
+    is_test = vc_ctx["verificationMethod"] == "Test"
+    tag_line = f"@REQ:{req['requirementId']} @VC:{vc_ctx['verificationId']}"
     if not is_test:
         tag_line += " @manual"
 
     description = req["description"] or "No description provided."
-    criteria = vc_ctx["criteria"] or "N/A"
+    criteria = vc_ctx["verificationDescription"] or "N/A"
 
     return (
         f"{tag_line}\n"
         f"\n"
-        f"Feature: {req['title']}\n"
+        f"Feature: {req['name']}\n"
         f"  {description}\n"
         f"\n"
-        f"  Scenario: Verify {req['title']} — {vc_ctx['verificationCriteriaId']}\n"
+        f"  Scenario: Verify {req['name']} — {vc_ctx['verificationId']}\n"
         f"    # Auto-generated stub — implement or replace with real steps.\n"
-        f"    # Verification method: {vc_ctx['method']}\n"
+        f"    # Verification method: {vc_ctx['verificationMethod']}\n"
         f"    # Verification criteria: {criteria}\n"
         f"    Given the system is set up for requirement {req['requirementId']}\n"
         f"    When the verification procedure is executed\n"
-        f"    Then the requirement \"{req['title']}\" is satisfied\n"
+        f"    Then the requirement \"{req['name']}\" is satisfied\n"
     )
 
 
@@ -684,9 +678,9 @@ def run_gate_a(
     items = [
         {
             "requirementId": req.requirement_id,
-            "verificationCriteriaId": vc.vc_id,
-            "method": vc.method,
-            "title": req.title,
+            "verificationId": vc.vc_id,
+            "verificationMethod": vc.method,
+            "name": req.name,
             "stubGenerated": str(stub),
             "deferred": False,
         }
@@ -697,9 +691,9 @@ def run_gate_a(
     for req, vc in deferred_vcs:
         items.append({
             "requirementId": req.requirement_id,
-            "verificationCriteriaId": vc.vc_id,
-            "method": vc.method,
-            "title": req.title,
+            "verificationId": vc.vc_id,
+            "verificationMethod": vc.method,
+            "name": req.name,
             "deferred": True,
             "targetRelease": vc_to_release.get(vc.vc_id, ""),
         })
@@ -767,8 +761,8 @@ def run_gate_b(
         items.append(
             {
                 "requirementId": req.requirement_id,
-                "verificationCriteriaId": vc.vc_id,
-                "title": req.title,
+                "verificationId": vc.vc_id,
+                "name": req.name,
                 "oldHash": baseline.get(vc.vc_id, ""),
                 "newHash": vc.criteria_hash,
                 "oldCriteria": old_criteria_text,

@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""Generate demo data for a 5-release narrative.
+"""Generate demo data for a 3-release narrative.
 
 Releases:
   1.0.0 (Released)  — The Clean Baseline
-  1.1.0 (Released)  — Building On It
   1.2.0 (Current)   — The Model Changed   (issues: 1 fail, 1 drift, 1 uncovered)
   2.0.0 (Future)    — Planning Ahead       (3 deferred reqs, 1 uncovered)
-  2.1.0 (Future)    — Security and Compliance (2 deferred reqs)
 
-11 requirements, 13 VCs, ALL method "Test", NO orphans.
+8 requirements, 10 VCs, ALL method "Test", NO orphans.
 
 Usage:
     python tools/generate_demo_data.py --output-dir build/demo
@@ -30,7 +28,7 @@ def generate(output_dir: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
-    # 1. Requirements (11 requirements, 13 VCs — all method "Test")
+    # 1. Requirements (8 requirements, 10 VCs — all verificationMethod "Test")
     # ------------------------------------------------------------------
     requirements = {
         "exportMetadata": {
@@ -43,214 +41,144 @@ def generate(output_dir: Path):
             {
                 # REQ-001: Basic ICD Communications — 2 VCs, both PASS (1.0.0)
                 "requirementId": "SYS-REQ-001",
-                "title": "Basic ICD Communications",
+                "name": "Basic ICD Communications",
                 "description": "The system shall exchange messages with external systems in accordance with the Interface Control Document (ICD), supporting all defined message types and response codes.",
-                "priority": "High",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-001-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that a valid IcdRequest produces a valid IcdResponse within 500ms.",
+                        "verificationId": "SYS-REQ-001-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that a valid IcdRequest produces a valid IcdResponse within 500ms.",
                     },
                     {
-                        "verificationCriteriaId": "SYS-REQ-001-VC-02",
-                        "method": "Test",
-                        "criteria": "Verify correct round-trip ICD message exchange with the hardware simulator across all defined message types.",
+                        "verificationId": "SYS-REQ-001-VC-02",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify correct round-trip ICD message exchange with the hardware simulator across all defined message types.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA", "ComponentB"],
-                "tracesTo": [],
             },
             {
                 # REQ-002: Health Monitoring — 1 VC, PASS (1.0.0)
                 "requirementId": "SYS-REQ-002",
-                "title": "Health Monitoring",
+                "name": "Health Monitoring",
                 "description": "The system shall report health status to the mission computer at a configurable interval not to exceed 10 seconds.",
-                "priority": "High",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-002-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify health status messages are emitted at the configured interval.",
+                        "verificationId": "SYS-REQ-002-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify health status messages are emitted at the configured interval.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA"],
-                "tracesTo": [],
             },
             {
                 # REQ-003: Graceful Degradation — 1 VC (1.2.0)
                 #   VC-02: UNCOVERED (no scenario written, stub generated)
                 "requirementId": "SYS-REQ-003",
-                "title": "Graceful Degradation",
+                "name": "Graceful Degradation",
                 "description": "The system shall continue operating in a degraded mode when a non-critical subsystem fails, maintaining all safety-critical functions.",
-                "priority": "Medium",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-003-VC-02",
-                        "method": "Test",
-                        "criteria": "Verify that critical ICD messages are still processed and responded to during subsystem failure.",
+                        "verificationId": "SYS-REQ-003-VC-02",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that critical ICD messages are still processed and responded to during subsystem failure.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA", "ComponentB"],
-                "tracesTo": ["SYS-REQ-001"],
             },
             {
                 # REQ-004: System Resilience — 1 VC, deferred (2.0.0), Gherkin written, steps not implemented
                 "requirementId": "SYS-REQ-004",
-                "title": "System Resilience",
+                "name": "System Resilience",
                 "description": "The system shall recover from transient hardware faults within 30 seconds and resume normal operation without operator intervention.",
-                "priority": "Critical",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-004-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that the system recovers from a simulated transient fault within 30 seconds and resumes processing.",
+                        "verificationId": "SYS-REQ-004-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that the system recovers from a simulated transient fault within 30 seconds and resumes processing.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA", "ComponentB"],
-                "tracesTo": [],
-            },
-            {
-                # REQ-005: Error Handling — 1 VC, PASS (1.1.0)
-                "requirementId": "SYS-REQ-005",
-                "title": "Error Handling",
-                "description": "The system shall reject malformed ICD messages with a descriptive error response and shall not crash or enter an undefined state.",
-                "priority": "High",
-                "status": "Approved",
-                "parentRequirementId": "SYS-REQ-001",
-                "verificationCriteria": [
-                    {
-                        "verificationCriteriaId": "SYS-REQ-005-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that sending a malformed IcdRequest results in a WARN log and an IcdResponse with status INVALID_REQUEST.",
-                    },
-                ],
-                "satisfiedBy": ["ComponentA"],
-                "tracesTo": ["SYS-REQ-001"],
             },
             {
                 # REQ-006: Startup Self-Test — 1 VC, deferred (2.0.0), Gherkin written, steps not implemented
                 "requirementId": "SYS-REQ-006",
-                "title": "Startup Self-Test",
+                "name": "Startup Self-Test",
                 "description": "The system shall perform a comprehensive self-test on startup, verifying all subsystem interfaces, and report pass/fail results to the mission computer.",
-                "priority": "High",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-006-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that self-test completes within 10 seconds and all subsystem checks pass.",
+                        "verificationId": "SYS-REQ-006-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that self-test completes within 10 seconds and all subsystem checks pass.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA", "ComponentB"],
-                "tracesTo": [],
             },
             {
                 # REQ-007: Configuration Management — 2 VCs (1.2.0)
                 #   VC-01: FAIL (config update took 12.3s, expected <5s)
                 #   VC-02: PASS
                 "requirementId": "SYS-REQ-007",
-                "title": "Configuration Management",
+                "name": "Configuration Management",
                 "description": "The system shall support runtime configuration updates without requiring a restart, applying changes within 5 seconds of receipt.",
-                "priority": "High",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-007-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that configuration changes are applied within 5 seconds without service interruption.",
+                        "verificationId": "SYS-REQ-007-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that configuration changes are applied within 5 seconds without service interruption.",
                     },
                     {
-                        "verificationCriteriaId": "SYS-REQ-007-VC-02",
-                        "method": "Test",
-                        "criteria": "Verify that invalid configuration values are rejected with a descriptive error message.",
+                        "verificationId": "SYS-REQ-007-VC-02",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that invalid configuration values are rejected with a descriptive error message.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA"],
-                "tracesTo": [],
             },
             {
                 # REQ-008: Data Logging — 1 VC, deferred (2.0.0), UNCOVERED (no scenario)
                 "requirementId": "SYS-REQ-008",
-                "title": "Data Logging",
+                "name": "Data Logging",
                 "description": "The system shall log all ICD transactions with timestamps for post-mission replay and forensic analysis.",
-                "priority": "Medium",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-008-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that all ICD transactions are logged with timestamps and can be replayed.",
+                        "verificationId": "SYS-REQ-008-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that all ICD transactions are logged with timestamps and can be replayed.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA"],
-                "tracesTo": ["SYS-REQ-001"],
-            },
-            {
-                # REQ-009: Firmware Update — 1 VC, deferred (2.1.0), Gherkin written, steps not implemented
-                "requirementId": "SYS-REQ-009",
-                "title": "Firmware Update",
-                "description": "The system shall verify firmware image integrity using cryptographic hash before applying any update, rejecting corrupted images.",
-                "priority": "Critical",
-                "status": "Approved",
-                "parentRequirementId": None,
-                "verificationCriteria": [
-                    {
-                        "verificationCriteriaId": "SYS-REQ-009-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that a corrupted firmware image is rejected and the system continues running the current version.",
-                    },
-                ],
-                "satisfiedBy": ["ComponentB"],
-                "tracesTo": [],
-            },
-            {
-                # REQ-010: Network Fault Tolerance — 1 VC, deferred (2.1.0), Gherkin written, steps not implemented
-                "requirementId": "SYS-REQ-010",
-                "title": "Network Fault Tolerance",
-                "description": "The system shall maintain operation during temporary network interruptions of up to 60 seconds, buffering outbound messages for transmission upon reconnection.",
-                "priority": "High",
-                "status": "Approved",
-                "parentRequirementId": None,
-                "verificationCriteria": [
-                    {
-                        "verificationCriteriaId": "SYS-REQ-010-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify that the system buffers messages during a 60-second network outage and transmits them upon reconnection.",
-                    },
-                ],
-                "satisfiedBy": ["ComponentA", "ComponentB"],
-                "tracesTo": [],
             },
             {
                 # REQ-011: Logging Subsystem Failover — 1 VC (1.2.0)
                 #   VC-01: DRIFTED (moved from REQ-003, criteria includes failover language)
                 "requirementId": "SYS-REQ-011",
-                "title": "Logging Subsystem Failover",
+                "name": "Logging Subsystem Failover",
                 "description": "The system shall automatically failover to backup logging when the primary logging subsystem is unavailable.",
-                "priority": "High",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [
                     {
-                        "verificationCriteriaId": "SYS-REQ-011-VC-01",
-                        "method": "Test",
-                        "criteria": "Verify continued operation when logging subsystem is unavailable, including automatic failover to backup logging.",
+                        "verificationId": "SYS-REQ-011-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify continued operation when logging subsystem is unavailable, including automatic failover to backup logging.",
                     },
                 ],
-                "satisfiedBy": ["ComponentA", "ComponentB"],
-                "tracesTo": ["SYS-REQ-003"],
             },
         ],
     }
@@ -374,29 +302,7 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 4: Error Handling — 1 scenario, passes (1.1.0)
-        {
-            "keyword": "Feature",
-            "name": "Error Handling",
-            "tags": ["REQ:SYS-REQ-005"],
-            "location": "features/automated/sys_req_005_error_handling.feature:2",
-            "status": "passed",
-            "elements": [
-                {
-                    "keyword": "Scenario",
-                    "name": "Malformed messages are rejected without crashing",
-                    "tags": ["VC:SYS-REQ-005-VC-01", "VER:Test"],
-                    "type": "scenario",
-                    "status": "passed",
-                    "steps": [
-                        step("Given ", "the simulation logs are loaded"),
-                        step("Then ", 'the product logs should contain "Malformed message rejected"'),
-                        step("And ", "no crash or panic entries should appear"),
-                    ],
-                },
-            ],
-        },
-        # Feature 5: Configuration Management — VC-01 FAILS, VC-02 passes (1.2.0)
+        # Feature 4: Configuration Management — VC-01 FAILS, VC-02 passes (1.2.0)
         {
             "keyword": "Feature",
             "name": "Configuration Management",
@@ -478,29 +384,6 @@ def generate(output_dir: Path):
                 },
             ],
         },
-        # Feature 8: Firmware Update — deferred (2.1.0), Gherkin written but steps not implemented
-        {
-            "keyword": "Feature",
-            "name": "Firmware Update",
-            "tags": ["REQ:SYS-REQ-009"],
-            "location": "features/automated/sys_req_009_firmware.feature:2",
-            "status": "failed",
-            "elements": [
-                {
-                    "keyword": "Scenario",
-                    "name": "Corrupted firmware image is rejected",
-                    "tags": ["VC:SYS-REQ-009-VC-01", "VER:Test", "DEFERRED"],
-                    "type": "scenario",
-                    "status": "undefined",
-                    "steps": [
-                        step("Given ", "a corrupted firmware image is available", status="undefined"),
-                        step("When ", "the firmware update is initiated", status="skipped"),
-                        step("Then ", 'the system should log "Firmware integrity check FAILED"', status="skipped"),
-                        step("And ", "the current firmware version should remain active", status="skipped"),
-                    ],
-                },
-            ],
-        },
         # NOTE: No feature for REQ-008 (Data Logging) — it is deferred AND uncovered
         # Feature 9: ORPHANED — references a deleted requirement (Gate C catches this)
         {
@@ -525,95 +408,53 @@ def generate(output_dir: Path):
         },
     ]
 
-    # Feature 9: Network Fault Tolerance — deferred (2.1.0), Gherkin written but steps not implemented
-    behave_results.append(
-        {
-            "keyword": "Feature",
-            "name": "Network Fault Tolerance",
-            "tags": ["REQ:SYS-REQ-010"],
-            "location": "features/automated/sys_req_010_network.feature:2",
-            "status": "failed",
-            "elements": [
-                {
-                    "keyword": "Scenario",
-                    "name": "System buffers messages during network outage",
-                    "tags": ["VC:SYS-REQ-010-VC-01", "VER:Test", "DEFERRED"],
-                    "type": "scenario",
-                    "status": "undefined",
-                    "steps": [
-                        step("Given ", "the system is connected to the network", status="undefined"),
-                        step("When ", "the network connection is interrupted for 60 seconds", status="skipped"),
-                        step("Then ", "outbound messages should be buffered", status="skipped"),
-                        step("And ", "buffered messages should be transmitted upon reconnection", status="skipped"),
-                    ],
-                },
-            ],
-        }
-    )
-
     # ------------------------------------------------------------------
     # 3. Traceability report (gate results)
     # ------------------------------------------------------------------
     traceability_report = {
         "timestamp": "2026-03-24T10:05:00Z",
-        "requirements_total": 11,
-        "features_scanned": 11,
-        "vcs_total": 12,
-        "vcs_covered": 11,
+        "requirements_total": 8,
+        "features_scanned": 8,
+        "vcs_total": 9,
+        "vcs_covered": 8,
         "gate_a": {
             "gate": "A",
             "passed": False,
             "items": [
                 {
                     "requirementId": "SYS-REQ-003",
-                    "verificationCriteriaId": "SYS-REQ-003-VC-02",
-                    "method": "Test",
-                    "title": "Graceful Degradation",
+                    "verificationId": "SYS-REQ-003-VC-02",
+                    "verificationMethod": "Test",
+                    "name": "Graceful Degradation",
                     "deferred": False,
                     "stubGenerated": "bdd/features/automated/sys_req_003_vc_02.feature",
                 },
                 {
                     "requirementId": "SYS-REQ-004",
-                    "verificationCriteriaId": "SYS-REQ-004-VC-01",
-                    "method": "Test",
-                    "title": "System Resilience",
+                    "verificationId": "SYS-REQ-004-VC-01",
+                    "verificationMethod": "Test",
+                    "name": "System Resilience",
                     "deferred": True,
                     "targetRelease": "2.0.0",
                 },
                 {
                     "requirementId": "SYS-REQ-006",
-                    "verificationCriteriaId": "SYS-REQ-006-VC-01",
-                    "method": "Test",
-                    "title": "Startup Self-Test",
+                    "verificationId": "SYS-REQ-006-VC-01",
+                    "verificationMethod": "Test",
+                    "name": "Startup Self-Test",
                     "deferred": True,
                     "targetRelease": "2.0.0",
                 },
                 {
                     "requirementId": "SYS-REQ-008",
-                    "verificationCriteriaId": "SYS-REQ-008-VC-01",
-                    "method": "Test",
-                    "title": "Data Logging",
+                    "verificationId": "SYS-REQ-008-VC-01",
+                    "verificationMethod": "Test",
+                    "name": "Data Logging",
                     "deferred": True,
                     "targetRelease": "2.0.0",
                 },
-                {
-                    "requirementId": "SYS-REQ-009",
-                    "verificationCriteriaId": "SYS-REQ-009-VC-01",
-                    "method": "Test",
-                    "title": "Firmware Update",
-                    "deferred": True,
-                    "targetRelease": "2.1.0",
-                },
-                {
-                    "requirementId": "SYS-REQ-010",
-                    "verificationCriteriaId": "SYS-REQ-010-VC-01",
-                    "method": "Test",
-                    "title": "Network Fault Tolerance",
-                    "deferred": True,
-                    "targetRelease": "2.1.0",
-                },
             ],
-            "message": "1 uncovered in-scope VC (SYS-REQ-003-VC-02); 5 deferred to future releases.",
+            "message": "1 uncovered in-scope VC (SYS-REQ-003-VC-02); 3 deferred to future releases.",
         },
         "gate_b": {
             "gate": "B",
@@ -621,9 +462,9 @@ def generate(output_dir: Path):
             "items": [
                 {
                     "requirementId": "SYS-REQ-011",
-                    "verificationCriteriaId": "SYS-REQ-011-VC-01",
-                    "method": "Test",
-                    "title": "Logging Subsystem Failover",
+                    "verificationId": "SYS-REQ-011-VC-01",
+                    "verificationMethod": "Test",
+                    "name": "Logging Subsystem Failover",
                     "oldHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
                     "newHash": "f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1",
                     "oldCriteria": "Verify continued operation when logging subsystem is unavailable.",
@@ -726,7 +567,7 @@ def generate(output_dir: Path):
     }
 
     # ------------------------------------------------------------------
-    # 6. Release plan (5 releases)
+    # 6. Release plan (3 releases)
     # ------------------------------------------------------------------
     release_plan = {
         "currentVersion": "1.2.0",
@@ -738,14 +579,6 @@ def generate(output_dir: Path):
                 "scope": [
                     "SYS-REQ-001",
                     "SYS-REQ-002",
-                ],
-            },
-            {
-                "version": "1.1.0",
-                "targetDate": "2026-04-01",
-                "description": "Building On It \u2014 error handling for malformed messages",
-                "scope": [
-                    "SYS-REQ-005",
                 ],
             },
             {
@@ -768,15 +601,6 @@ def generate(output_dir: Path):
                     "SYS-REQ-008",
                 ],
             },
-            {
-                "version": "2.1.0",
-                "targetDate": "2027-06-01",
-                "description": "Security and Compliance \u2014 firmware verification and network fault tolerance",
-                "scope": [
-                    "SYS-REQ-009",
-                    "SYS-REQ-010",
-                ],
-            },
         ],
     }
 
@@ -796,25 +620,20 @@ def generate(output_dir: Path):
     write("release-plan.json", release_plan)
 
     print()
-    print("Demo data — 5-release narrative:")
-    print("  Release 1.0.0 (Released)  — The Clean Baseline")
+    print("Demo data \u2014 3-release narrative:")
+    print("  Release 1.0.0 (Released)  \u2014 The Clean Baseline")
     print("    SYS-REQ-001-VC-01  Test  PASS")
     print("    SYS-REQ-001-VC-02  Test  PASS")
     print("    SYS-REQ-002-VC-01  Test  PASS")
-    print("  Release 1.1.0 (Released)  — Building On It")
-    print("    SYS-REQ-005-VC-01  Test  PASS")
-    print("  Release 1.2.0 (Current)   — The Model Changed")
+    print("  Release 1.2.0 (Current)   \u2014 The Model Changed")
     print("    SYS-REQ-003-VC-02  Test  UNCOVERED (no scenario, stub generated)")
     print("    SYS-REQ-007-VC-01  Test  FAIL (config update 12.3s > 5s)")
     print("    SYS-REQ-007-VC-02  Test  PASS")
     print("    SYS-REQ-011-VC-01  Test  DRIFTED (criteria changed: added failover)")
-    print("  Release 2.0.0 (Future)    — Planning Ahead")
+    print("  Release 2.0.0 (Future)    \u2014 Planning Ahead")
     print("    SYS-REQ-004-VC-01  Test  deferred (Gherkin written, steps not implemented)")
     print("    SYS-REQ-006-VC-01  Test  deferred (Gherkin written, steps not implemented)")
     print("    SYS-REQ-008-VC-01  Test  deferred + UNCOVERED (no scenario)")
-    print("  Release 2.1.0 (Future)    — Security and Compliance")
-    print("    SYS-REQ-009-VC-01  Test  deferred (Gherkin written, steps not implemented)")
-    print("    SYS-REQ-010-VC-01  Test  deferred (Gherkin written, steps not implemented)")
     print()
     print("Gates: A=FAIL, B=FAIL, C=PASS, overall=False")
     print()

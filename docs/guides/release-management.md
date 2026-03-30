@@ -28,45 +28,27 @@ The pipeline supports **incremental requirement delivery** across multiple relea
       "description": "Initial deployment -- core ICD communications and health monitoring",
       "scope": [
         "SYS-REQ-001",
-        "SYS-REQ-002",
-        "SYS-REQ-005"
-      ]
-    },
-    {
-      "version": "1.1.0",
-      "targetDate": "2026-09-01",
-      "description": "Degradation handling and ICD demonstration verification",
-      "scope": [
-        "SYS-REQ-001-VC-02",
-        "SYS-REQ-003"
+        "SYS-REQ-002"
       ]
     },
     {
       "version": "1.2.0",
-      "targetDate": "2026-12-01",
-      "description": "Configuration management and data logging",
+      "targetDate": "2026-09-01",
+      "description": "Degradation handling and configuration management",
       "scope": [
+        "SYS-REQ-003",
         "SYS-REQ-007",
-        "SYS-REQ-009",
         "SYS-REQ-011"
       ]
     },
     {
       "version": "2.0.0",
-      "targetDate": "2027-03-01",
-      "description": "Extended verification and system resilience",
+      "targetDate": "2027-01-01",
+      "description": "System resilience, self-test, and data logging",
       "scope": [
         "SYS-REQ-004",
         "SYS-REQ-006",
         "SYS-REQ-008"
-      ]
-    },
-    {
-      "version": "2.1.0",
-      "targetDate": "2027-06-01",
-      "description": "Full compliance and operational readiness",
-      "scope": [
-        "SYS-REQ-010"
       ]
     }
   ]
@@ -241,18 +223,18 @@ As the program evolves, add new releases to the plan:
 
 If a VC needs to be deferred to a later release, move its ID from one release's scope to another:
 
-**Before** (VC in 1.1.0):
+**Before** (VC in 1.2.0):
 ```json
-{ "version": "1.1.0", "scope": ["SYS-REQ-003", "SYS-REQ-007"] }
+{ "version": "1.2.0", "scope": ["SYS-REQ-003", "SYS-REQ-007"] }
 ```
 
 **After** (VC moved to 2.0.0):
 ```json
-{ "version": "1.1.0", "scope": ["SYS-REQ-003"] },
+{ "version": "1.2.0", "scope": ["SYS-REQ-003"] },
 { "version": "2.0.0", "scope": ["SYS-REQ-004", "SYS-REQ-007"] }
 ```
 
-Commit this change. The pipeline will immediately reflect the change -- the moved VCs will appear as "deferred" for 1.1.0 and "in scope" for 2.0.0.
+Commit this change. The pipeline will immediately reflect the change -- the moved VCs will appear as "deferred" for 1.2.0 and "in scope" for 2.0.0.
 
 ---
 

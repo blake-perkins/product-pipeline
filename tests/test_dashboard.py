@@ -35,47 +35,41 @@ REQUIREMENTS_DATA = {
     "requirements": [
         {
             "requirementId": "SYS-REQ-001",
-            "title": "Basic ICD Communications",
+            "name": "Basic ICD Communications",
             "description": "The system shall exchange messages with external systems.",
-            "priority": "High",
+            "requirementType": "Functional",
             "status": "Approved",
             "parentRequirementId": None,
             "verificationCriteria": [
-                {"verificationCriteriaId": "SYS-REQ-001-VC-01", "method": "Test",
-                 "criteria": "Verify valid IcdRequest produces valid IcdResponse within 500ms."},
-                {"verificationCriteriaId": "SYS-REQ-001-VC-02", "method": "Demonstration",
-                 "criteria": "Demonstrate round-trip ICD exchange with simulator."},
+                {"verificationId": "SYS-REQ-001-VC-01", "verificationMethod": "Test",
+                 "verificationDescription": "Verify valid IcdRequest produces valid IcdResponse within 500ms."},
+                {"verificationId": "SYS-REQ-001-VC-02", "verificationMethod": "Demonstration",
+                 "verificationDescription": "Demonstrate round-trip ICD exchange with simulator."},
             ],
-            "satisfiedBy": ["ComponentA"],
-            "tracesTo": [],
         },
         {
             "requirementId": "SYS-REQ-002",
-            "title": "Health Monitoring",
+            "name": "Health Monitoring",
             "description": "The system shall report health status.",
-            "priority": "High",
+            "requirementType": "Functional",
             "status": "Approved",
             "parentRequirementId": None,
             "verificationCriteria": [
-                {"verificationCriteriaId": "SYS-REQ-002-VC-01", "method": "Test",
-                 "criteria": "Verify health status messages emitted at interval."},
+                {"verificationId": "SYS-REQ-002-VC-01", "verificationMethod": "Test",
+                 "verificationDescription": "Verify health status messages emitted at interval."},
             ],
-            "satisfiedBy": ["ComponentA"],
-            "tracesTo": [],
         },
         {
             "requirementId": "SYS-REQ-004",
-            "title": "Thermal Analysis Compliance",
+            "name": "Thermal Analysis Compliance",
             "description": "Operate within thermal envelope.",
-            "priority": "Critical",
+            "requirementType": "Functional",
             "status": "Approved",
             "parentRequirementId": None,
             "verificationCriteria": [
-                {"verificationCriteriaId": "SYS-REQ-004-VC-01", "method": "Analysis",
-                 "criteria": "Thermal analysis confirms operating temperature range."},
+                {"verificationId": "SYS-REQ-004-VC-01", "verificationMethod": "Analysis",
+                 "verificationDescription": "Thermal analysis confirms operating temperature range."},
             ],
-            "satisfiedBy": [],
-            "tracesTo": [],
         },
     ],
 }
@@ -165,8 +159,8 @@ def _traceability_with_uncovered():
         "vms_covered": 3,
         "gate_a": {
             "gate": "A", "passed": False,
-            "items": [{"verificationCriteriaId": "SYS-REQ-001-VC-02", "method": "Demonstration",
-                        "title": "Basic ICD Communications", "stubGenerated": "stubs/vm02.feature"}],
+            "items": [{"verificationId": "SYS-REQ-001-VC-02", "verificationMethod": "Demonstration",
+                        "name": "Basic ICD Communications", "stubGenerated": "stubs/vm02.feature"}],
             "message": "1 uncovered VC.",
         },
         "gate_b": {"gate": "B", "passed": True, "items": [], "message": "No drift."},
@@ -332,7 +326,7 @@ class TestBuildReport:
         trace = _traceability_all_pass()
         trace["gate_b"] = {
             "gate": "B", "passed": False,
-            "items": [{"verificationCriteriaId": "SYS-REQ-001-VC-01",
+            "items": [{"verificationId": "SYS-REQ-001-VC-01",
                         "oldHash": "aaa", "newHash": "bbb"}],
             "message": "1 drifted.",
         }
@@ -629,18 +623,16 @@ class TestEdgeCases:
             "exportMetadata": REQUIREMENTS_DATA["exportMetadata"],
             "requirements": [{
                 "requirementId": "SYS-REQ-XSS",
-                "title": "Test </script><script>alert('XSS')</script> attack",
+                "name": "Test </script><script>alert('XSS')</script> attack",
                 "description": "Malicious description",
-                "priority": "High",
+                "requirementType": "Functional",
                 "status": "Approved",
                 "parentRequirementId": None,
                 "verificationCriteria": [{
-                    "verificationCriteriaId": "SYS-REQ-XSS-VC-01",
-                    "method": "Test",
-                    "criteria": "criteria",
+                    "verificationId": "SYS-REQ-XSS-VC-01",
+                    "verificationMethod": "Test",
+                    "verificationDescription": "criteria",
                 }],
-                "satisfiedBy": [],
-                "tracesTo": [],
             }],
         }
         req_path = _write_json(tmp_path, "req.json", req_data)
@@ -691,14 +683,12 @@ class TestEdgeCases:
             "exportMetadata": REQUIREMENTS_DATA["exportMetadata"],
             "requirements": [{
                 "requirementId": "SYS-REQ-EMPTY",
-                "title": "Empty VCs",
+                "name": "Empty VCs",
                 "description": "",
-                "priority": "Low",
+                "requirementType": "Functional",
                 "status": "Draft",
                 "parentRequirementId": None,
                 "verificationCriteria": [],
-                "satisfiedBy": [],
-                "tracesTo": [],
             }],
         }
         report = self._build(tmp_path, [], {"covered": [], "uncovered": [], "drifted": [], "orphaned": []}, req_data)

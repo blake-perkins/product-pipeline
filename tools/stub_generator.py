@@ -54,14 +54,14 @@ _MANUAL_TAG = "@manual"
 _INLINE_TEMPLATE = textwrap.dedent(
     """\
     {feature_tags}
-    Feature: {vc_id} - {title} ({method})
+    Feature: {verificationId} - {name} ({verificationMethod})
       {description}
 
-      Verification Method: {method}
-      Verification Criteria: {criteria}
+      Verification Method: {verificationMethod}
+      Verification Criteria: {verificationDescription}
 
-      @VC:{vc_id}
-      Scenario: Verify {vc_id} - {title}
+      @VC:{verificationId}
+      Scenario: Verify {verificationId} - {name}
         Given the system is configured for {method_lower} verification of "{req_id}"
         When the {method_lower} verification is performed
         Then it should fail because it is not yet implemented
@@ -146,10 +146,10 @@ def _render_stub(
         The full text of the ``.feature`` file.
     """
     req_id: str = requirement["requirementId"]
-    title: str = requirement.get("title", req_id)
+    title: str = requirement.get("name", req_id)
     description: str = requirement.get("description", "")
-    vc_id: str = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
-    method: str = vc.get("method", "Test")
+    vc_id: str = vc.get("verificationId", vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
+    method: str = vc.get("verificationMethod", vc.get("method", "Test"))
     criteria: str = vc.get("criteria", "")
 
     if jinja_template is not None:
@@ -167,11 +167,11 @@ def _render_stub(
     return _INLINE_TEMPLATE.format(
         feature_tags=feature_tags,
         req_id=req_id,
-        vc_id=vc_id,
-        title=title,
+        verificationId=vc_id,
+        name=title,
         description=description,
-        method=method,
-        criteria=criteria,
+        verificationMethod=method,
+        verificationDescription=criteria,
         method_lower=method.lower(),
     )
 
@@ -233,13 +233,13 @@ def generate_stubs(
             continue
 
         for vc in verification_criteria:
-            vc_id: str = vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))
+            vc_id: str = vc.get("verificationId", vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
 
             if vc_id in covered_vc_ids:
                 logger.debug("Skipping %s – already covered.", vc_id)
                 continue
 
-            method: str = vc.get("method", "Test")
+            method: str = vc.get("verificationMethod", vc.get("method", "Test"))
             is_manual = method in _MANUAL_VERIFICATION_METHODS
 
             # Determine target path

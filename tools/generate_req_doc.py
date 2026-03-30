@@ -40,14 +40,13 @@ def build_hierarchy(requirements: list[dict]) -> dict[str | None, list[dict]]:
 
 def compute_statistics(requirements: list[dict]) -> str:
     total = len(requirements)
-    by_priority = Counter(r.get("priority", "Unspecified") for r in requirements)
     by_status = Counter(r.get("status", "Unspecified") for r in requirements)
     by_verification: Counter = Counter()
     for r in requirements:
         vcs = r.get("verificationCriteria", r.get("verificationMethods", []))
         if vcs:
             for vc in vcs:
-                by_verification[vc.get("method", "Unspecified")] += 1
+                by_verification[vc.get("verificationMethod", vc.get("method", "Unspecified"))] += 1
         else:
             # Legacy fallback for single verificationMethod field
             by_verification[r.get("verificationMethod", "Unspecified")] += 1
@@ -69,7 +68,6 @@ def compute_statistics(requirements: list[dict]) -> str:
         f"<h2>Summary Statistics</h2>"
         f'<p class="total">Total Requirements: <strong>{total}</strong></p>'
         f'<div class="stat-grid">'
-        f"{stat_table('By Priority', by_priority)}"
         f"{stat_table('By Status', by_status)}"
         f"{stat_table('By Verification Method', by_verification)}"
         f"</div></div>"
@@ -87,12 +85,9 @@ def render_toc_entries(
     items = ""
     for req in reqs:
         rid = escape(req.get("requirementId", ""))
-        title = escape(req.get("title", "Untitled"))
-        priority = req.get("priority", "")
-        color = PRIORITY_COLORS.get(priority, "#555")
+        title = escape(req.get("name", req.get("title", "Untitled")))
         items += (
             f'<li><a href="#req-{rid}">{rid} &mdash; {title}</a>'
-            f' <span class="toc-priority" style="color:{color};">[{escape(priority)}]</span>'
         )
         sub = render_toc_entries(children, req.get("requirementId"), depth + 1)
         if sub:
@@ -122,16 +117,15 @@ def render_requirements(
     html_parts: list[str] = []
     for req in reqs:
         rid = escape(req.get("requirementId", ""))
-        title = escape(req.get("title", "Untitled"))
-        priority = req.get("priority", "")
-        border_color = PRIORITY_COLORS.get(priority, "#bbb")
-        bg_color = PRIORITY_BG_COLORS.get(priority, "#fafafa")
+        title = escape(req.get("name", req.get("title", "Untitled")))
+        status = req.get("status", "")
+        border_color = "#bbb"
+        bg_color = "#fafafa"
         indent = depth * 40
 
         fields = ""
         fields += render_field("Requirement ID", req.get("requirementId"))
         fields += render_field("Cameo UUID", req.get("cameoUUID"))
-        fields += render_field("Priority", priority)
         fields += render_field("Status", req.get("status"))
         fields += render_field("Parent Requirement", req.get("parentRequirementId"))
 
@@ -140,8 +134,8 @@ def render_requirements(
         if vcs:
             vc_rows = ""
             for vc in vcs:
-                vc_id = escape(vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
-                method = escape(vc.get("method", ""))
+                vc_id = escape(vc.get("verificationId", vc.get("verificationCriteriaId", vc.get("verificationMethodId", ""))))
+                method = escape(vc.get("verificationMethod", vc.get("method", "")))
                 criteria = escape(vc.get("criteria", ""))
                 vc_rows += (
                     f'<tr><td><code>{vc_id}</code></td>'

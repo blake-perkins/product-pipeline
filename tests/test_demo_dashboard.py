@@ -81,17 +81,17 @@ class TestDemoDashboard:
     # ---- HERO HEADER ----
 
     def test_hero_coverage_percent(self):
-        # Coverage is against in-scope VCs only (8 in-scope, 7 covered = 87.5%)
-        assert self.summary["coverage_percent"] == 87.5
+        # Coverage is against in-scope VCs only (7 in-scope, 6 covered = 85.71%)
+        assert self.summary["coverage_percent"] == 85.71
 
     def test_hero_total_vcs(self):
-        assert self.summary["total_vcs"] == 13
+        assert self.summary["total_vcs"] == 10
 
     def test_hero_covered_vcs(self):
-        assert self.summary["covered_vcs"] == 7
+        assert self.summary["covered_vcs"] == 6
 
     def test_hero_passed(self):
-        assert self.summary["passed"] == 5
+        assert self.summary["passed"] == 4
 
     def test_hero_failed(self):
         assert self.summary["failed"] == 1
@@ -101,7 +101,7 @@ class TestDemoDashboard:
         assert self.summary["uncovered_vcs"] == 1
 
     def test_hero_deferred(self):
-        assert self.summary["deferred_vcs"] == 5
+        assert self.summary["deferred_vcs"] == 3
 
     def test_hero_drifted(self):
         assert self.summary["drifted_vcs"] == 1
@@ -151,7 +151,7 @@ class TestDemoDashboard:
         """REQ-011-VC-01 criteria changed in 1.2.0 model update."""
         r = self.rows["SYS-REQ-011-VC-01"]
         assert r["status"] == "drifted"
-        assert r["method"] == "Test"
+        assert r["verificationMethod"] == "Test"
 
     def test_req003_vc02_uncovered(self):
         """SYS-REQ-003-VC-02 is in 1.2.0 scope but has no scenario."""
@@ -163,19 +163,13 @@ class TestDemoDashboard:
         """REQ-004-VC-01 is deferred to 2.0.0."""
         r = self.rows["SYS-REQ-004-VC-01"]
         assert r["status"] == "deferred"
-        assert r["method"] == "Test"
-
-    def test_req005_passes(self):
-        """REQ-005 shipped in 1.0.0 — passes."""
-        r = self.rows["SYS-REQ-005-VC-01"]
-        assert r["status"] == "pass"
-
+        assert r["verificationMethod"] == "Test"
 
     def test_req006_deferred(self):
         """REQ-006-VC-01 is deferred to 2.0.0."""
         r = self.rows["SYS-REQ-006-VC-01"]
         assert r["status"] == "deferred"
-        assert r["method"] == "Test"
+        assert r["verificationMethod"] == "Test"
 
     def test_orphaned_tests_present(self):
         """One orphaned test referencing deleted SYS-REQ-099."""
@@ -219,21 +213,21 @@ class TestDemoDashboard:
         """Gate A fails: 1 uncovered in-scope + 5 deferred."""
         ga = self.js_trace["gate_a"]
         assert ga["passed"] is False
-        assert len(ga["items"]) == 6
-        assert sum(1 for item in ga["items"] if item.get("deferred")) == 5
+        assert len(ga["items"]) == 4
+        assert sum(1 for item in ga["items"] if item.get("deferred")) == 3
         assert sum(1 for item in ga["items"] if not item.get("deferred")) == 1
 
     def test_gate_a_has_deferred_items(self):
         deferred = [i for i in self.js_trace["gate_a"]["items"] if i.get("deferred")]
-        assert len(deferred) == 5
+        assert len(deferred) == 3
         targets = {i["targetRelease"] for i in deferred}
-        assert targets == {"2.0.0", "2.1.0"}
+        assert targets == {"2.0.0"}
 
     def test_gate_b_failed_with_drift(self):
         gb = self.js_trace["gate_b"]
         assert gb["passed"] is False
         assert len(gb["items"]) == 1
-        assert gb["items"][0]["verificationCriteriaId"] == "SYS-REQ-011-VC-01"
+        assert gb["items"][0]["verificationId"] == "SYS-REQ-011-VC-01"
 
     def test_gate_b_has_hash_diff(self):
         item = self.js_trace["gate_b"]["items"][0]
@@ -270,7 +264,7 @@ class TestDemoDashboard:
     # ---- TAB 4: TEST EXECUTION ----
 
     def test_behave_has_10_features(self):
-        assert len(self.js_behave) == 11  # 10 requirement features + 1 orphaned
+        assert len(self.js_behave) == 8  # 7 requirement features + 1 orphaned
 
     def test_automated_features_are_10(self):
         """All features are automated in demo (no manual/stub tags)."""
@@ -281,7 +275,7 @@ class TestDemoDashboard:
                     for t in f.get("tags", [])]
             if not manual_tags.intersection(tags):
                 automated.append(f)
-        assert len(automated) == 11
+        assert len(automated) == 8
 
     def test_fail_scenario_has_error_message(self):
         feat = [f for f in self.js_behave if f["name"] == "Configuration Management"][0]
@@ -359,7 +353,7 @@ class TestDemoDashboard:
     def test_all_requirements_have_matching_report_rows(self):
         for req in self.js_reqs["requirements"]:
             rid = req["requirementId"]
-            vc_ids_in_req = {vc["verificationCriteriaId"] for vc in req["verificationCriteria"]}
+            vc_ids_in_req = {vc.get("verificationId") or vc.get("verificationCriteriaId") for vc in req["verificationCriteria"]}
             vc_ids_in_report = {r["vc_id"] for r in self.report["requirements"] if r["requirement_id"] == rid}
             assert vc_ids_in_req == vc_ids_in_report, f"VC mismatch for {rid}: {vc_ids_in_req} vs {vc_ids_in_report}"
 
@@ -375,25 +369,17 @@ class TestDemoDashboard:
         for req in self.js_reqs["requirements"]:
             assert req.get("description"), f"{req['requirementId']} missing description"
 
-    def test_satisfied_by_present(self):
-        req001 = [r for r in self.js_reqs["requirements"] if r["requirementId"] == "SYS-REQ-001"][0]
-        assert req001["satisfiedBy"] == ["ComponentA", "ComponentB"]
-
-    def test_traces_to_present(self):
-        req003 = [r for r in self.js_reqs["requirements"] if r["requirementId"] == "SYS-REQ-003"][0]
-        assert req003["tracesTo"] == ["SYS-REQ-001"]
-
     # ---- RELEASE PLAN ----
 
     def test_release_plan_loaded(self):
         assert self.js_release_plan is not None
 
-    def test_release_plan_has_5_releases(self):
-        assert len(self.js_release_plan["releases"]) == 5
+    def test_release_plan_has_3_releases(self):
+        assert len(self.js_release_plan["releases"]) == 3
 
     def test_release_versions(self):
         versions = [r["version"] for r in self.js_release_plan["releases"]]
-        assert versions == ["1.0.0", "1.1.0", "1.2.0", "2.0.0", "2.1.0"]
+        assert versions == ["1.0.0", "1.2.0", "2.0.0"]
 
     def test_release_100_scope(self):
         rel = self.js_release_plan["releases"][0]
@@ -402,7 +388,7 @@ class TestDemoDashboard:
 
     def test_release_120_scope(self):
         """Release 1.2.0 (current) has REQ-003 and REQ-007."""
-        rel = self.js_release_plan["releases"][2]
+        rel = self.js_release_plan["releases"][1]
         assert "SYS-REQ-003" in rel["scope"]
         assert "SYS-REQ-007" in rel["scope"]
 
@@ -514,7 +500,7 @@ class TestDemoDashboard:
                 vc_ids.append(sid)
             elif sid in reqs:
                 for vc in reqs[sid].get("verificationCriteria", reqs[sid].get("verificationMethods", [])):
-                    vc_ids.append(vc.get("verificationCriteriaId") or vc.get("verificationMethodId"))
+                    vc_ids.append(vc.get("verificationId") or vc.get("verificationCriteriaId") or vc.get("verificationMethodId"))
         for vc_id in vc_ids:
             row = self.rows.get(vc_id)
             assert row is not None, f"VC {vc_id} missing from report"
@@ -530,7 +516,7 @@ class TestDemoDashboard:
                 vc_ids.append(sid)
             elif sid in reqs:
                 for vc in reqs[sid].get("verificationCriteria", reqs[sid].get("verificationMethods", [])):
-                    vc_ids.append(vc.get("verificationCriteriaId") or vc.get("verificationMethodId"))
+                    vc_ids.append(vc.get("verificationId") or vc.get("verificationCriteriaId") or vc.get("verificationMethodId"))
         statuses = [self.rows[vid]["status"] for vid in vc_ids if vid in self.rows]
         non_pass = [s for s in statuses if s != "pass"]
         assert len(non_pass) > 0, "Release 1.2.0 should have issues"

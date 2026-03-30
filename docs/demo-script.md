@@ -43,23 +43,7 @@ Click **Quality Gates** tab:
 
 ---
 
-## Act 2: Release 1.1.0 -- Building On It (2:30 - 3:30)
-
-**Filter:** Select "Release 1.1.0 (Released)"
-
-**Say:**
-> "Release 1.1.0 added error handling. Also green -- it shipped clean."
-
-Quick look at Traceability Matrix -- show the additional requirement (SYS-REQ-005):
-> "The pipeline enforced coverage. The team had to write a test for this new requirement before the release could pass. Gate A ensured nothing slipped through."
-
-> "Two releases shipped. Both clean. Now let's look at what's in progress."
-
-**Takeaway:** The audience sees how incremental releases work.
-
----
-
-## Act 3: Release 1.2.0 -- The Model Changed (3:30 - 6:30)
+## Act 2: Release 1.2.0 -- The Model Changed (2:30 - 5:30)
 
 **Filter:** Select "Release 1.2.0 (Current)"
 
@@ -108,7 +92,7 @@ Point out the uncovered VC (SYS-REQ-008-VC-01):
 > "One requirement doesn't have a test yet. The pipeline generated a placeholder -- the developer just fills in the steps when the time comes."
 
 Click **Release Progress** tab:
-> "Here's the full roadmap. Five releases with progress bars, target dates, and clickable details. You can see at a glance where the program stands."
+> "Here's the full roadmap. Three releases with progress bars, target dates, and clickable details. You can see at a glance where the program stands."
 
 > "The team can plan ahead without future work blocking their current release."
 

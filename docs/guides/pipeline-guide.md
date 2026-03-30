@@ -639,17 +639,16 @@ Create `release-plan.json` in the repository root:
       "description": "Initial deployment — core ICD and health monitoring",
       "scope": [
         "SYS-REQ-001",
-        "SYS-REQ-002",
-        "SYS-REQ-005"
+        "SYS-REQ-002"
       ]
     },
     {
-      "version": "1.1.0",
+      "version": "1.2.0",
       "targetDate": "2026-09-01",
-      "description": "Degradation handling",
+      "description": "Degradation handling and configuration management",
       "scope": [
-        "SYS-REQ-001-VC-02",
-        "SYS-REQ-003"
+        "SYS-REQ-003",
+        "SYS-REQ-007"
       ]
     }
   ]
