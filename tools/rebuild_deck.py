@@ -344,8 +344,8 @@ def slide_5_testing(prs):
     # Pyramid narrows from bottom to top, centered around x=3.0
     cx = 3.0  # center of pyramid
     layers = [
-        (Inches(0.5), Inches(5.4), Inches(5.5), Inches(0.75), "Static Analysis", NAVY_1, False),
-        (Inches(0.9), Inches(4.5), Inches(4.7), Inches(0.75), "Unit Tests", NAVY_2, False),
+        (Inches(0.5), Inches(5.4), Inches(5.5), Inches(0.75), "Static Analysis", GRAY_DIM, False),
+        (Inches(0.9), Inches(4.5), Inches(4.7), Inches(0.75), "Unit Tests", GRAY_DIM, False),
         (Inches(1.3), Inches(3.6), Inches(3.9), Inches(0.75), "Integration Tests", GRAY_DIM, False),
         (Inches(1.7), Inches(2.7), Inches(3.1), Inches(0.75), "E2E Tests", BLUE_NG, True),
         (Inches(2.1), Inches(1.8), Inches(2.3), Inches(0.75), "Manual &\nExploratory", GRAY_DIM, False),
