@@ -99,7 +99,7 @@ def stage_box(slide, left, top, w, h, title, desc, fill):
     text(tb.text_frame, desc, size=7, color=GRAY_LIGHT, after=0)
 
 
-TOTAL = 11
+TOTAL = 12
 
 
 def slide_1(prs):
@@ -595,7 +595,86 @@ def slide_7(prs):
     page_num(slide, 7, TOTAL)
 
 
-def slide_8(prs):
+def slide_8_cyber(prs):
+    """Cyber: SBOM & Vulnerability Scanning."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    white_bg(slide)
+
+    # Title
+    tb = add_tb(slide, Inches(0.8), Inches(0.4), Inches(11), Inches(0.5))
+    text(tb.text_frame, "Cyber: Supply Chain Security", size=28, bold=True, color=NAVY, after=0, first=True)
+
+    tb = add_tb(slide, Inches(0.8), Inches(0.95), Inches(10), Inches(0.35))
+    text(tb.text_frame, "Every container image is scanned for known vulnerabilities before deployment. A full Software Bill of Materials is generated on every build.",
+         size=11, color=GRAY_DARK, after=0, first=True)
+
+    # LEFT SIDE: Scanning Toolchain
+    tb = add_tb(slide, Inches(0.8), Inches(1.6), Inches(5), Inches(0.3))
+    text(tb.text_frame, "Automated Scanning Pipeline", size=16, bold=True, color=NAVY, after=0, first=True)
+
+    # Flow: Container Image -> Syft -> SBOM -> Grype -> Results -> Policy
+    scan_steps = [
+        ("Container Image", "Product containers\nbuilt by CI/CD", GRAY_DIM),
+        ("\u2192  Syft (SBOM)", "Generates CycloneDX\nSoftware Bill of Materials", BLUE_NG),
+        ("\u2192  Grype (Scan)", "Scans SBOM against\nknown vulnerability DBs", BLUE_4),
+        ("\u2192  Policy Gate", "Fail on Critical/High\nPass with advisory", AMBER),
+    ]
+    x = Inches(0.5)
+    sw = Inches(2.8)
+    for title, desc, color in scan_steps:
+        add_box(slide, x, Inches(2.1), sw, Inches(0.85), color)
+        tb = add_tb(slide, x + Inches(0.1), Inches(2.15), sw - Inches(0.2), Inches(0.75))
+        text(tb.text_frame, title, size=9, bold=True, color=WHITE, after=1, first=True)
+        text(tb.text_frame, desc, size=7, color=GRAY_LIGHT, after=0)
+        x += sw + Inches(0.1)
+
+    # What gets produced
+    tb = add_tb(slide, Inches(0.8), Inches(3.3), Inches(5), Inches(0.3))
+    text(tb.text_frame, "What Gets Produced", size=14, bold=True, color=NAVY, after=0, first=True)
+
+    artifacts = [
+        ("SBOM (CycloneDX)", "Complete inventory of every software component, version, and source in the deployed artifact."),
+        ("Vulnerability Report", "CVE-level findings with severity, affected package, version, and fix availability."),
+        ("Policy Verdict", "PASS / WARNING / FAIL based on configurable severity thresholds. Blocks deployment on Critical/High."),
+        ("Severity Dashboard", "Visual breakdown by severity level in the Deployment Pipeline Report \u2014 filterable, searchable, CSV-exportable."),
+    ]
+    y = Inches(3.7)
+    for title, desc in artifacts:
+        tb = add_tb(slide, Inches(0.8), y, Inches(5.5), Inches(0.6))
+        text(tb.text_frame, title, size=11, bold=True, color=BLUE_NG, after=2, first=True)
+        text(tb.text_frame, desc, size=9, color=GRAY_DARK, after=0)
+        y += Inches(0.65)
+
+    # RIGHT SIDE: Compliance Value
+    add_box(slide, Inches(6.8), Inches(1.5), Inches(5.8), Inches(5.0), SURFACE_LIGHT, BORDER_LIGHT)
+
+    tb = add_tb(slide, Inches(7.0), Inches(1.7), Inches(5.4), Inches(0.3))
+    text(tb.text_frame, "Why This Matters for Compliance", size=16, bold=True, color=NAVY, after=0, first=True)
+
+    compliance = [
+        ("Executive Order 14028", "Federal mandate requiring SBOMs for all software sold to the government. The pipeline generates CycloneDX SBOMs automatically on every build."),
+        ("NIST SP 800-218 (SSDF)", "Secure Software Development Framework requires vulnerability scanning and remediation tracking. Grype scan results are stored per build as immutable CI artifacts."),
+        ("Supply Chain Transparency", "Every component in the deployed product is inventoried with name, version, type, and package URL. No hidden dependencies."),
+        ("Audit-Ready Evidence", "SBOM + vulnerability scan results are included in the deployment evidence bundle. No manual assembly \u2014 generated fresh on every pipeline run."),
+        ("Air-Gapped Compatible", "Grype vulnerability database can be mirrored internally. Syft runs against local container images. No internet required at scan time."),
+    ]
+    y = Inches(2.2)
+    for title, desc in compliance:
+        tb = add_tb(slide, Inches(7.0), y, Inches(5.4), Inches(0.8))
+        text(tb.text_frame, title, size=11, bold=True, color=BLUE_NG, after=2, first=True)
+        text(tb.text_frame, desc, size=8, color=GRAY_DARK, after=0)
+        y += Inches(0.85)
+
+    # Bottom callout
+    add_box(slide, Inches(0.5), Inches(6.6), Inches(12.3), Inches(0.45), SURFACE_LIGHT, BLUE_NG)
+    tb = add_tb(slide, Inches(0.8), Inches(6.66), Inches(11.8), Inches(0.35))
+    text(tb.text_frame, "Every build produces a complete SBOM and vulnerability scan \u2014 no manual steps, no gaps, always current.",
+         size=11, bold=True, color=NAVY, after=0, align=PP_ALIGN.CENTER, first=True)
+
+    page_num(slide, 8, TOTAL)
+
+
+def slide_9(prs):
     """Traceability & Audit Evidence."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -643,7 +722,7 @@ def slide_8(prs):
     page_num(slide, 8, TOTAL)
 
 
-def slide_9(prs):
+def slide_9_closing(prs):
     """Why This Matters — closing slide."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     dark_bg(slide)
@@ -686,8 +765,9 @@ def main():
     slide_5(prs)   # Collaborative Test Authoring
     slide_6(prs)   # Gherkin & Tags
     slide_7(prs)   # CI/CD
-    slide_8(prs)   # Traceability & Audit
-    slide_9(prs)   # Closing
+    slide_8_cyber(prs)  # Cyber: SBOM & Vulnerability Scanning
+    slide_9(prs)   # Traceability & Audit (was slide_8)
+    slide_9_closing(prs)  # Closing (was slide_9)
 
     # Fix all page numbers
     total = len(prs.slides)
