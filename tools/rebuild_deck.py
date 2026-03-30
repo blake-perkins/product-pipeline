@@ -217,7 +217,7 @@ def slide_3(prs):
     sy2 = ly2 + Inches(0.7)
     stages2 = [
         ("Fetch Model", "Download versioned\nartifact from release", NAVY_1),
-        ("\u2192  Quality Gates", "Coverage, drift &\norphan detection", AMBER),
+        ("\u2192  Quality Gates", "Coverage, drift &\norphan detection", NAVY_2),
         ("\u2192  BDD Verification", "Automated Gherkin\nlog-analysis tests", BLUE_NG),
         ("\u2192  Deploy + Report", "Helm deploy with\nevidence bundle", BLUE_4),
     ]
@@ -576,9 +576,9 @@ def slide_7(prs):
 
     product_stages = [
         ("Traceability\nCheck", BLUE_NG),
-        ("Gate A\nCoverage", AMBER),
-        ("Gate B\nDrift", AMBER),
-        ("Gate C\nOrphans", AMBER),
+        ("Gate A\nCoverage", NAVY_2),
+        ("Gate B\nDrift", NAVY_2),
+        ("Gate C\nOrphans", NAVY_2),
         ("BDD Test\nExecution", BLUE_4),
         ("Deploy +\nReport", BLUE_4),
     ]
@@ -617,7 +617,7 @@ def slide_8_cyber(prs):
         ("Container Image", "Product containers built by CI/CD", GRAY_DIM),
         ("Syft \u2192 SBOM", "Generates CycloneDX Software Bill of Materials", BLUE_NG),
         ("Grype \u2192 Scan", "Scans SBOM against known vulnerability databases", BLUE_4),
-        ("Policy Gate", "PASS / WARNING / FAIL based on severity thresholds", AMBER),
+        ("Policy Gate", "PASS / WARNING / FAIL based on severity thresholds", NAVY_2),
     ]
     y = Inches(2.0)
     for title, desc, color in scan_steps:
