@@ -2,7 +2,7 @@
 """Build the executive briefing deck from scratch as a new file.
 
 Instead of modifying the existing .pptx (which corrupts the zip when
-deleting slides), this creates a brand new file with all 9 slides.
+deleting slides), this creates a brand new file with all 11 slides.
 """
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -99,10 +99,10 @@ def stage_box(slide, left, top, w, h, title, desc, fill):
     text(tb.text_frame, desc, size=7, color=GRAY_LIGHT, after=0)
 
 
-TOTAL = 12
+TOTAL = 11
 
 
-def slide_1(prs):
+def slide_01_title(prs):
     """Title slide."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     dark_bg(slide)
@@ -113,7 +113,7 @@ def slide_1(prs):
     page_num(slide, 1, TOTAL)
 
 
-def slide_2(prs):
+def slide_02_problem(prs):
     """Built for Program Velocity."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -161,7 +161,7 @@ def slide_2(prs):
     page_num(slide, 2, TOTAL)
 
 
-def slide_3(prs):
+def slide_03_solution(prs):
     """The Solution: Gherkin as the Common Language."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -304,7 +304,7 @@ def slide_3(prs):
     page_num(slide, 3, TOTAL)
 
 
-def slide_4_release(prs):
+def slide_04_releases(prs):
     """Release Planning & Program Progress."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -389,7 +389,7 @@ def slide_4_release(prs):
     page_num(slide, 4, TOTAL)
 
 
-def slide_5_testing(prs):
+def slide_05_testing(prs):
     """Layered Testing Approach."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -465,7 +465,7 @@ def slide_5_testing(prs):
     page_num(slide, 5, TOTAL)
 
 
-def slide_6_gates(prs):
+def slide_06_gates(prs):
     """Three Quality Gates."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -515,57 +515,7 @@ def slide_6_gates(prs):
     page_num(slide, 4, TOTAL)
 
 
-def slide_5(prs):
-    """Collaborative Test Authoring."""
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    white_bg(slide)
-
-    tb = add_tb(slide, Inches(0.8), Inches(0.5), Inches(11), Inches(0.5))
-    text(tb.text_frame, "Collaborative Test Authoring", size=28, bold=True, color=NAVY, after=0, first=True)
-
-    tb = add_tb(slide, Inches(0.8), Inches(1.05), Inches(11), Inches(0.3))
-    text(tb.text_frame, "SEs and Developers co-author Gherkin specifications \u2014 SEs define WHAT to verify, developers implement HOW.",
-         size=11, color=GRAY_DARK, after=0, first=True)
-
-    cols = [
-        ("Systems Engineers", "Own the WHAT", BLUE_NG, [
-            "Author requirements & verification criteria in Cameo",
-            "Co-author Gherkin Features & Scenarios",
-            "Write Given / When / Then specifications",
-            "Ensure scenarios satisfy the intent of each VC",
-        ]),
-        ("Software Developers", "Own the HOW", BLUE_4, [
-            "Implement step definitions (Python code behind steps)",
-            "Build log-analysis assertions against system output",
-            "Maintain BDD test infrastructure & helpers",
-            "Write product application code",
-        ]),
-    ]
-
-    x = Inches(0.5)
-    for title, subtitle, color, items in cols:
-        add_box(slide, x, Inches(1.7), Inches(5.8), Inches(4.5), SURFACE_LIGHT, BORDER_LIGHT)
-        add_box(slide, x, Inches(1.7), Inches(5.8), Inches(0.7), color)
-
-        tb = add_tb(slide, x + Inches(0.2), Inches(1.78), Inches(5.4), Inches(0.55))
-        text(tb.text_frame, title, size=16, bold=True, color=WHITE, after=2, first=True)
-        text(tb.text_frame, subtitle, size=10, color=GRAY_LIGHT, after=0)
-
-        tb = add_tb(slide, x + Inches(0.2), Inches(2.6), Inches(5.4), Inches(3.2))
-        for i, item in enumerate(items):
-            text(tb.text_frame, "\u2022  " + item, size=10, color=GRAY_DARK, after=8, first=(i == 0))
-
-        x += Inches(6.2)
-
-    # Joint ownership callout
-    tb = add_tb(slide, Inches(0.5), Inches(6.4), Inches(12.3), Inches(0.3))
-    text(tb.text_frame, "JOINTLY OWNED  \u2014  Systems Engineers + Software Developers co-author Gherkin (.feature) files",
-         size=9, bold=True, color=BLUE_LIGHT, after=0, align=PP_ALIGN.CENTER, first=True)
-
-    page_num(slide, 5, TOTAL)
-
-
-def slide_6(prs):
+def slide_07_tags(prs):
     """Gherkin Specification & Tag Convention."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     dark_bg(slide)
@@ -615,7 +565,7 @@ def slide_6(prs):
     page_num(slide, 6, TOTAL)
 
 
-def slide_7(prs):
+def slide_08_cicd(prs):
     """CI/CD Pipeline Stages."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -658,7 +608,7 @@ def slide_7(prs):
     page_num(slide, 7, TOTAL)
 
 
-def slide_8_cyber(prs):
+def slide_09_cyber(prs):
     """Cyber: SBOM & Vulnerability Scanning."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -744,7 +694,7 @@ def slide_8_cyber(prs):
     page_num(slide, 8, TOTAL)
 
 
-def slide_9(prs):
+def slide_10_traceability(prs):
     """Traceability & Audit Evidence."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
@@ -792,7 +742,7 @@ def slide_9(prs):
     page_num(slide, 8, TOTAL)
 
 
-def slide_9_closing(prs):
+def slide_11_closing(prs):
     """Why This Matters — closing slide."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     dark_bg(slide)
@@ -826,18 +776,17 @@ def main():
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
 
-    slide_1(prs)
-    slide_2(prs)
-    slide_3(prs)
-    slide_4_release(prs)
-    slide_5_testing(prs)
-    slide_6_gates(prs)
-    slide_5(prs)   # Collaborative Test Authoring
-    slide_6(prs)   # Gherkin & Tags
-    slide_7(prs)   # CI/CD
-    slide_8_cyber(prs)  # Cyber: SBOM & Vulnerability Scanning
-    slide_9(prs)   # Traceability & Audit (was slide_8)
-    slide_9_closing(prs)  # Closing (was slide_9)
+    slide_01_title(prs)
+    slide_02_problem(prs)
+    slide_03_solution(prs)
+    slide_04_releases(prs)
+    slide_05_testing(prs)
+    slide_06_gates(prs)
+    slide_07_tags(prs)
+    slide_08_cicd(prs)
+    slide_09_cyber(prs)
+    slide_10_traceability(prs)
+    slide_11_closing(prs)
 
     # Fix all page numbers
     total = len(prs.slides)
