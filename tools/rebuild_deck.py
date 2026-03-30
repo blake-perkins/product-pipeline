@@ -162,81 +162,144 @@ def slide_2(prs):
 
 
 def slide_3(prs):
-    """The Solution: Two Pipelines, One Thread (merged slides 3+4)."""
+    """The Solution: Gherkin as the Common Language."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
 
     # Title + subtitle
     tb = add_tb(slide, Inches(0.8), Inches(0.4), Inches(11), Inches(0.5))
-    text(tb.text_frame, "The Solution: Two Pipelines, One Thread", size=28, bold=True, color=NAVY, after=0, first=True)
+    text(tb.text_frame, "The Solution: Gherkin as the Common Language", size=28, bold=True, color=NAVY, after=0, first=True)
 
-    tb = add_tb(slide, Inches(0.8), Inches(0.95), Inches(10), Inches(0.35))
-    text(tb.text_frame, "A single automated thread connects the Cameo model to the deployed product \u2014 with quality gates enforcing traceability at every stage.",
+    tb = add_tb(slide, Inches(0.8), Inches(0.95), Inches(11), Inches(0.35))
+    text(tb.text_frame, "Systems Engineers and developers communicate through executable specifications \u2014 Gherkin scenarios that trace directly to Cameo requirements and run as automated tests.",
          size=11, color=GRAY_DARK, after=0, first=True)
 
-    # TOP LANE: Model Pipeline
-    ly = Inches(1.7)
-    add_box(slide, Inches(0.5), ly, Inches(12.3), Inches(1.8), SURFACE_LIGHT, BORDER_LIGHT)
+    # ============================================
+    # THE BRIDGE — Three columns showing the connection
+    # ============================================
 
-    tb = add_tb(slide, Inches(0.7), ly + Inches(0.08), Inches(4), Inches(0.5))
-    text(tb.text_frame, "MODEL PIPELINE  \u2022  cameo-model-pipeline", size=9, bold=True, color=BLUE_LIGHT, after=1, first=True)
-    text(tb.text_frame, "Owned by Systems Engineers", size=8, color=GRAY_DIM, after=0)
+    # Left column: Cameo Model (SEs)
+    add_box(slide, Inches(0.5), Inches(1.7), Inches(3.5), Inches(2.8), SURFACE_LIGHT, BORDER_LIGHT)
+    tb = add_tb(slide, Inches(0.7), Inches(1.8), Inches(3.1), Inches(0.3))
+    text(tb.text_frame, "Cameo Model", size=14, bold=True, color=NAVY, after=0, first=True)
+    tb = add_tb(slide, Inches(0.7), Inches(2.15), Inches(3.1), Inches(0.25))
+    text(tb.text_frame, "Owned by Systems Engineers", size=9, color=BLUE_LIGHT, after=0, first=True)
 
-    sw, sh = Inches(2.3), Inches(0.8)
-    sy = ly + Inches(0.7)
-    stages = [
-        ("Cameo Model", "Author requirements\n& ICD in the model", NAVY_1),
-        ("\u2192  Export & Validate", "Schema validation\nof JSON exports", NAVY_2),
-        ("\u2192  Package & Version", "Semantic versioning\n& artifact assembly", BLUE_NG),
-        ("\u2192  Publish Artifact", "Versioned ZIP to\nGitHub Releases", BLUE_4),
+    se_items = [
+        "Requirements with verification criteria",
+        "ICD definitions and message types",
+        "Criteria text drives test intent",
+        "Model changes trigger drift detection",
     ]
-    x = Inches(0.7)
-    for t, d, c in stages:
-        stage_box(slide, x, sy, sw, sh, t, d, c)
-        x += sw + Inches(0.15)
+    tb = add_tb(slide, Inches(0.7), Inches(2.55), Inches(3.1), Inches(1.8))
+    for i, item in enumerate(se_items):
+        text(tb.text_frame, "\u2022  " + item, size=9, color=GRAY_DARK, after=5, first=(i == 0))
 
-    # Down arrow + label
-    ay = ly + Inches(1.85)
-    shape = slide.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(5.8), ay, Inches(0.5), Inches(0.5))
+    # Center column: Gherkin (shared)
+    add_box(slide, Inches(4.4), Inches(1.5), Inches(4.5), Inches(3.2), BLUE_NG)
+    tb = add_tb(slide, Inches(4.6), Inches(1.6), Inches(4.1), Inches(0.3))
+    text(tb.text_frame, "Gherkin Specifications", size=16, bold=True, color=WHITE, after=0, align=PP_ALIGN.CENTER, first=True)
+    tb = add_tb(slide, Inches(4.6), Inches(1.95), Inches(4.1), Inches(0.25))
+    text(tb.text_frame, "Co-authored by SEs + Developers", size=9, color=GRAY_LIGHT, after=0, align=PP_ALIGN.CENTER, first=True)
+
+    # Gherkin example inside the center box
+    tb = add_tb(slide, Inches(4.7), Inches(2.4), Inches(3.9), Inches(2.1))
+    gherkin_lines = [
+        ("@REQ:SYS-REQ-001", True),
+        ("Feature: Basic ICD Communications", True),
+        ("", False),
+        ("  @VC:SYS-REQ-001-VC-01 @VER:Test", True),
+        ("  Scenario: Valid ICD response", False),
+        ("    Given the simulation logs are loaded", False),
+        ("    Then the logs should contain", False),
+        ('         \"IcdResponse: status=OK\"', False),
+    ]
+    for i, (line, bold_line) in enumerate(gherkin_lines):
+        text(tb.text_frame, line if line else " ", size=8, bold=bold_line,
+             color=WHITE if bold_line else GRAY_LIGHT, after=1, first=(i == 0))
+
+    # Right column: Automated Tests (Devs)
+    add_box(slide, Inches(9.3), Inches(1.7), Inches(3.5), Inches(2.8), SURFACE_LIGHT, BORDER_LIGHT)
+    tb = add_tb(slide, Inches(9.5), Inches(1.8), Inches(3.1), Inches(0.3))
+    text(tb.text_frame, "Automated Tests", size=14, bold=True, color=NAVY, after=0, first=True)
+    tb = add_tb(slide, Inches(9.5), Inches(2.15), Inches(3.1), Inches(0.25))
+    text(tb.text_frame, "Owned by Developers", size=9, color=BLUE_LIGHT, after=0, first=True)
+
+    dev_items = [
+        "Step definitions implement the HOW",
+        "Log analysis against deployed product",
+        "Results feed the pipeline report",
+        "CI/CD runs on every commit",
+    ]
+    tb = add_tb(slide, Inches(9.5), Inches(2.55), Inches(3.1), Inches(1.8))
+    for i, item in enumerate(dev_items):
+        text(tb.text_frame, "\u2022  " + item, size=9, color=GRAY_DARK, after=5, first=(i == 0))
+
+    # Arrows: Cameo -> Gherkin -> Tests
+    shape = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(4.05), Inches(2.9), Inches(0.3), Inches(0.3))
     shape.fill.solid()
     shape.fill.fore_color.rgb = rgb(BLUE_NG)
     shape.line.fill.background()
 
-    tb = add_tb(slide, Inches(6.4), ay + Inches(0.02), Inches(2.5), Inches(0.4))
-    text(tb.text_frame, "Versioned Artifact", size=9, bold=True, color=BLUE_LIGHT, after=1, first=True)
-    text(tb.text_frame, "requirements.json + proto files", size=7, color=GRAY_DIM, after=0)
+    shape = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(8.95), Inches(2.9), Inches(0.3), Inches(0.3))
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = rgb(BLUE_NG)
+    shape.line.fill.background()
 
-    # BOTTOM LANE: Product Pipeline
-    ly2 = ay + Inches(0.6)
-    add_box(slide, Inches(0.5), ly2, Inches(12.3), Inches(1.8), SURFACE_LIGHT, BORDER_LIGHT)
+    # ============================================
+    # BOTTOM: Two pipeline lanes (compact)
+    # ============================================
+    tb = add_tb(slide, Inches(0.8), Inches(4.9), Inches(5), Inches(0.3))
+    text(tb.text_frame, "How It Flows Through the Pipelines", size=14, bold=True, color=NAVY, after=0, first=True)
 
-    tb = add_tb(slide, Inches(0.7), ly2 + Inches(0.08), Inches(5), Inches(0.5))
-    text(tb.text_frame, "PRODUCT PIPELINE  \u2022  product-pipeline", size=9, bold=True, color=BLUE_LIGHT, after=1, first=True)
-    text(tb.text_frame, "Owned by Developers + Systems Engineers", size=8, color=GRAY_DIM, after=0)
+    # Model Pipeline (compact)
+    add_box(slide, Inches(0.5), Inches(5.3), Inches(6.0), Inches(0.5), SURFACE_LIGHT, BORDER_LIGHT)
+    tb = add_tb(slide, Inches(0.6), Inches(5.33), Inches(5.8), Inches(0.4))
+    p = text(tb.text_frame, "MODEL PIPELINE", size=8, bold=True, color=BLUE_LIGHT, after=0, first=True)
+    r = p.add_run()
+    r.text = "    Cameo  \u2192  Export  \u2192  Package  \u2192  Publish Artifact"
+    r.font.size = Pt(8)
+    r.font.bold = False
+    r.font.color.rgb = rgb(GRAY_DARK)
 
-    sy2 = ly2 + Inches(0.7)
-    stages2 = [
-        ("Fetch Model", "Download versioned\nartifact from release", NAVY_1),
-        ("\u2192  Quality Gates", "Coverage, drift &\norphan detection", NAVY_2),
-        ("\u2192  BDD Verification", "Automated Gherkin\nlog-analysis tests", BLUE_NG),
-        ("\u2192  Deploy + Report", "Helm deploy with\nevidence bundle", BLUE_4),
+    # Arrow down
+    shape = slide.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(3.0), Inches(5.85), Inches(0.3), Inches(0.25))
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = rgb(BLUE_NG)
+    shape.line.fill.background()
+
+    # Product Pipeline (compact)
+    add_box(slide, Inches(0.5), Inches(6.15), Inches(6.0), Inches(0.5), SURFACE_LIGHT, BORDER_LIGHT)
+    tb = add_tb(slide, Inches(0.6), Inches(6.18), Inches(5.8), Inches(0.4))
+    p = text(tb.text_frame, "PRODUCT PIPELINE", size=8, bold=True, color=BLUE_LIGHT, after=0, first=True)
+    r = p.add_run()
+    r.text = "    Fetch  \u2192  Quality Gates  \u2192  BDD Tests  \u2192  Deploy + Report"
+    r.font.size = Pt(8)
+    r.font.bold = False
+    r.font.color.rgb = rgb(GRAY_DARK)
+
+    # Right side: key points
+    key_points = [
+        ("Readable by both sides", "SEs validate intent, developers implement steps."),
+        ("Machine-traceable", "Tags (@REQ, @VC) create the link to requirements."),
+        ("Pipeline-enforced", "Quality gates ensure every VC has a scenario."),
     ]
-    x = Inches(0.7)
-    for t, d, c in stages2:
-        stage_box(slide, x, sy2, sw, sh, t, d, c)
-        x += sw + Inches(0.15)
+    y = Inches(5.15)
+    for title, desc in key_points:
+        tb = add_tb(slide, Inches(7.0), y, Inches(5.5), Inches(0.45))
+        p = text(tb.text_frame, title, size=10, bold=True, color=BLUE_NG, after=0, first=True)
+        r = p.add_run()
+        r.text = "  \u2014  " + desc
+        r.font.size = Pt(9)
+        r.font.bold = False
+        r.font.color.rgb = rgb(GRAY_DARK)
+        y += Inches(0.5)
 
-    # Key principle
-    py = ly2 + Inches(1.9)
-    add_box(slide, Inches(0.5), py, Inches(12.3), Inches(0.45), (0x0A, 0x14, 0x20), BLUE_NG)
-    tb = add_tb(slide, Inches(0.8), py + Inches(0.06), Inches(11.8), Inches(0.35))
-    text(tb.text_frame, "Every requirement is automatically traced from model to test to deployment. No manual assembly. No gaps. No drift.",
-         size=11, bold=True, color=WHITE, after=0, align=PP_ALIGN.CENTER, first=True)
-
-    # Tool stack
-    tb = add_tb(slide, Inches(9.5), Inches(0.4), Inches(3.3), Inches(0.3))
-    text(tb.text_frame, "Cameo \u2022 Python \u2022 Behave \u2022 Gherkin \u2022 Helm \u2022 GitHub Actions",
-         size=7, color=GRAY_DIM, after=0, align=PP_ALIGN.RIGHT, first=True)
+    # Bottom callout
+    add_box(slide, Inches(7.0), Inches(6.7), Inches(5.8), Inches(0.4), (0x0A, 0x14, 0x20), BLUE_NG)
+    tb = add_tb(slide, Inches(7.2), Inches(6.74), Inches(5.4), Inches(0.3))
+    text(tb.text_frame, "One language. Model to deployment. Both sides own the spec.",
+         size=10, bold=True, color=WHITE, after=0, align=PP_ALIGN.CENTER, first=True)
 
     page_num(slide, 3, TOTAL)
 
