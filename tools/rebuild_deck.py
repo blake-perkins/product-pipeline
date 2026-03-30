@@ -336,7 +336,7 @@ def slide_5_testing(prs):
     text(tb.text_frame, "Where This Fits: Layered Testing", size=28, bold=True, color=NAVY, after=0, first=True)
 
     tb = add_tb(slide, Inches(0.8), Inches(0.95), Inches(10), Inches(0.35))
-    text(tb.text_frame, "The MBSE pipeline operates at the System and Acceptance test layers \u2014 verifying requirements against the deployed product.",
+    text(tb.text_frame, "The MBSE pipeline operates at the System Test layer \u2014 verifying requirements against the deployed product through automated log analysis.",
          size=11, color=GRAY_DARK, after=0, first=True)
 
     # Test pyramid (built from shapes)
@@ -345,7 +345,7 @@ def slide_5_testing(prs):
         (Inches(1.5), Inches(5.2), Inches(5.0), Inches(0.8), "Unit Tests", "Component-level code coverage", GRAY_DIM, False),
         (Inches(2.0), Inches(4.3), Inches(4.0), Inches(0.8), "Integration Tests", "Module interfaces & data flow", GRAY_DIM, False),
         (Inches(2.5), Inches(3.4), Inches(3.0), Inches(0.8), "System Tests", "End-to-end behavior verification", BLUE_NG, True),
-        (Inches(3.0), Inches(2.5), Inches(2.0), Inches(0.8), "Acceptance Tests", "Requirement-level validation", BLUE_4, True),
+        (Inches(3.0), Inches(2.5), Inches(2.0), Inches(0.8), "Acceptance Tests", "Customer-driven validation", GRAY_DIM, False),
     ]
 
     for lx, ly, lw, lh, label, desc, color, highlight in layers:
@@ -362,8 +362,8 @@ def slide_5_testing(prs):
         text(tb.text_frame, label, size=11, bold=True, color=WHITE, after=1, align=PP_ALIGN.CENTER, first=True)
         text(tb.text_frame, desc, size=8, color=GRAY_LIGHT, after=0, align=PP_ALIGN.CENTER)
 
-    # "MBSE Pipeline" bracket/label pointing to top two layers
-    tb = add_tb(slide, Inches(5.8), Inches(2.8), Inches(1.5), Inches(0.3))
+    # "MBSE Pipeline" label pointing to System Tests layer
+    tb = add_tb(slide, Inches(5.8), Inches(3.5), Inches(1.5), Inches(0.3))
     text(tb.text_frame, "\u25c0 MBSE Pipeline", size=10, bold=True, color=BLUE_NG, after=0, first=True)
 
     # Right side — what the pipeline does at each layer
@@ -386,7 +386,7 @@ def slide_5_testing(prs):
 
     # Bottom note
     tb = add_tb(slide, Inches(0.8), Inches(6.5), Inches(12), Inches(0.3))
-    text(tb.text_frame, "Unit and Integration tests are owned by developers in their respective repos. The MBSE pipeline adds the System and Acceptance layers with full traceability.",
+    text(tb.text_frame, "Unit and Integration tests are owned by developers in their respective repos. The MBSE pipeline adds the System Test layer with full requirement traceability.",
          size=9, color=GRAY_DIM, after=0, align=PP_ALIGN.CENTER, first=True)
 
     page_num(slide, 5, TOTAL)
