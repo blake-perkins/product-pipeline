@@ -218,18 +218,18 @@ def slide_3(prs):
         text(tb.text_frame, line if line else " ", size=8, bold=bold_line,
              color=WHITE if bold_line else GRAY_LIGHT, after=1, first=(i == 0))
 
-    # Right column: Automated Tests (Devs)
+    # Right column: System Verification (Devs)
     add_box(slide, Inches(9.3), Inches(1.7), Inches(3.5), Inches(2.8), SURFACE_LIGHT, BORDER_LIGHT)
     tb = add_tb(slide, Inches(9.5), Inches(1.8), Inches(3.1), Inches(0.3))
-    text(tb.text_frame, "Automated Tests", size=14, bold=True, color=NAVY, after=0, first=True)
+    text(tb.text_frame, "System Verification", size=14, bold=True, color=NAVY, after=0, first=True)
     tb = add_tb(slide, Inches(9.5), Inches(2.15), Inches(3.1), Inches(0.25))
-    text(tb.text_frame, "Owned by Developers", size=9, color=BLUE_LIGHT, after=0, first=True)
+    text(tb.text_frame, "Implemented by Developers", size=9, color=BLUE_LIGHT, after=0, first=True)
 
     dev_items = [
         "Step definitions implement the HOW",
-        "Log analysis against deployed product",
+        "Log analysis against the deployed product",
+        "E2E verification on every build",
         "Results feed the pipeline report",
-        "CI/CD runs on every commit",
     ]
     tb = add_tb(slide, Inches(9.5), Inches(2.55), Inches(3.1), Inches(1.8))
     for i, item in enumerate(dev_items):
