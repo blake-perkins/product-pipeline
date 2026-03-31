@@ -114,49 +114,83 @@ def slide_01_title(prs):
 
 
 def slide_02_problem(prs):
-    """Built for Program Velocity."""
+    """One Pipeline. Model to Deployment."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     white_bg(slide)
 
     # Title
     tb = add_tb(slide, Inches(0.8), Inches(0.5), Inches(11), Inches(0.6))
-    text(tb.text_frame, "Built for Program Velocity", size=30, bold=True, color=NAVY, after=0, first=True)
+    text(tb.text_frame, "One Pipeline. Model to Deployment.", size=32, bold=True, color=NAVY, after=0, first=True)
 
-    # LEFT: Structural Gaps
-    tb = add_tb(slide, Inches(0.8), Inches(1.4), Inches(5.5), Inches(0.3))
-    text(tb.text_frame, "The Structural Gaps", size=16, bold=True, color=NAVY, after=0, first=True)
-
+    # ============================================
+    # LEFT SIDE: Three gap cards (60% width)
+    # ============================================
     gaps = [
-        ("No Shared Language", "SEs work in the model, developers work in code. Without a bridge, intent gets lost in translation at every handoff."),
-        ("No Reliable Handoff", "Artifacts shared over email or SharePoint have no version control, no change awareness, and no enforcement."),
-        ("No Connected Toolchain", "Requirements, tests, and deployment are maintained in separate tools with no automated thread between them."),
+        ("No Shared Language",
+         "SEs work in the model, developers work in code. Intent gets lost at every handoff \u2014 misalignment surfaces at integration."),
+        ("No Reliable Handoff",
+         "Artifacts shared over email have no version control. When the model changes, nothing alerts the team. Tests go stale silently."),
+        ("No Connected Toolchain",
+         "Requirements, tests, and deployment live in separate tools. Audit evidence is rebuilt from scratch every review cycle."),
     ]
-    y = Inches(1.9)
-    for title, desc in gaps:
-        tb = add_tb(slide, Inches(0.8), y, Inches(5.5), Inches(0.75))
-        text(tb.text_frame, title, size=13, bold=True, color=BLUE_LIGHT, after=2, first=True)
-        text(tb.text_frame, desc, size=10, color=GRAY_DARK, after=0)
-        y += Inches(0.85)
 
-    # RIGHT: Why the Old Approach Falls Short
-    add_box(slide, Inches(6.8), Inches(1.3), Inches(5.8), Inches(4.0), SURFACE_LIGHT, BORDER_LIGHT)
-    tb = add_tb(slide, Inches(7.0), Inches(1.5), Inches(5.4), Inches(0.3))
-    text(tb.text_frame, "Why the Old Approach Falls Short", size=14, bold=True, color=NAVY, after=0, first=True)
+    y = Inches(1.5)
+    for gap_title, gap_desc in gaps:
+        add_box(slide, Inches(0.5), y, Inches(7.3), Inches(1.35), SURFACE_LIGHT, BORDER_LIGHT)
+        tb = add_tb(slide, Inches(0.8), y + Inches(0.15), Inches(6.8), Inches(1.1))
+        text(tb.text_frame, gap_title, size=15, bold=True, color=BLUE_NG, after=4, first=True)
+        text(tb.text_frame, gap_desc, size=10, color=GRAY_DARK, after=0)
+        y += Inches(1.55)
 
-    bullets = [
-        "Requirements are living targets \u2014 this program moves faster than any manual process can track.",
-        "SE/SW misalignment surfaces at integration \u2014 the most expensive point to find it.",
-        "Audit evidence reconstructed from scratch each review cycle \u2014 unsustainable at this pace.",
-        "Requirement changes silently invalidate tests \u2014 no alert, no flag, no enforcement.",
+    # ============================================
+    # RIGHT SIDE: Disconnected silos diagram
+    # ============================================
+    diag_x = Inches(8.5)
+    diag_w = Inches(4.0)
+
+    # "Today" label
+    tb = add_tb(slide, diag_x, Inches(1.5), diag_w, Inches(0.35))
+    text(tb.text_frame, "Today", size=14, bold=True, color=GRAY_DIM, after=0, align=PP_ALIGN.CENTER, first=True)
+
+    # Three silo boxes — stacked vertically, not connected
+    silo_w = Inches(2.8)
+    silo_h = Inches(0.65)
+    silo_x = diag_x + Inches(0.6)
+    silos = [
+        ("Cameo Model", NAVY_1),
+        ("Test Suite", NAVY_2),
+        ("Deployment", GRAY_DIM),
     ]
-    tb = add_tb(slide, Inches(7.0), Inches(2.1), Inches(5.4), Inches(2.8))
-    for i, b in enumerate(bullets):
-        text(tb.text_frame, "\u2022  " + b, size=10, color=GRAY_DARK, after=8, first=(i == 0))
 
-    # Closing line
-    tb = add_tb(slide, Inches(0.8), Inches(5.8), Inches(11.5), Inches(0.4))
+    silo_y = Inches(2.1)
+    silo_positions = []
+    for label, color in silos:
+        add_box(slide, silo_x, silo_y, silo_w, silo_h, color)
+        tb = add_tb(slide, silo_x + Inches(0.1), silo_y + Inches(0.12), silo_w - Inches(0.2), silo_h - Inches(0.2))
+        text(tb.text_frame, label, size=11, bold=True, color=WHITE, after=0, align=PP_ALIGN.CENTER, first=True)
+        silo_positions.append(silo_y)
+        silo_y += Inches(1.05)
+
+    # Dashed gap indicators between silos (X marks)
+    RED = (0xCC, 0x33, 0x33)
+    for i in range(len(silo_positions) - 1):
+        gap_y = silo_positions[i] + silo_h + Inches(0.08)
+        # X mark shape
+        tb = add_tb(slide, silo_x + Inches(1.1), gap_y, Inches(0.6), Inches(0.3))
+        text(tb.text_frame, "\u2718", size=16, bold=True, color=RED, after=0, align=PP_ALIGN.CENTER, first=True)
+
+    # "No thread" label under the diagram
+    tb = add_tb(slide, diag_x, silo_positions[-1] + silo_h + Inches(0.3), diag_w, Inches(0.5))
+    text(tb.text_frame, "No automated thread", size=10, bold=True, color=RED, after=2, align=PP_ALIGN.CENTER, first=True)
+    text(tb.text_frame, "Manual handoffs at every stage", size=9, color=GRAY_DIM, after=0, align=PP_ALIGN.CENTER)
+
+    # ============================================
+    # Bottom takeaway
+    # ============================================
+    add_box(slide, Inches(0.5), Inches(6.3), Inches(12.3), Inches(0.5), SURFACE_LIGHT, BLUE_NG)
+    tb = add_tb(slide, Inches(0.8), Inches(6.36), Inches(11.8), Inches(0.4))
     text(tb.text_frame, "This program moves too fast for manual traceability. The pipeline keeps pace.",
-         size=13, bold=True, color=NAVY, after=0, first=True)
+         size=12, bold=True, color=NAVY, after=0, align=PP_ALIGN.CENTER, first=True)
 
     page_num(slide, 2, TOTAL)
 
