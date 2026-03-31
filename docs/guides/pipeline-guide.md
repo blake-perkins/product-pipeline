@@ -791,8 +791,9 @@ python tools/report_generator.py \
 
 1. SE runs the export macro and pushes.
 2. Pipeline runs. Gate A detects the uncovered VC(s). A stub is generated.
+   - If the VC is scoped to a future release, the stub includes `@DEFERRED` at the feature and scenario level. The dashboard shows it as "deferred" rather than "failed."
 3. If `--fail-on-uncovered` is enabled, the pipeline fails at the traceability check.
-4. If not, the pipeline continues but Behave fails on the stub's `NotImplementedError`.
+4. If not, the pipeline continues but Behave fails on the stub's `NotImplementedError` (unless deferred).
 5. SE and developer meet. SE explains the requirement intent and verification criteriaology. Together they co-author the Gherkin Feature and Scenario text.
 6. Developer implements any new step definitions needed for the scenario.
 7. Developer commits and pushes. Pipeline passes.

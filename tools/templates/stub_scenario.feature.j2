@@ -1,8 +1,11 @@
 {% set is_manual = vc.verificationMethod not in ["Test", "Demonstration"] -%}
+{% set is_deferred = vc.deferred | default(false) -%}
 {% if is_manual -%}
-@REQ:{{ requirement.requirementId }} @manual @STUB @AUTO_GENERATED
+@REQ:{{ requirement.requirementId }} @manual @STUB @AUTO_GENERATED{% if is_deferred %} @DEFERRED{% endif %}
+
 {% else -%}
-@REQ:{{ requirement.requirementId }} @STUB @AUTO_GENERATED
+@REQ:{{ requirement.requirementId }} @STUB @AUTO_GENERATED{% if is_deferred %} @DEFERRED{% endif %}
+
 {% endif -%}
 Feature: {{ vc.verificationId }} - {{ requirement.name }} ({{ vc.verificationMethod }})
   {{ requirement.description | default("No description provided.", true) }}
@@ -10,7 +13,8 @@ Feature: {{ vc.verificationId }} - {{ requirement.name }} ({{ vc.verificationMet
   Verification Method: {{ vc.verificationMethod }}
   Verification Criteria: {{ vc.verificationDescription | default("N/A", true) }}
 
-  @VC:{{ vc.verificationId }}
+  @VC:{{ vc.verificationId }}{% if is_deferred %} @DEFERRED{% endif %}
+
   Scenario: Verify {{ vc.verificationId }} - {{ requirement.name }}
     Given the system is configured for {{ vc.verificationMethod | lower }} verification of "{{ requirement.requirementId }}"
     When the {{ vc.verificationMethod | lower }} verification is performed

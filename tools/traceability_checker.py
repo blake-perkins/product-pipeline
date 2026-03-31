@@ -295,7 +295,7 @@ def scan_features(features_dir: Path) -> tuple[list[ScenarioRef], set[str], set[
 # ---------------------------------------------------------------------------
 # Stub generation (Gate A helper)
 # ---------------------------------------------------------------------------
-def _render_stub(requirement: Requirement, vc: VerificationCriteria, template_path: Path | None) -> str:
+def _render_stub(requirement: Requirement, vc: VerificationCriteria, template_path: Path | None, deferred: bool = False) -> str:
     """Render a stub .feature file for an uncovered VC.
 
     Tries Jinja2 template at *template_path* first; falls back to the inline
@@ -311,6 +311,7 @@ def _render_stub(requirement: Requirement, vc: VerificationCriteria, template_pa
             "verificationId": vc.vc_id,
             "verificationMethod": vc.method,
             "verificationDescription": vc.criteria,
+            "deferred": deferred,
         },
     }
 
@@ -340,6 +341,8 @@ def _render_stub(requirement: Requirement, vc: VerificationCriteria, template_pa
     vc_ctx = context["vc"]
     is_test = vc_ctx["verificationMethod"] == "Test"
     tag_line = f"@REQ:{req['requirementId']} @VC:{vc_ctx['verificationId']}"
+    if vc_ctx.get("deferred"):
+        tag_line += " @DEFERRED"
     if not is_test:
         tag_line += " @manual"
 
@@ -367,11 +370,13 @@ def generate_stubs(
     stubs_output_dir: Path,
     non_test_output_dir: Path | None,
     template_path: Path | None,
+    deferred: bool = False,
 ) -> list[Path]:
     """Create stub .feature files for every uncovered VC.
 
     Non-Test VCs are placed in *non_test_output_dir* (if given) with
-    an additional ``@manual`` tag.
+    an additional ``@manual`` tag.  When *deferred* is True, stubs
+    include the ``@DEFERRED`` tag.
     """
     created: list[Path] = []
 
@@ -386,7 +391,7 @@ def generate_stubs(
         safe_id = re.sub(r"[^\w\-.]", "_", vc.vc_id)
         stub_path = out_dir / f"{safe_id}.feature"
 
-        content = _render_stub(req, vc, template_path)
+        content = _render_stub(req, vc, template_path, deferred=deferred)
         stub_path.write_text(content, encoding="utf-8")
         LOG.info("Generated stub: %s", stub_path)
         created.append(stub_path)
@@ -670,10 +675,16 @@ def run_gate_a(
             message="All verification criteria are covered by at least one scenario.",
         )
 
-    # Generate stubs only for truly uncovered VCs (not deferred)
+    # Generate stubs for uncovered VCs
     stubs = generate_stubs(
         uncovered_vcs, stubs_output_dir, non_test_output_dir, template_path
     ) if uncovered_vcs else []
+
+    # Generate stubs for deferred VCs (with @DEFERRED tag)
+    deferred_stubs = generate_stubs(
+        deferred_vcs, stubs_output_dir, non_test_output_dir, template_path,
+        deferred=True,
+    ) if deferred_vcs else []
 
     items = [
         {
@@ -688,15 +699,18 @@ def run_gate_a(
     ]
 
     # Add deferred items (not counted toward failure)
-    for req, vc in deferred_vcs:
-        items.append({
+    for i, (req, vc) in enumerate(deferred_vcs):
+        item = {
             "requirementId": req.requirement_id,
             "verificationId": vc.vc_id,
             "verificationMethod": vc.method,
             "name": req.name,
             "deferred": True,
             "targetRelease": vc_to_release.get(vc.vc_id, ""),
-        })
+        }
+        if deferred_stubs and i < len(deferred_stubs):
+            item["stubGenerated"] = str(deferred_stubs[i])
+        items.append(item)
 
     # Only truly uncovered VCs (in-scope) count toward failure
     passed = not fail_on_uncovered or len(uncovered_vcs) == 0
