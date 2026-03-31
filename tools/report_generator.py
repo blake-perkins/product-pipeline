@@ -309,6 +309,7 @@ def build_report(
     requirements_path: Path,
     behave_results_path: Path,
     traceability_input_path: Path,
+    release_plan_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Merge all data sources and produce the traceability report dict.
 
@@ -351,6 +352,27 @@ def build_report(
     covered_ids, uncovered_ids, drifted_ids, orphaned_tests, deferred_ids, deferred_releases = _parse_traceability_data(
         trace_data, all_vc_ids
     )
+
+    # Build VC → release version mapping from the release plan (overrides
+    # traceability report's targetRelease, which may use old version names).
+    if release_plan_data and "releases" in release_plan_data:
+        current = release_plan_data.get("currentVersion", "")
+        past_current = False
+        for rel in release_plan_data["releases"]:
+            ver = rel.get("version", "")
+            if ver == current:
+                past_current = True
+                continue
+            if past_current:
+                for scope_id in rel.get("scope", []):
+                    # scope_id can be a requirement ID or a VC ID
+                    if "-VC-" in scope_id:
+                        deferred_releases[scope_id] = ver
+                    elif scope_id in req_index:
+                        for vc in req_index[scope_id].get("verificationCriteria", req_index[scope_id].get("verificationMethods", [])):
+                            vid = vc.get("verificationId", vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
+                            if vid:
+                                deferred_releases[vid] = ver
 
     # Manual verification methods don't have automated test results
     manual_methods = {"Analysis", "Inspection"}
@@ -742,10 +764,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             logger.error("%s file not found: %s", label, path)
             return 1
 
+    release_plan_data = _load_optional_json(getattr(args, "release_plan", None))
+
     report = build_report(
         requirements_path=args.requirements,
         behave_results_path=args.behave_results,
         traceability_input_path=args.traceability_input,
+        release_plan_data=release_plan_data,
     )
 
     # Load raw data for the interactive dashboard template
@@ -754,7 +779,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     traceability_raw = _load_json(args.traceability_input)
     sbom_data = _load_optional_json(getattr(args, "sbom_path", None))
     grype_data = _load_optional_json(getattr(args, "grype_path", None))
-    release_plan_data = _load_optional_json(getattr(args, "release_plan", None))
 
     write_json_report(report, args.output_json)
     write_html_report(
