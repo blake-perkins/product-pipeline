@@ -811,6 +811,78 @@ python tools/report_generator.py \
 7. Developer removes `@REVIEW_REQUIRED`, runs `--update-baseline` to refresh hashes.
 8. Developer commits the updated feature file and baseline. Pipeline passes.
 
+### Scenario: A new requirement is planned for a future release
+
+**Who acts:** SE adds the requirement, PM/SE updates the release plan.
+
+A deferred requirement is one that exists in the model but is not yet in scope for the current release. The pipeline tracks it without enforcing it.
+
+**Step 1: Add the requirement to `requirements.json`**
+
+Add the requirement with its verification criteria, just like any other requirement:
+
+```json
+{
+  "requirementId": "SYS-REQ-012",
+  "name": "Diagnostic Port Access",
+  "description": "The system shall provide a secure diagnostic port...",
+  "requirementType": "Functional",
+  "status": "Approved",
+  "parentRequirementId": null,
+  "verificationCriteria": [
+    {
+      "verificationId": "SYS-REQ-012-VC-01",
+      "verificationMethod": "Test",
+      "verificationDescription": "Verify that unauthenticated access is rejected."
+    }
+  ]
+}
+```
+
+**Step 2: Add it to a future release in `release-plan.json`**
+
+Place the requirement ID in the scope of a release that comes **after** `currentVersion` in the array:
+
+```json
+{
+  "currentVersion": "1.2.0",
+  "releases": [
+    { "version": "1.0.0", "scope": ["SYS-REQ-001", "SYS-REQ-002"] },
+    { "version": "1.2.0", "scope": ["SYS-REQ-003", "SYS-REQ-007"] },
+    { "version": "Door 1 Release", "scope": ["SYS-REQ-004", "SYS-REQ-012"] }
+  ]
+}
+```
+
+Key rules:
+- **Array order determines what is deferred**, not version numbers or target dates.
+- Everything after `currentVersion` in the array is treated as future.
+- Release names can be anything — semver (`2.0.0`) or descriptive (`Door 1 Release`).
+
+**Step 3: Regenerate the dashboard**
+
+```bash
+python tools/report_generator.py \
+  --requirements build/demo/requirements.json \
+  --behave-results build/demo/behave-results.json \
+  --traceability-input build/demo/traceability_report.json \
+  --output-json build/demo/final_report.json \
+  --output-html build/demo/Deployment_Pipeline_Report.html \
+  --sbom-path build/demo/sbom.json \
+  --grype-path build/demo/grype-results.json \
+  --release-plan release-plan.json
+```
+
+No need to re-run the traceability checker. The report generator reads the release plan directly and marks future-release VCs as deferred.
+
+**What you'll see in the dashboard:**
+- The VC shows as **deferred** in the Traceability Matrix
+- The target release name appears in the deferred badge
+- The VC does **not** count as a blocker or failure for the current release
+- If the pipeline generates a stub feature file, it will include `@DEFERRED` tags automatically
+
+---
+
 ### Scenario: A requirement is removed from the model
 
 **Who acts:** SE exports, SE confirms removal, Developer cleans up.
