@@ -607,16 +607,6 @@ if (TRACEABILITY && TRACEABILITY.gate_b && TRACEABILITY.gate_b.items) {
 }
 
 /* Semver compare: returns -1 if a<b, 0 if a==b, 1 if a>b */
-function semverCmp(a, b) {
-  if (!a || !b) return 0;
-  const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i]||0) < (pb[i]||0)) return -1;
-    if ((pa[i]||0) > (pb[i]||0)) return 1;
-  }
-  return 0;
-}
-
 /* Get current product version from the release plan */
 function getCurrentVersion() {
   if (RELEASE_PLAN && RELEASE_PLAN.currentVersion) return RELEASE_PLAN.currentVersion;
@@ -625,13 +615,17 @@ function getCurrentVersion() {
 const CURRENT_VERSION = getCurrentVersion();
 
 function isReleasedVersion(version) {
-  if (!CURRENT_VERSION || !version) return false;
-  return semverCmp(version, CURRENT_VERSION) < 0;
+  if (!CURRENT_VERSION || !version || !RELEASE_PLAN || !RELEASE_PLAN.releases) return false;
+  if (version === CURRENT_VERSION) return false;
+  var currentIdx = RELEASE_PLAN.releases.findIndex(function(r) { return r.version === CURRENT_VERSION; });
+  var versionIdx = RELEASE_PLAN.releases.findIndex(function(r) { return r.version === version; });
+  if (currentIdx < 0 || versionIdx < 0) return false;
+  return versionIdx < currentIdx;
 }
 
 function isCurrentVersion(version) {
   if (!CURRENT_VERSION || !version) return false;
-  return semverCmp(version, CURRENT_VERSION) === 0;
+  return version === CURRENT_VERSION;
 }
 
 /* Animate a number element from 0 to target using requestAnimationFrame */
