@@ -368,11 +368,13 @@ def build_report(
                     # scope_id can be a requirement ID or a VC ID
                     if "-VC-" in scope_id:
                         deferred_releases[scope_id] = ver
+                        deferred_ids.add(scope_id)
                     elif scope_id in req_index:
                         for vc in req_index[scope_id].get("verificationCriteria", req_index[scope_id].get("verificationMethods", [])):
                             vid = vc.get("verificationId", vc.get("verificationCriteriaId", vc.get("verificationMethodId", "")))
                             if vid:
                                 deferred_releases[vid] = ver
+                                deferred_ids.add(vid)
 
     # Manual verification methods don't have automated test results
     manual_methods = {"Analysis", "Inspection"}
