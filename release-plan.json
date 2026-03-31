@@ -21,13 +21,14 @@
       ]
     },
     {
-      "version": "2.0.0",
-      "targetDate": "2027-01-01",
+      "version": "Door 1 Release",
+      "targetDate": "2026-04-01",
       "description": "System resilience, self-test, and data logging",
       "scope": [
         "SYS-REQ-004",
         "SYS-REQ-006",
-        "SYS-REQ-008"
+        "SYS-REQ-008",
+        "SYS-REQ-012"
       ]
     }
   ]

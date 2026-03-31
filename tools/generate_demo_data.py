@@ -180,6 +180,22 @@ def generate(output_dir: Path):
                     },
                 ],
             },
+            {
+                # REQ-012: Diagnostic Port Access — 1 VC, deferred (Door 1 Release)
+                "requirementId": "SYS-REQ-012",
+                "name": "Diagnostic Port Access",
+                "description": "The system shall provide a secure diagnostic port for field maintenance, requiring authentication before granting access.",
+                "requirementType": "Functional",
+                "status": "Approved",
+                "parentRequirementId": None,
+                "verificationCriteria": [
+                    {
+                        "verificationId": "SYS-REQ-012-VC-01",
+                        "verificationMethod": "Test",
+                        "verificationDescription": "Verify that unauthenticated diagnostic port access is rejected and logged.",
+                    },
+                ],
+            },
         ],
     }
 
