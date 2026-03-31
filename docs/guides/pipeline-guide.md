@@ -776,9 +776,9 @@ python tools/report_generator.py \
   --traceability-input build/demo/traceability_report.json \
   --sbom-path build/demo/sbom.json \
   --grype-path build/demo/grype-results.json \
-  --release-plan build/demo/release-plan.json \
+  --release-plan release-plan.json \
   --output-json build/demo/final_report.json \
-  --output-html build/demo/dashboard.html
+  --output-html build/demo/Deployment_Pipeline_Report.html
 ```
 
 ---

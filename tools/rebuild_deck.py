@@ -171,18 +171,18 @@ def slide_02_problem(prs):
         silo_positions.append(silo_y)
         silo_y += Inches(1.05)
 
-    # Dashed gap indicators between silos (X marks)
-    RED = (0xCC, 0x33, 0x33)
+    # Manual handoff indicators between silos
+    AMBER_DARK = (0x92, 0x40, 0x00)
     for i in range(len(silo_positions) - 1):
-        gap_y = silo_positions[i] + silo_h + Inches(0.08)
-        # X mark shape
-        tb = add_tb(slide, silo_x + Inches(1.1), gap_y, Inches(0.6), Inches(0.3))
-        text(tb.text_frame, "\u2718", size=16, bold=True, color=RED, after=0, align=PP_ALIGN.CENTER, first=True)
+        gap_y = silo_positions[i] + silo_h + Inches(0.05)
+        # Hand icon + label
+        tb = add_tb(slide, silo_x, gap_y, silo_w, Inches(0.3))
+        text(tb.text_frame, "\u270b  manual handoff", size=9, bold=True, color=AMBER_DARK, after=0, align=PP_ALIGN.CENTER, first=True)
 
-    # "No thread" label under the diagram
+    # Bottom label under the diagram
     tb = add_tb(slide, diag_x, silo_positions[-1] + silo_h + Inches(0.3), diag_w, Inches(0.5))
-    text(tb.text_frame, "No automated thread", size=10, bold=True, color=RED, after=2, align=PP_ALIGN.CENTER, first=True)
-    text(tb.text_frame, "Manual handoffs at every stage", size=9, color=GRAY_DIM, after=0, align=PP_ALIGN.CENTER)
+    text(tb.text_frame, "No automated thread", size=10, bold=True, color=AMBER_DARK, after=2, align=PP_ALIGN.CENTER, first=True)
+    text(tb.text_frame, "Slow, fragile, unversioned", size=9, color=GRAY_DIM, after=0, align=PP_ALIGN.CENTER)
 
     # ============================================
     # Bottom takeaway
