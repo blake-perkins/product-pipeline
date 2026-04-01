@@ -443,19 +443,17 @@ def slide_05_testing(prs):
     text(tb.text_frame, "The MBSE pipeline automates E2E testing \u2014 deploying the product, running simulations, and verifying requirements through log analysis.",
          size=11, color=GRAY_DARK, after=0, first=True)
 
-    # Test pyramid — 5 layers matching the standard testing pyramid
-    # Each layer: (center_x_offset, y, width, height, label, color, highlighted)
-    # Pyramid narrows from bottom to top, centered around x=3.0
-    cx = 3.0  # center of pyramid
+    # Test pyramid — 5 layers, each with label + description inside the bar
+    # (x, y, w, h, label, desc, color, highlighted)
     layers = [
-        (Inches(0.5), Inches(5.4), Inches(5.5), Inches(0.75), "Static Analysis", GRAY_DIM, False),
-        (Inches(0.9), Inches(4.5), Inches(4.7), Inches(0.75), "Unit Tests", GRAY_DIM, False),
-        (Inches(1.3), Inches(3.6), Inches(3.9), Inches(0.75), "Integration Tests", GRAY_DIM, False),
-        (Inches(1.7), Inches(2.7), Inches(3.1), Inches(0.75), "E2E Tests", BLUE_NG, True),
-        (Inches(2.1), Inches(1.8), Inches(2.3), Inches(0.75), "Manual &\nExploratory", GRAY_DIM, False),
+        (Inches(0.8),  Inches(5.5), Inches(5.0), Inches(0.7), "Static Analysis",       "Linting, type checks, code standards",       GRAY_DIM, False),
+        (Inches(1.15), Inches(4.65), Inches(4.3), Inches(0.7), "Unit Tests",            "Individual functions, logic correctness",     GRAY_DIM, False),
+        (Inches(1.5),  Inches(3.8), Inches(3.6), Inches(0.7), "Integration Tests",     "Component interfaces, API contracts",         GRAY_DIM, False),
+        (Inches(1.85), Inches(2.95), Inches(2.9), Inches(0.7), "E2E / System Tests",   "Requirements verified against deployed product", BLUE_NG, True),
+        (Inches(2.2),  Inches(2.1), Inches(2.2), Inches(0.7), "Manual & Exploratory",  "Usability, edge cases, human judgment",       GRAY_DIM, False),
     ]
 
-    for lx, ly, lw, lh, label, color, highlight in layers:
+    for lx, ly, lw, lh, label, desc, color, highlight in layers:
         shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, lx, ly, lw, lh)
         shape.fill.solid()
         shape.fill.fore_color.rgb = rgb(color)
@@ -465,38 +463,31 @@ def slide_05_testing(prs):
         else:
             shape.line.fill.background()
 
-        tb = add_tb(slide, lx + Inches(0.1), ly + Inches(0.1), lw - Inches(0.2), lh - Inches(0.1))
+        tb = add_tb(slide, lx + Inches(0.1), ly + Inches(0.05), lw - Inches(0.2), Inches(0.3))
         text(tb.text_frame, label, size=11, bold=True, color=WHITE, after=0, align=PP_ALIGN.CENTER, first=True)
-
-    # Cost arrow (left side)
-    tb = add_tb(slide, Inches(0.05), Inches(1.7), Inches(0.4), Inches(4.5))
-    text(tb.text_frame, "Cost \u2191", size=9, bold=True, color=GRAY_DIM, after=0, align=PP_ALIGN.CENTER, first=True)
-
-    # Speed arrow (bottom right of pyramid)
-    tb = add_tb(slide, Inches(5.5), Inches(6.2), Inches(0.8), Inches(0.3))
-    text(tb.text_frame, "Speed \u2192", size=9, bold=True, color=GRAY_DIM, after=0, first=True)
+        tb = add_tb(slide, lx + Inches(0.1), ly + Inches(0.35), lw - Inches(0.2), Inches(0.3))
+        text(tb.text_frame, desc, size=8, color=WHITE, after=0, align=PP_ALIGN.CENTER, first=True)
 
     # "MBSE Pipeline" label pointing to E2E layer
-    tb = add_tb(slide, Inches(5.1), Inches(2.8), Inches(1.8), Inches(0.3))
+    tb = add_tb(slide, Inches(5.0), Inches(3.05), Inches(1.8), Inches(0.3))
     text(tb.text_frame, "\u25c0 MBSE Pipeline", size=11, bold=True, color=BLUE_NG, after=0, first=True)
 
-    # Right side — what the pipeline does
-    tb = add_tb(slide, Inches(7.5), Inches(1.5), Inches(5), Inches(0.3))
+    # Right side — what the pipeline does at the E2E layer
+    tb = add_tb(slide, Inches(7.5), Inches(1.8), Inches(5), Inches(0.3))
     text(tb.text_frame, "What the Pipeline Provides", size=16, bold=True, color=NAVY, after=0, first=True)
 
     pipeline_items = [
-        ("Requirement Traceability", "Every Cameo requirement maps to a Gherkin scenario. Gate A enforces 100% coverage."),
-        ("Automated E2E Verification", "BDD scenarios run against simulation logs after product deployment. Results captured automatically."),
-        ("Drift Detection", "Gate B detects when the model changes and flags tests for review \u2014 no silent invalidation."),
-        ("Evidence Generation", "The Deployment Pipeline Report is produced on every build \u2014 a complete audit trail."),
-        ("Release-Aware Gating", "Quality gates only enforce VCs in scope for the current release. Future work is tracked but not blocking."),
+        ("Requirement Traceability", "Every Cameo requirement maps to a Gherkin scenario.\nGate A enforces 100% coverage."),
+        ("Automated Verification", "BDD scenarios run against the deployed product.\nResults captured automatically on every build."),
+        ("Drift Detection", "Gate B flags tests when the model changes \u2014\nno silent invalidation."),
+        ("Audit Evidence", "The Deployment Pipeline Report is a complete,\nautomatically generated audit trail."),
     ]
-    y = Inches(2.0)
+    y = Inches(2.3)
     for title, desc in pipeline_items:
-        tb = add_tb(slide, Inches(7.5), y, Inches(5.2), Inches(0.7))
-        text(tb.text_frame, title, size=11, bold=True, color=BLUE_NG, after=2, first=True)
+        tb = add_tb(slide, Inches(7.5), y, Inches(5.2), Inches(0.8))
+        text(tb.text_frame, title, size=12, bold=True, color=BLUE_NG, after=2, first=True)
         text(tb.text_frame, desc, size=9, color=GRAY_DARK, after=0)
-        y += Inches(0.78)
+        y += Inches(0.95)
 
     # Bottom note
     tb = add_tb(slide, Inches(0.8), Inches(6.6), Inches(12), Inches(0.3))
